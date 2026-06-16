@@ -27,10 +27,12 @@ export interface Coordinates {
 }
 
 export interface OpeningHour {
-  days: string[];
+  /** Giorno in inglese (schema.org), es. 'Tuesday' */
+  day: string;
+  /** Etichetta leggibile in italiano, es. 'Martedì' */
   label: string;
-  opens: string;
-  closes: string;
+  /** Fasce orarie del giorno (più fasce = pausa pranzo); [] = chiuso */
+  ranges: { opens: string; closes: string }[];
 }
 
 export interface Service {
@@ -80,10 +82,15 @@ export const site = {
   } satisfies Address,
   coordinates: { lat: 0, lng: 0 } satisfies Coordinates, // GPS esatto da confermare
 
-  // — Orari (placeholder, DA CONFERMARE) —
+  // — Orari (confermati da Google) —
   openingHours: [
-    { days: ['Tuesday', 'Wednesday', 'Thursday', 'Friday'], label: 'Mar–Ven', opens: '09:00', closes: '19:00' },
-    { days: ['Saturday'], label: 'Sabato', opens: '09:00', closes: '18:00' },
+    { day: 'Monday', label: 'Lunedì', ranges: [] },
+    { day: 'Tuesday', label: 'Martedì', ranges: [{ opens: '09:00', closes: '15:00' }, { opens: '17:00', closes: '19:00' }] },
+    { day: 'Wednesday', label: 'Mercoledì', ranges: [{ opens: '09:00', closes: '15:00' }, { opens: '17:00', closes: '19:00' }] },
+    { day: 'Thursday', label: 'Giovedì', ranges: [{ opens: '09:00', closes: '15:00' }] },
+    { day: 'Friday', label: 'Venerdì', ranges: [{ opens: '09:00', closes: '13:00' }, { opens: '17:00', closes: '19:00' }] },
+    { day: 'Saturday', label: 'Sabato', ranges: [{ opens: '09:00', closes: '13:00' }] },
+    { day: 'Sunday', label: 'Domenica', ranges: [] },
   ] satisfies OpeningHour[],
 
   // — Link ufficiali —
@@ -107,10 +114,24 @@ export const site = {
   // Testi reali delle recensioni Google (da incollare). Mostrati come vetrina,
   // NON inseriti nel JSON-LD (policy Google sulle recensioni di terze parti).
   reviews: [
-    // { author: 'Nome C.', rating: 5, text: 'Testo della recensione…' },
+    {
+      author: 'Monica Malverti',
+      rating: 5,
+      text: 'Cura e attenzione per il benessere del capello al primo posto! Jessica è davvero brava, sia che si tratti di una piega al volo sia che ci si rivolga a lei per un cambiamento radicale.',
+    },
+    {
+      author: 'Tatiana Flocea',
+      rating: 5,
+      text: 'Parrucchiera bravissima! Ho portato i miei 3 figli e sono usciti con un taglio perfetto. Paziente e professionale. Torneremo sicuramente!',
+    },
+    {
+      author: 'alice paxia',
+      rating: 5,
+      text: 'Mi sono trovata benissimo, come sempre!',
+    },
   ] satisfies Review[],
-  // Valutazione media e numero recensioni Google (0 = sconosciuto, da compilare).
-  googleReviews: { rating: 0, count: 0 },
+  // Valutazione media e numero recensioni Google.
+  googleReviews: { rating: 5, count: 3 },
 
   // — Domande frequenti (per SEO: FAQPage) —
   faqs: [
@@ -174,7 +195,7 @@ export const site = {
     email: true,
     address: true,
     coordinates: false,
-    openingHours: false,
+    openingHours: true,
     prices: false,
   },
 } as const;

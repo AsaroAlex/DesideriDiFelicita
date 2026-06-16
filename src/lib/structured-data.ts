@@ -46,13 +46,18 @@ export function buildHairSalonSchema(
     };
   }
 
-  if (c.openingHours && site.openingHours.length > 0) {
-    schema.openingHoursSpecification = site.openingHours.map((o) => ({
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: o.days,
-      opens: o.opens,
-      closes: o.closes,
-    }));
+  if (c.openingHours) {
+    // Una specifica per ogni fascia oraria (i giorni con pausa hanno 2 fasce);
+    // i giorni chiusi (ranges vuoti) vengono omessi.
+    const specs = site.openingHours.flatMap((o) =>
+      o.ranges.map((r) => ({
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: o.day,
+        opens: r.opens,
+        closes: r.closes,
+      }))
+    );
+    if (specs.length > 0) schema.openingHoursSpecification = specs;
   }
 
   // Profili social verificabili (Instagram è un link ufficiale confermato).

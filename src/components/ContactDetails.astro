@@ -18,8 +18,19 @@ const c = site.confirmed;
 
   <div>
     <h3 class="contact__h">Orari</h3>
-    <ul class="contact__list" role="list">
-      {site.openingHours.map((o) => <li>{o.label}: {o.opens}–{o.closes}</li>)}
+    <ul class="contact__hours" role="list">
+      {
+        site.openingHours.map((o) => (
+          <li class={o.ranges.length === 0 ? 'is-closed' : ''}>
+            <span class="contact__day">{o.label}</span>
+            <span>
+              {o.ranges.length
+                ? o.ranges.map((r) => `${r.opens}–${r.closes}`).join(' · ')
+                : 'Chiuso'}
+            </span>
+          </li>
+        ))
+      }
     </ul>
     {!c.openingHours && <span class="badge-tbc">da confermare</span>}
   </div>
@@ -61,10 +72,22 @@ const c = site.confirmed;
     font-style: normal;
     line-height: var(--lh-normal);
   }
-  .contact__list {
+  .contact__hours {
     margin: 0;
     display: grid;
-    gap: 0.25rem;
+    gap: 0.3rem;
+    max-width: 22rem;
+  }
+  .contact__hours li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+  .contact__day {
+    color: var(--color-ink-soft);
+  }
+  .contact__hours li.is-closed span:last-child {
+    color: var(--color-muted);
   }
   .contact__actions {
     display: flex;

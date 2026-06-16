@@ -64,6 +64,8 @@ OG, performance); 3) design premium editoriale; 4) rifinitura "Awwwards-like".
 | Servizi | taglio donna/uomo/bambini, colore, balayage/biondo, cura del riccio, piega/frangia, trattamenti (Vitality's, anti-caduta) |
 | Prenotazioni | WhatsApp, telefono, DM Instagram |
 | P. IVA | IT04315221202 |
+| Orari | Mar/Mer 9–15·17–19, Gio 9–15, Ven 9–13·17–19, Sab 9–13, Dom/Lun chiuso |
+| Recensioni Google | 5,0 · 3 recensioni (Monica Malverti, Tatiana Flocea, alice paxia) — in vetrina, non nel JSON-LD |
 
 I flag in `site.confirmed` per questi dati sono a `true` → entrano nel JSON-LD,
 la mappa è attiva, niente badge "da confermare".
@@ -72,7 +74,6 @@ la mappa è attiva, niente badge "da confermare".
 
 | Dato | Note |
 |------|------|
-| Orari di apertura | placeholder (Mar–Ven 9–19, Sab 9–18) → badge "da confermare" |
 | Coordinate GPS esatte | mappa usa l'indirizzo; per il pin preciso servono lat/lng |
 | Prezzi servizi | mostrati come "su richiesta" |
 | Foto reali, logo, immagine OG | da caricare |

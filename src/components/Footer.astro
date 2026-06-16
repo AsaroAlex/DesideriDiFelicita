@@ -35,7 +35,16 @@ const c = site.confirmed;
     <div>
       <h2 class="footer__title">Orari</h2>
       <ul class="footer__list" role="list">
-        {site.openingHours.map((o) => <li>{o.label}: {o.opens}–{o.closes}</li>)}
+        {
+          site.openingHours.map((o) => (
+            <li>
+              {o.label}:{' '}
+              {o.ranges.length
+                ? o.ranges.map((r) => `${r.opens}–${r.closes}`).join(' · ')
+                : 'Chiuso'}
+            </li>
+          ))
+        }
       </ul>
       {!c.openingHours && <span class="badge-tbc">da confermare</span>}
     </div>
