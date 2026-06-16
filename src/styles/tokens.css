@@ -1,54 +1,68 @@
 /*
  * DESIGN TOKEN — Desideri di Felicità
  * -----------------------------------
- * Punto UNICO per modificare l'estetica del sito (colori, tipografia,
- * spaziature, raggi, ombre). In Fase 2, allineando palette e font allo
- * stile reale dell'Instagram, basterà cambiare i valori qui.
- *
- * Base di partenza: elegante / editoriale, toni caldi e femminili.
+ * Palette allineata al BRAND reale (logo Instagram @desideri.di.felicita):
+ *   - blu polvere/slate  → colore principale
+ *   - oro/bronzo caldo    → accento
+ *   - rosa cipria         → colore morbido (fiori acquerello)
+ *   - crema/bianco        → sfondo
+ * Stile: editoriale luxury, chiaro, con sezioni scure d'effetto.
+ * Punto UNICO per modificare l'estetica del sito.
  */
 
 :root {
-  /* — Colori — */
-  --color-bg: #faf6f1;          /* avorio caldo */
+  /* — Colori chiari — */
+  --color-bg: #f8f5f0;          /* crema caldo */
   --color-surface: #ffffff;
-  --color-surface-alt: #f3ece3; /* sezioni alternate */
-  --color-blush: #efe2d8;       /* dettagli morbidi */
+  --color-surface-alt: #f1ebe1; /* sabbia tenue per sezioni alternate */
 
-  --color-ink: #221b16;         /* testo principale (espresso) */
-  --color-ink-soft: #574d45;
-  --color-muted: #8a7e73;       /* testo secondario */
-  --color-line: #e7ddd1;        /* bordi / divisori */
+  --color-blush: #e6c3c6;       /* rosa cipria (accento) */
+  --color-blush-soft: #f7eded;  /* rosa cipria velato (fondali) */
 
-  --color-primary: #b0865f;     /* bronzo/oro caldo (accento) */
-  --color-primary-strong: #8f6743;
+  --color-ink: #222c39;         /* slate navy profondo (testo) */
+  --color-ink-soft: #4c5868;
+  --color-muted: #8a909b;       /* testo secondario */
+  --color-line: #e6ded2;        /* bordi / divisori */
+
+  --color-primary: #4a5d7a;     /* blu polvere del brand */
+  --color-primary-strong: #374a64;
   --color-primary-contrast: #ffffff;
+
+  --color-gold: #c2a268;        /* oro/bronzo caldo del brand */
+  --color-gold-strong: #a6864a;
+
+  /* — Sezioni scure (contrasto cinematografico) — */
+  --color-dark: #1e2733;        /* navy/slate profondo */
+  --color-dark-2: #28323f;
+  --color-on-dark: #eef1f5;
+  --color-on-dark-soft: #b8c0cc;
+  --color-gold-on-dark: #d4b277;
 
   --color-whatsapp: #25d366;
   --color-whatsapp-strong: #1da851;
 
-  /* — Tipografia —
-     Fase 1: stack di sistema raffinati (zero richieste di rete, ottimo per
-     performance). In Fase 2 si possono sostituire con font self-hosted. */
-  --font-display: 'Iowan Old Style', 'Apple Garamond', 'Palatino Linotype',
-    Palatino, Georgia, 'Times New Roman', serif;
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-    'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  /* — Tipografia (font variabili self-hosted) — */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype',
+    Georgia, 'Times New Roman', serif;
+  --font-body: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
 
-  /* Scala tipografica fluida (clamp: min, preferita vw, max) */
-  --fs-100: 0.875rem;
+  /* Scala tipografica fluida */
+  --fs-100: 0.8125rem;
   --fs-200: 1rem;
-  --fs-300: 1.125rem;
-  --fs-400: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
-  --fs-500: clamp(1.5rem, 1.25rem + 1.2vw, 2rem);
-  --fs-600: clamp(2rem, 1.6rem + 2vw, 3rem);
-  --fs-700: clamp(2.6rem, 1.9rem + 3.4vw, 4.5rem);
+  --fs-300: 1.1875rem;
+  --fs-400: clamp(1.25rem, 1.05rem + 0.9vw, 1.6rem);
+  --fs-500: clamp(1.6rem, 1.25rem + 1.6vw, 2.4rem);
+  --fs-600: clamp(2.1rem, 1.55rem + 2.6vw, 3.4rem);
+  --fs-700: clamp(2.7rem, 1.7rem + 4.6vw, 5.5rem);
+  --fs-800: clamp(3.2rem, 1.8rem + 6.4vw, 7rem);
 
-  --lh-tight: 1.1;
-  --lh-snug: 1.25;
-  --lh-normal: 1.6;
+  --lh-tight: 1.05;
+  --lh-snug: 1.22;
+  --lh-normal: 1.65;
 
-  --tracking-wide: 0.14em; /* per occhielli/etichette maiuscole */
+  --tracking-wide: 0.22em;  /* etichette maiuscole spaziate (come nel logo) */
+  --tracking-tight: -0.015em;
 
   /* — Spaziature — */
   --space-2xs: 0.25rem;
@@ -58,28 +72,30 @@
   --space-lg: 1.5rem;
   --space-xl: 2.5rem;
   --space-2xl: 4rem;
-  --space-3xl: 6rem;
+  --space-3xl: 6.5rem;
 
   /* — Layout — */
-  --container: 72rem;       /* larghezza massima contenuto */
-  --container-narrow: 48rem;
-  --gutter: clamp(1.1rem, 0.6rem + 2.5vw, 2.5rem);
+  --container: 75rem;
+  --container-narrow: 46rem;
+  --gutter: clamp(1.1rem, 0.5rem + 2.8vw, 2.75rem);
 
   /* — Forme — */
   --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 32px;
   --radius-pill: 999px;
 
   /* — Ombre — */
-  --shadow-sm: 0 1px 2px rgba(34, 27, 22, 0.06);
-  --shadow-md: 0 10px 30px rgba(34, 27, 22, 0.08);
-  --shadow-lg: 0 24px 60px rgba(34, 27, 22, 0.12);
+  --shadow-sm: 0 1px 2px rgba(34, 44, 57, 0.06);
+  --shadow-md: 0 14px 36px rgba(34, 44, 57, 0.10);
+  --shadow-lg: 0 30px 70px rgba(34, 44, 57, 0.16);
 
   /* — Movimento — */
-  --transition: 220ms ease;
-  --transition-slow: 420ms ease;
+  --transition: 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-slow: 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* — Header — */
-  --header-h: 4.5rem;
+  --header-h: 4.75rem;
 }

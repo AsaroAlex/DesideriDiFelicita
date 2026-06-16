@@ -24,11 +24,22 @@ const REPO = 'DesideriDiFelicita';
 
 const site = USE_CUSTOM_DOMAIN ? CUSTOM_DOMAIN : `https://${GH_USER}.github.io`;
 const base = USE_CUSTOM_DOMAIN ? '/' : `/${REPO}`;
+const homeUrl = `${site}${base}`.replace(/\/+$/, '');
 
 // https://astro.build/config
 export default defineConfig({
   site,
   base,
   trailingSlash: 'ignore',
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      changefreq: 'weekly',
+      lastmod: new Date(),
+      serialize(item) {
+        // La home ha priorità massima, le altre pagine leggermente inferiore.
+        item.priority = item.url.replace(/\/+$/, '') === homeUrl ? 1.0 : 0.7;
+        return item;
+      },
+    }),
+  ],
 });

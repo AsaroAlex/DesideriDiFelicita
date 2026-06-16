@@ -26,10 +26,17 @@ const c = site.confirmed;
 
   <div>
     <h3 class="contact__h">Telefono</h3>
-    <p>
-      <a href={telHref(site.phone)}>{site.phone}</a>
-      {!c.phone && <span class="badge-tbc">da confermare</span>}
-    </p>
+    <p><a class="link-underline" href={telHref(site.phone)}>{site.phone}</a></p>
+  </div>
+
+  <div>
+    <h3 class="contact__h">Email</h3>
+    <p><a class="link-underline" href={`mailto:${site.email}`}>{site.email}</a></p>
+  </div>
+
+  <div>
+    <h3 class="contact__h">Prenotazioni</h3>
+    <p class="note">Su WhatsApp, al telefono o in DM su Instagram.</p>
   </div>
 
   <div class="contact__actions">
@@ -44,10 +51,10 @@ const c = site.confirmed;
 <style>
   .contact__h {
     font-family: var(--font-body);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
-    color: var(--color-muted);
+    color: var(--color-gold-strong);
     margin-bottom: var(--space-2xs);
   }
   .contact__addr {

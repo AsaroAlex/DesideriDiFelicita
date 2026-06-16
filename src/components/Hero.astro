@@ -7,12 +7,21 @@ import WhatsappButton from './WhatsappButton.astro';
 ---
 
 <section class="hero">
+  <span class="hero__glow hero__glow--gold" aria-hidden="true"></span>
+  <span class="hero__glow hero__glow--blue" aria-hidden="true"></span>
+
   <div class="container hero__inner">
     <div class="hero__content">
-      <p class="eyebrow">{site.category}</p>
-      <h1 class="hero__title">{site.slogan}</h1>
-      <p class="lead hero__desc">{site.description}</p>
-      <div class="hero__actions">
+      <p class="eyebrow hero__a1">{site.role} · Galliera (BO)</p>
+      <h1 class="hero__title hero__a2">
+        La bellezza nasce da un <em class="italic-accent">desiderio</em>, la felicità
+        lo rende <em class="italic-accent">reale</em>.
+      </h1>
+      <p class="lead hero__desc hero__a3">
+        {site.tagline} Salone di parrucchiera a Galliera (BO): taglio, colore,
+        balayage e cura del riccio, su misura per te.
+      </p>
+      <div class="hero__actions hero__a4">
         <WhatsappButton label="Prenota su WhatsApp" />
         <a class="btn btn--outline" href={telHref(site.phone)}>
           <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -24,15 +33,14 @@ import WhatsappButton from './WhatsappButton.astro';
           Chiama ora
         </a>
       </div>
-      <p class="note hero__note">Recapiti in fase di conferma.</p>
     </div>
 
-    <div class="hero__media">
+    <div class="hero__media hero__a3">
       {
         heroImage ? (
           <Image
             src={heroImage}
-            alt={`Interno del salone ${site.businessName}`}
+            alt={`Interno del salone ${site.businessName} a Galliera`}
             class="hero__img"
             widths={[480, 768, 1100]}
             sizes="(min-width: 960px) 45vw, 90vw"
@@ -41,7 +49,10 @@ import WhatsappButton from './WhatsappButton.astro';
           />
         ) : (
           <div class="hero__placeholder" aria-hidden="true">
-            <span class="hero__monogram">Df</span>
+            <div class="hero__frame">
+              <span class="hero__monogram">Df</span>
+              <span class="hero__placeholder-note">la tua foto qui</span>
+            </div>
           </div>
         )
       }
@@ -52,26 +63,54 @@ import WhatsappButton from './WhatsappButton.astro';
 <style>
   .hero {
     position: relative;
-    background:
-      radial-gradient(80% 120% at 100% 0%, var(--color-blush) 0%, transparent 55%),
-      linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
-    padding-block: clamp(2.5rem, 1rem + 8vw, 6rem);
     overflow: hidden;
+    background:
+      radial-gradient(70% 90% at 88% 4%, var(--color-blush-soft) 0%, transparent 55%),
+      linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
+    padding-block: clamp(3rem, 1rem + 9vw, 7rem);
   }
+
+  .hero__glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .hero__glow--gold {
+    width: 26rem;
+    height: 26rem;
+    top: -8rem;
+    right: -6rem;
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-gold) 40%, transparent), transparent 70%);
+  }
+  .hero__glow--blue {
+    width: 22rem;
+    height: 22rem;
+    bottom: -10rem;
+    left: -8rem;
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 30%, transparent), transparent 70%);
+  }
+
   .hero__inner {
+    position: relative;
     display: grid;
     gap: var(--space-2xl);
     align-items: center;
   }
   @media (min-width: 960px) {
     .hero__inner {
-      grid-template-columns: 1.1fr 0.9fr;
+      grid-template-columns: 1.08fr 0.92fr;
     }
   }
+
   .hero__title {
     margin-top: var(--space-xs);
     font-size: var(--fs-700);
-    max-width: 16ch;
+    max-width: 15ch;
+  }
+  .hero__title em {
+    color: var(--color-gold-strong);
   }
   .hero__desc {
     margin-top: var(--space-lg);
@@ -82,30 +121,79 @@ import WhatsappButton from './WhatsappButton.astro';
     gap: var(--space-md);
     margin-top: var(--space-xl);
   }
-  .hero__note {
-    margin-top: var(--space-sm);
+
+  .hero__media {
+    justify-self: center;
+    width: 100%;
   }
   .hero__img {
     width: 100%;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     object-fit: cover;
     aspect-ratio: 4 / 5;
   }
   .hero__placeholder {
     aspect-ratio: 4 / 5;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
+    padding: 0.75rem;
     background:
-      radial-gradient(120% 120% at 0% 0%, var(--color-blush), transparent 60%),
-      linear-gradient(160deg, var(--color-primary) 0%, var(--color-primary-strong) 100%);
-    display: grid;
-    place-items: center;
+      linear-gradient(150deg, var(--color-blush-soft) 0%, #e9e3ec 55%, color-mix(in srgb, var(--color-primary) 18%, #fff) 100%);
     box-shadow: var(--shadow-lg);
+  }
+  .hero__frame {
+    height: 100%;
+    border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent);
+    border-radius: calc(var(--radius-xl) - 8px);
+    display: grid;
+    place-content: center;
+    gap: 0.4rem;
+    text-align: center;
   }
   .hero__monogram {
     font-family: var(--font-display);
-    font-size: clamp(4rem, 10vw, 7rem);
-    color: rgba(255, 255, 255, 0.92);
-    letter-spacing: 0.02em;
+    font-style: italic;
+    font-size: clamp(4rem, 11vw, 7.5rem);
+    line-height: 1;
+    color: var(--color-primary);
+  }
+  .hero__placeholder-note {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-gold-strong);
+  }
+
+  /* Ingresso animato leggero (solo se l'utente non ha ridotto il movimento) */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__a1,
+    .hero__a2,
+    .hero__a3,
+    .hero__a4 {
+      opacity: 0;
+      animation: hero-in 0.8s var(--ease-out) forwards;
+    }
+    .hero__a1 {
+      animation-delay: 0.05s;
+    }
+    .hero__a2 {
+      animation-delay: 0.16s;
+    }
+    .hero__a3 {
+      animation-delay: 0.28s;
+    }
+    .hero__a4 {
+      animation-delay: 0.4s;
+    }
+    @keyframes hero-in {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
   }
 </style>

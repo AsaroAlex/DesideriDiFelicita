@@ -7,30 +7,35 @@ import { site } from '../data/site';
 
 const title = 'Servizi';
 const description =
-  'Taglio, colore, piega, balayage e trattamenti su misura nel salone Desideri di Felicità a Galliera (BO).';
+  'Taglio donna, uomo e bambino, colore, balayage, cura del riccio e trattamenti professionali nel salone Desideri di Felicità a Galliera (BO).';
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Servizi', href: '/servizi' },
+];
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} breadcrumbs={breadcrumbs}>
   <section class="section">
     <div class="container">
       <div class="section__head">
         <p class="eyebrow">Servizi</p>
         <h1>I nostri servizi</h1>
         <p class="lead">
-          Ogni trattamento nasce dall’ascolto del tuo desiderio. Di seguito i servizi
-          principali del salone: i prezzi verranno definiti insieme alla titolare.
+          Ogni trattamento nasce dall’ascolto del tuo desiderio. Dal taglio al colore,
+          fino alla cura del capello riccio: ti accompagniamo verso il look che ti
+          rappresenta. I prezzi si definiscono insieme in base al servizio.
         </p>
       </div>
 
       <div class="grid grid--3">
         {
-          site.services.map((s) => (
-            <Reveal>
+          site.services.map((s, i) => (
+            <Reveal style={`--reveal-delay:${(i % 3) * 80}ms`}>
               <ServiceCard
+                index={i + 1}
                 name={s.name}
                 description={s.description}
-                price={s.price}
-                priceConfirmed={site.confirmed.services}
+                priceConfirmed={site.confirmed.prices}
               />
             </Reveal>
           ))
@@ -48,9 +53,9 @@ const description =
 <style>
   .cta-band {
     margin-top: var(--space-2xl);
-    padding: var(--space-xl);
+    padding: var(--space-2xl) var(--space-xl);
     text-align: center;
-    background: var(--color-surface-alt);
+    background: var(--color-blush-soft);
     border-radius: var(--radius-lg);
     display: grid;
     gap: var(--space-md);

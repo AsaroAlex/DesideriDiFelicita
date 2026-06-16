@@ -3,15 +3,17 @@
  * Wrapper per rivelazione leggera allo scroll. Aggiunge `data-reveal`:
  * lo script in BaseLayout aggiunge `.is-visible` quando l'elemento entra in
  * viewport (e rispetta prefers-reduced-motion). Usare con parsimonia.
+ * Accetta `class`, `style` (es. --reveal-delay) e altri attributi.
  */
 interface Props {
   as?: keyof HTMLElementTagNameMap;
   class?: string;
+  [key: string]: unknown;
 }
-const { as = 'div', class: className } = Astro.props;
+const { as = 'div', class: className, ...rest } = Astro.props;
 const Tag = as as any;
 ---
 
-<Tag data-reveal class={className}>
+<Tag data-reveal class={className} {...rest}>
   <slot />
 </Tag>

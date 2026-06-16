@@ -2,22 +2,29 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Gallery from '../components/Gallery.astro';
 import WhatsappButton from '../components/WhatsappButton.astro';
+import { site } from '../data/site';
 import { galleryImages } from '../data/images';
 
 const title = 'Galleria';
 const description =
-  'Una raccolta dei lavori realizzati nel salone Desideri di Felicità: tagli, colori e acconciature.';
+  'I lavori del salone Desideri di Felicità: tagli, colori, balayage, capelli ricci e acconciature realizzati a Galliera (BO).';
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Galleria', href: '/galleria' },
+];
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} breadcrumbs={breadcrumbs}>
   <section class="section">
     <div class="container">
       <div class="section__head">
         <p class="eyebrow">Galleria</p>
         <h1>I nostri lavori</h1>
         <p class="lead">
-          Lasciati ispirare dai tagli, dai colori e dalle acconciature realizzati nel
-          salone.
+          Tagli, colori, balayage e cura del riccio. Lasciati ispirare — e seguici su
+          <a class="link-underline" href={site.instagramUrl} target="_blank" rel="noopener"
+            >Instagram</a
+          > per i look più recenti.
         </p>
       </div>
 
@@ -34,9 +41,9 @@ const description =
 <style>
   .cta-band {
     margin-top: var(--space-2xl);
-    padding: var(--space-xl);
+    padding: var(--space-2xl) var(--space-xl);
     text-align: center;
-    background: var(--color-surface-alt);
+    background: var(--color-blush-soft);
     border-radius: var(--radius-lg);
     display: grid;
     gap: var(--space-md);

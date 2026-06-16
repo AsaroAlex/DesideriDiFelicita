@@ -5,34 +5,41 @@ import { site } from '../data/site';
 
 const title = 'Chi siamo';
 const description =
-  'La storia e la filosofia del salone Desideri di Felicità: la bellezza nasce da un desiderio.';
-const c = site.confirmed;
+  'La storia e la filosofia di Desideri di Felicità, il salone di Jessica Asaro a Galliera (BO): cura del riccio, ascolto e benessere.';
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Chi siamo', href: '/chi-siamo' },
+];
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} breadcrumbs={breadcrumbs}>
   <section class="section">
     <div class="container container--narrow stack">
       <p class="eyebrow">Chi siamo</p>
       <h1>{site.slogan}</h1>
 
-      <p class="lead">{site.description}</p>
+      <p class="lead">{site.tagline}</p>
 
       <p>
-        Da <strong>Desideri di Felicità</strong> crediamo che prendersi cura dei propri
-        capelli sia molto più di un gesto estetico: è un momento di benessere, ascolto e
-        fiducia. Ogni cliente è unica, e ogni servizio nasce dall’attenzione ai suoi
-        desideri.
+        <strong>Desideri di Felicità</strong> è il salone di
+        <strong>{site.ownerName}</strong>, hair stylist a Galliera (BO). Un luogo nato
+        dal desiderio di unire competenza tecnica e accoglienza, dove ogni persona si
+        sente ascoltata.
       </p>
 
       <p>
-        Il salone è guidato da <strong>{site.ownerName}</strong>
-        {!c.ownerName && <span class="badge-tbc">da confermare</span>}, con passione per
-        l’acconciatura e cura del dettaglio.
+        Crediamo che prendersi cura dei propri capelli sia molto più di un gesto
+        estetico: è un momento di benessere e fiducia. Per questo dedichiamo attenzione
+        a ogni dettaglio, dalla consulenza iniziale fino al risultato finale, con una
+        particolare passione per la <strong>cura del capello riccio</strong> e l’uso di
+        prodotti professionali.
       </p>
 
-      <p class="note">
-        Questa pagina contiene testi provvisori: la storia e i contenuti definitivi
-        verranno completati insieme alla titolare.
+      <hr class="rule-gold" />
+
+      <p>
+        Taglio, colore, balayage, trattamenti e styling per donna, uomo e bambino: ti
+        aspettiamo per creare insieme il tuo momento felice.
       </p>
 
       <div class="about-cta">

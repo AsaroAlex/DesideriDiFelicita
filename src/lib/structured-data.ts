@@ -61,3 +61,34 @@ export function buildHairSalonSchema(
 
   return schema;
 }
+
+/** Schema BreadcrumbList (gli `url` devono essere assoluti). */
+export function buildBreadcrumbSchema(
+  items: { name: string; url: string }[]
+): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      item: it.url,
+    })),
+  };
+}
+
+/** Schema FAQPage per le domande frequenti (ottimo per i risultati ricchi). */
+export function buildFaqSchema(
+  faqs: { q: string; a: string }[]
+): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
+}

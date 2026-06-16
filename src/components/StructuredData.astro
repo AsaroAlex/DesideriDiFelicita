@@ -1,7 +1,18 @@
 ---
-import { buildHairSalonSchema } from '../lib/structured-data';
+import {
+  buildHairSalonSchema,
+  buildBreadcrumbSchema,
+  buildFaqSchema,
+} from '../lib/structured-data';
 import { ogImage } from '../data/images';
 import { withBase } from '../lib/href';
+import type { Faq } from '../data/site';
+
+interface Props {
+  breadcrumbs?: { name: string; href: string }[];
+  faq?: Faq[];
+}
+const { breadcrumbs, faq } = Astro.props;
 
 const canonicalPath = Astro.url.pathname.endsWith('/')
   ? Astro.url.pathname
@@ -9,7 +20,21 @@ const canonicalPath = Astro.url.pathname.endsWith('/')
 const canonical = new URL(canonicalPath, Astro.site).href;
 const ogUrl = ogImage ? new URL(withBase(ogImage), Astro.site).href : null;
 
-const schema = buildHairSalonSchema(canonical, ogUrl);
+const salon = buildHairSalonSchema(canonical, ogUrl);
+
+const crumbs =
+  breadcrumbs && breadcrumbs.length > 0
+    ? buildBreadcrumbSchema(
+        breadcrumbs.map((b) => ({
+          name: b.name,
+          url: new URL(withBase(b.href), Astro.site).href,
+        }))
+      )
+    : null;
+
+const faqSchema = faq && faq.length > 0 ? buildFaqSchema(faq) : null;
 ---
 
-<script type="application/ld+json" set:html={JSON.stringify(schema)} />
+<script type="application/ld+json" set:html={JSON.stringify(salon)} />
+{crumbs && <script type="application/ld+json" set:html={JSON.stringify(crumbs)} />}
+{faqSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}

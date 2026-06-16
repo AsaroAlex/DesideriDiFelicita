@@ -11,7 +11,8 @@ const c = site.confirmed;
   <div class="container footer__grid">
     <div class="footer__brand">
       <p class="footer__name">Desideri di Felicità</p>
-      <p class="note">{site.category}</p>
+      <p class="footer__motto">{site.slogan}</p>
+      <p class="footer__note">di {site.ownerName} · {site.role}</p>
     </div>
 
     <div>
@@ -19,21 +20,15 @@ const c = site.confirmed;
       <address class="footer__address">
         {site.address.street}<br />
         {site.address.postalCode} {site.address.city} ({site.address.province})
-        {!c.address && <span class="badge-tbc">da confermare</span>}
       </address>
     </div>
 
     <div>
       <h2 class="footer__title">Contatti</h2>
       <ul class="footer__list" role="list">
-        <li>
-          <a href={telHref(site.phone)}>{site.phone}</a>
-          {!c.phone && <span class="badge-tbc">da confermare</span>}
-        </li>
-        {site.email && <li><a href={`mailto:${site.email}`}>{site.email}</a></li>}
-        <li>
-          <a href={site.instagramUrl} target="_blank" rel="noopener">Instagram</a>
-        </li>
+        <li><a href={telHref(site.phone)}>{site.phone}</a></li>
+        <li><a href={`mailto:${site.email}`}>{site.email}</a></li>
+        <li><a href={site.instagramUrl} target="_blank" rel="noopener">Instagram</a></li>
       </ul>
     </div>
 
@@ -47,12 +42,12 @@ const c = site.confirmed;
   </div>
 
   <div class="container footer__bottom">
-    <p class="note">
+    <p class="footer__note">
       © {year} {site.businessName}.{' '}
       {site.legal.vatNumber && <>P.IVA {site.legal.vatNumber}. </>}
-      I dati contrassegnati con “da confermare” sono provvisori e in fase di verifica.
+      Galliera (BO).
     </p>
-    <p class="note">
+    <p class="footer__note">
       <a href={withBase('/')}>Home</a> · <a href={withBase('/contatti')}>Contatti</a>
     </p>
   </div>
@@ -60,13 +55,16 @@ const c = site.confirmed;
 
 <style>
   .footer {
-    background: var(--color-ink);
-    color: #efe7df;
+    background: linear-gradient(170deg, var(--color-dark) 0%, var(--color-dark-2) 100%);
+    color: var(--color-on-dark);
     padding-block: var(--space-2xl) var(--space-lg);
-    margin-top: var(--space-3xl);
   }
   .footer :global(a) {
-    color: #f3e9df;
+    color: var(--color-on-dark);
+    text-decoration: none;
+  }
+  .footer :global(a:hover) {
+    color: var(--color-gold-on-dark);
   }
   .footer__grid {
     display: grid;
@@ -74,36 +72,47 @@ const c = site.confirmed;
   }
   @media (min-width: 720px) {
     .footer__grid {
-      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
     }
   }
   .footer__name {
     font-family: var(--font-display);
-    font-size: 1.4rem;
+    font-size: 1.6rem;
+    color: var(--color-on-dark);
+  }
+  .footer__motto {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--color-gold-on-dark);
+    margin-top: var(--space-2xs);
+    max-width: 28ch;
   }
   .footer__title {
     font-family: var(--font-body);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
-    color: #cdbfb2;
+    color: var(--color-gold-on-dark);
     margin-bottom: var(--space-sm);
   }
   .footer__address {
     font-style: normal;
     line-height: var(--lh-normal);
+    color: var(--color-on-dark-soft);
   }
   .footer__list {
     margin: 0;
     display: grid;
     gap: 0.35rem;
   }
-  .footer :global(.note) {
-    color: #b7a99c;
+  .footer__note {
+    font-size: var(--fs-100);
+    color: var(--color-on-dark-soft);
+    margin-top: var(--space-2xs);
   }
   .footer :global(.badge-tbc) {
     background: rgba(255, 255, 255, 0.1);
-    color: #f0dcc8;
+    color: var(--color-gold-on-dark);
   }
   .footer__bottom {
     display: flex;

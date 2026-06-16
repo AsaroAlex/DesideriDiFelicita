@@ -2,22 +2,30 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ContactDetails from '../components/ContactDetails.astro';
 import MapEmbed from '../components/MapEmbed.astro';
+import { site } from '../data/site';
 
 const title = 'Contatti';
 const description =
-  'Contatta il salone Desideri di Felicità: telefono, WhatsApp, indirizzo e orari. Ti aspettiamo a Galliera (BO).';
+  'Contatta Desideri di Felicità a Galliera (BO): telefono, WhatsApp, email, Instagram, indirizzo e mappa. Prenota il tuo appuntamento.';
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Contatti', href: '/contatti' },
+];
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} breadcrumbs={breadcrumbs}>
   <section class="section">
     <div class="container">
       <div class="section__head">
         <p class="eyebrow">Contatti</p>
         <h1>Parliamo del tuo prossimo look</h1>
         <p class="lead">
-          Scrivici su WhatsApp o chiamaci per informazioni e appuntamenti.
+          Scrivici su WhatsApp, chiamaci o mandaci un DM su Instagram per informazioni e
+          appuntamenti. Ti aspettiamo a Galliera (BO).
         </p>
-        <p class="note">I recapiti riportati sono provvisori e in fase di conferma.</p>
+        {!site.confirmed.openingHours && (
+          <p class="note">Gli orari di apertura sono in fase di conferma.</p>
+        )}
       </div>
 
       <div class="grid grid--2 contact-grid">

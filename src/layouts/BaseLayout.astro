@@ -1,11 +1,16 @@
 ---
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/manrope';
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
+import type { Faq } from '../data/site';
 import Seo from '../components/Seo.astro';
 import StructuredData from '../components/StructuredData.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 import WhatsappButton from '../components/WhatsappButton.astro';
 
 interface Props {
@@ -13,53 +18,97 @@ interface Props {
   description?: string;
   image?: string | null;
   noindex?: boolean;
+  breadcrumbs?: { name: string; href: string }[];
+  faq?: Faq[];
 }
 
-const { title, description, image, noindex } = Astro.props;
+const { title, description, image, noindex, breadcrumbs, faq } = Astro.props;
 ---
 
 <!doctype html>
 <html lang={site.seo.lang}>
   <head>
     <meta charset="utf-8" />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" href={withBase('favicon.svg')} type="image/svg+xml" />
     <link rel="manifest" href={withBase('site.webmanifest')} />
-    <meta name="theme-color" content="#b0865f" />
+    <meta name="theme-color" content="#4a5d7a" />
     <Seo title={title} description={description} image={image} noindex={noindex} />
-    <StructuredData />
+    <StructuredData breadcrumbs={breadcrumbs} faq={faq} />
+    <ClientRouter />
   </head>
   <body>
+    <div class="scroll-progress" aria-hidden="true"></div>
     <a class="skip-link" href="#main">Salta al contenuto</a>
     <Header />
     <main id="main">
+      {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
       <slot />
     </main>
     <Footer />
 
     <WhatsappButton variant="float" />
 
-    <!-- Reveal leggero: rivela [data-reveal] una sola volta, rispettando le preferenze di movimento -->
+    <!-- Reveal leggero: rivela [data-reveal] al loro ingresso in viewport.
+         Compatibile con le View Transitions (astro:page-load) e rispetta
+         prefers-reduced-motion. -->
     <script>
-      const items = document.querySelectorAll('[data-reveal]');
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (reduce || !('IntersectionObserver' in window)) {
-        items.forEach((el) => el.classList.add('is-visible'));
-      } else {
-        const io = new IntersectionObserver(
-          (entries) => {
+      let revealObserver: IntersectionObserver | undefined;
+      function initReveal() {
+        const items = document.querySelectorAll('[data-reveal]');
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce || !('IntersectionObserver' in window)) {
+          items.forEach((el) => el.classList.add('is-visible'));
+          return;
+        }
+        revealObserver?.disconnect();
+        revealObserver = new IntersectionObserver(
+          (entries, obs) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting) {
                 entry.target.classList.add('is-visible');
-                io.unobserve(entry.target);
+                obs.unobserve(entry.target);
               }
             });
           },
-          { rootMargin: '0px 0px -10% 0px', threshold: 0.12 }
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.12 }
         );
-        items.forEach((el) => io.observe(el));
+        items.forEach((el) => revealObserver!.observe(el));
       }
+      document.addEventListener('astro:page-load', initReveal);
     </script>
+
+    <style>
+      /* Barra di avanzamento scroll — puro CSS (scroll-driven animation),
+         degrada in modo invisibile sui browser che non la supportano. */
+      .scroll-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        width: 100%;
+        z-index: 1000;
+        transform: scaleX(0);
+        transform-origin: 0 50%;
+        background: linear-gradient(90deg, var(--color-gold), var(--color-primary));
+      }
+      @supports (animation-timeline: scroll()) {
+        @media (prefers-reduced-motion: no-preference) {
+          .scroll-progress {
+            animation: scroll-grow linear both;
+            animation-timeline: scroll(root);
+          }
+        }
+      }
+      @keyframes scroll-grow {
+        to {
+          transform: scaleX(1);
+        }
+      }
+    </style>
   </body>
 </html>

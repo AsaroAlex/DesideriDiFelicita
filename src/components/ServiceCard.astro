@@ -2,14 +2,17 @@
 interface Props {
   name: string;
   description: string;
+  index?: number;
   price?: string;
   /** Se true mostra il prezzo; altrimenti "su richiesta" (prezzi non confermati) */
   priceConfirmed?: boolean;
 }
-const { name, description, price, priceConfirmed = false } = Astro.props;
+const { name, description, index, price, priceConfirmed = false } = Astro.props;
+const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
 ---
 
 <article class="card service">
+  {num && <span class="index-num service__num">{num}</span>}
   <h3 class="service__name">{name}</h3>
   <p class="service__desc">{description}</p>
   <p class="service__price">
@@ -23,6 +26,10 @@ const { name, description, price, priceConfirmed = false } = Astro.props;
     flex-direction: column;
     height: 100%;
   }
+  .service__num {
+    display: block;
+    margin-bottom: var(--space-xs);
+  }
   .service__name {
     font-size: var(--fs-400);
   }
@@ -35,5 +42,7 @@ const { name, description, price, priceConfirmed = false } = Astro.props;
     margin-top: var(--space-md);
     font-weight: 600;
     color: var(--color-primary-strong);
+    font-size: var(--fs-100);
+    letter-spacing: 0.02em;
   }
 </style>

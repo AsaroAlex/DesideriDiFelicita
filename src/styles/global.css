@@ -7,7 +7,6 @@
 *::after {
   box-sizing: border-box;
 }
-
 * {
   margin: 0;
 }
@@ -27,6 +26,18 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100svh;
+  overflow-x: hidden;
+}
+
+/* Grana sottile su tutta la pagina (tocco editoriale) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 img,
@@ -58,8 +69,10 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 460;
+  font-optical-sizing: auto;
   line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
   color: var(--color-ink);
   text-wrap: balance;
 }
@@ -81,27 +94,56 @@ p {
   text-wrap: pretty;
 }
 
+strong {
+  font-weight: 600;
+}
+
 a {
   color: var(--color-primary-strong);
   text-underline-offset: 0.2em;
 }
 
-/* Occhiello / etichetta in maiuscoletto spaziato */
+/* Display extra-large per hero */
+.display {
+  font-family: var(--font-display);
+  font-weight: 440;
+  font-optical-sizing: auto;
+  font-size: var(--fs-800);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+
+.italic-accent {
+  font-style: italic;
+  font-weight: 420;
+}
+
+/* Occhiello / etichetta in maiuscoletto spaziato oro (come nel logo) */
 .eyebrow {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7em;
   font-family: var(--font-body);
   font-size: var(--fs-100);
   font-weight: 600;
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--color-primary-strong);
-  margin-bottom: var(--space-sm);
+  color: var(--color-gold-strong);
+  margin-bottom: var(--space-md);
+}
+.eyebrow::before {
+  content: '';
+  width: 2rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.7;
 }
 
 .lead {
   font-size: var(--fs-300);
   color: var(--color-ink-soft);
   max-width: 60ch;
+  line-height: 1.55;
 }
 
 /* ---------- Layout ---------- */
@@ -111,7 +153,6 @@ a {
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
-
 .container--narrow {
   max-width: var(--container-narrow);
 }
@@ -119,96 +160,176 @@ a {
 .section {
   padding-block: var(--space-3xl);
 }
-
 .section--alt {
   background-color: var(--color-surface-alt);
 }
+.section--blush {
+  background-color: var(--color-blush-soft);
+}
 
 .section__head {
-  max-width: 62ch;
-  margin-bottom: var(--space-xl);
+  max-width: 60ch;
+  margin-bottom: var(--space-2xl);
 }
 
 .stack > * + * {
   margin-top: var(--space-md);
+}
+.center {
+  text-align: center;
+}
+.center-block {
+  margin-inline: auto;
 }
 
 .grid {
   display: grid;
   gap: var(--space-lg);
 }
-
 @media (min-width: 640px) {
   .grid--2 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
 @media (min-width: 900px) {
   .grid--3 {
     grid-template-columns: repeat(3, 1fr);
   }
+  .grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Numero indice editoriale (01, 02…) */
+.index-num {
+  font-family: var(--font-display);
+  font-size: var(--fs-300);
+  color: var(--color-gold);
+  font-feature-settings: 'tnum';
+}
+
+/* Filetto decorativo oro */
+.rule-gold {
+  height: 1px;
+  width: min(8rem, 30%);
+  background: linear-gradient(90deg, var(--color-gold), transparent);
+  border: 0;
+}
+
+/* ---------- Sezioni scure ---------- */
+.section--dark {
+  background: linear-gradient(170deg, var(--color-dark) 0%, var(--color-dark-2) 100%);
+  color: var(--color-on-dark);
+}
+.section--dark h1,
+.section--dark h2,
+.section--dark h3,
+.section--dark h4 {
+  color: var(--color-on-dark);
+}
+.section--dark .lead {
+  color: var(--color-on-dark-soft);
+}
+.section--dark .eyebrow {
+  color: var(--color-gold-on-dark);
+}
+.section--dark a {
+  color: var(--color-on-dark);
 }
 
 /* ---------- Bottoni ---------- */
 .btn {
   --btn-bg: var(--color-ink);
   --btn-fg: #fff;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.55em;
-  padding: 0.85em 1.5em;
+  padding: 0.9em 1.6em;
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
   background-color: var(--btn-bg);
   color: var(--btn-fg);
   font-weight: 600;
   font-size: var(--fs-200);
+  line-height: 1;
   text-decoration: none;
   cursor: pointer;
   transition: transform var(--transition), background-color var(--transition),
-    border-color var(--transition), box-shadow var(--transition);
+    border-color var(--transition), box-shadow var(--transition), color var(--transition);
 }
-
 .btn:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
-
 .btn--primary {
   --btn-bg: var(--color-primary);
   --btn-fg: var(--color-primary-contrast);
 }
-
 .btn--primary:hover {
   --btn-bg: var(--color-primary-strong);
 }
-
+.btn--gold {
+  --btn-bg: var(--color-gold);
+  --btn-fg: #2a2110;
+}
+.btn--gold:hover {
+  --btn-bg: var(--color-gold-strong);
+  --btn-fg: #fff;
+}
 .btn--outline {
   --btn-bg: transparent;
   --btn-fg: var(--color-ink);
-  border-color: var(--color-ink);
+  border-color: color-mix(in srgb, var(--color-ink) 28%, transparent);
 }
-
 .btn--outline:hover {
   --btn-bg: var(--color-ink);
   --btn-fg: #fff;
+  border-color: var(--color-ink);
 }
-
+.section--dark .btn--outline {
+  --btn-fg: var(--color-on-dark);
+  border-color: color-mix(in srgb, #fff 35%, transparent);
+}
+.section--dark .btn--outline:hover {
+  --btn-bg: #fff;
+  --btn-fg: var(--color-ink);
+}
 .btn--whatsapp {
   --btn-bg: var(--color-whatsapp);
   --btn-fg: #fff;
 }
-
 .btn--whatsapp:hover {
   --btn-bg: var(--color-whatsapp-strong);
 }
-
 .btn__icon {
   width: 1.15em;
   height: 1.15em;
   flex: none;
+}
+
+/* ---------- Link con underline animato ---------- */
+.link-underline {
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -0.15em;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--transition);
+}
+.link-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 /* ---------- Card ---------- */
@@ -218,30 +339,30 @@ a {
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition), box-shadow var(--transition);
+  transition: transform var(--transition), box-shadow var(--transition),
+    border-color var(--transition);
 }
-
 .card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-5px);
   box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--color-gold) 45%, var(--color-line));
 }
 
-/* ---------- Badge "da confermare" ---------- */
+/* ---------- Badge ---------- */
 .badge-tbc {
   display: inline-block;
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-primary-strong);
-  background-color: var(--color-blush);
+  color: var(--color-gold-strong);
+  background-color: var(--color-blush-soft);
   border-radius: var(--radius-pill);
   padding: 0.15em 0.7em;
   margin-left: 0.5em;
   vertical-align: middle;
 }
-
 .note {
   font-size: var(--fs-100);
   color: var(--color-muted);
@@ -249,7 +370,7 @@ a {
 
 /* ---------- Accessibilità ---------- */
 :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
-  outline: 3px solid var(--color-primary);
+  outline: 3px solid var(--color-gold);
   outline-offset: 3px;
   border-radius: var(--radius-sm);
 }
@@ -269,7 +390,7 @@ a {
 .skip-link {
   position: absolute;
   left: var(--space-md);
-  top: -100%;
+  top: -120%;
   z-index: 1000;
   background: var(--color-ink);
   color: #fff;
@@ -277,22 +398,34 @@ a {
   border-radius: var(--radius-sm);
   transition: top var(--transition);
 }
-
 .skip-link:focus {
   top: var(--space-md);
 }
 
-/* ---------- Reveal (animazione leggera allo scroll) ---------- */
-[data-reveal] {
+/* ---------- Reveal (animazione leggera allo scroll) ----------
+   Nascondiamo SOLO se il JS è attivo (html.js): senza JS il contenuto
+   resta visibile (resilienza e accessibilità). */
+html.js [data-reveal] {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(22px);
   transition: opacity var(--transition-slow), transform var(--transition-slow);
+  transition-delay: var(--reveal-delay, 0ms);
   will-change: opacity, transform;
 }
-
+html.js [data-reveal='fade'] {
+  transform: none;
+}
 [data-reveal].is-visible {
   opacity: 1;
   transform: none;
+}
+
+/* ---------- View Transitions (transizioni di pagina morbide) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.4s;
+  }
 }
 
 /* ---------- Rispetto preferenze di movimento ---------- */
@@ -300,7 +433,6 @@ a {
   html {
     scroll-behavior: auto;
   }
-
   *,
   *::before,
   *::after {
@@ -309,7 +441,6 @@ a {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-
   [data-reveal] {
     opacity: 1;
     transform: none;

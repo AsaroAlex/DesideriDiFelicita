@@ -5,36 +5,69 @@ import ServiceCard from '../components/ServiceCard.astro';
 import Gallery from '../components/Gallery.astro';
 import MapEmbed from '../components/MapEmbed.astro';
 import ContactDetails from '../components/ContactDetails.astro';
+import Faq from '../components/Faq.astro';
 import Reveal from '../components/Reveal.astro';
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
 import { galleryImages } from '../data/images';
 
-const topServices = site.services.slice(0, 3);
+const homeServices = site.services.slice(0, 6);
+
+const values = [
+  { title: 'Cura del riccio', text: 'Specializzati nei capelli ricci e mossi: tagli e consigli per definizione e volume naturali.' },
+  { title: 'Ascolto del desiderio', text: 'Ogni look parte da te: studiamo insieme la soluzione più adatta al tuo viso e al tuo stile.' },
+  { title: 'Prodotti professionali', text: 'Trattamenti e cura con linee professionali come Vitality’s, per capelli sani e luminosi.' },
+  { title: 'Atmosfera accogliente', text: 'Un ambiente caldo e rilassante dove prenderti cura di te è un vero momento felice.' },
+];
 ---
 
-<BaseLayout>
+<BaseLayout faq={site.faqs}>
   <Hero />
 
+  <!-- Intro / filosofia -->
   <section class="section">
+    <div class="container intro">
+      <div class="intro__head">
+        <p class="eyebrow">Il salone</p>
+        <h2>Un salone dove la cura dei capelli diventa benessere</h2>
+      </div>
+      <div class="intro__body stack">
+        <p class="lead">
+          Desideri di Felicità è il salone di <strong>{site.ownerName}</strong>, hair
+          stylist a Galliera (BO). Taglio, colore, balayage e una vera passione per la
+          cura del capello riccio.
+        </p>
+        <p>
+          Crediamo che prendersi cura dei propri capelli sia molto più di un gesto
+          estetico: è un momento di benessere, ascolto e fiducia. {site.tagline}
+        </p>
+        <p>
+          <a class="link-underline" href={withBase('/chi-siamo')}>Scopri la nostra storia →</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Servizi -->
+  <section class="section section--alt">
     <div class="container">
       <div class="section__head">
         <p class="eyebrow">Servizi</p>
-        <h2>Cura, stile e benessere per i tuoi capelli</h2>
+        <h2>Cura, stile e benessere su misura</h2>
         <p class="lead">
-          Ogni servizio è pensato su misura, dall’ascolto del tuo desiderio fino al
-          risultato finale.
+          Una selezione dei nostri servizi: ogni trattamento è pensato sulle tue
+          esigenze.
         </p>
       </div>
       <div class="grid grid--3">
         {
-          topServices.map((s) => (
-            <Reveal>
+          homeServices.map((s, i) => (
+            <Reveal style={`--reveal-delay:${(i % 3) * 90}ms`}>
               <ServiceCard
+                index={i + 1}
                 name={s.name}
                 description={s.description}
-                price={s.price}
-                priceConfirmed={site.confirmed.services}
+                priceConfirmed={site.confirmed.prices}
               />
             </Reveal>
           ))
@@ -46,12 +79,34 @@ const topServices = site.services.slice(0, 3);
     </div>
   </section>
 
-  <section class="section section--alt">
+  <!-- Perché sceglierci (sezione scura d'effetto) -->
+  <section class="section section--dark">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Perché Desideri di Felicità</p>
+        <h2>Il tuo momento felice, in ogni dettaglio</h2>
+      </div>
+      <div class="grid grid--4 values">
+        {
+          values.map((v, i) => (
+            <Reveal class="value" style={`--reveal-delay:${(i % 4) * 80}ms`}>
+              <span class="index-num">0{i + 1}</span>
+              <h3 class="value__title">{v.title}</h3>
+              <p>{v.text}</p>
+            </Reveal>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Galleria -->
+  <section class="section">
     <div class="container">
       <div class="section__head">
         <p class="eyebrow">Galleria</p>
         <h2>I nostri lavori</h2>
-        <p class="lead">Tagli, colori e acconciature realizzati nel salone.</p>
+        <p class="lead">Tagli, colori, ricci e acconciature realizzati nel salone.</p>
       </div>
       <Gallery images={galleryImages.slice(0, 6)} placeholders={6} />
       <p class="section__cta">
@@ -60,41 +115,36 @@ const topServices = site.services.slice(0, 3);
     </div>
   </section>
 
-  <section class="section">
-    <div class="container container--narrow center">
-      <p class="eyebrow">Chi siamo</p>
-      <h2>{site.slogan}</h2>
-      <p class="lead center-block">{site.description}</p>
+  <!-- Instagram -->
+  <section class="section section--blush">
+    <div class="container center stack">
+      <p class="eyebrow center-block">Instagram</p>
+      <h2>Seguici su Instagram</h2>
+      <p class="lead center-block">
+        Ogni giorno nuovi look, consigli e ispirazioni dal salone. Le prenotazioni sono
+        aperte anche in DM.
+      </p>
       <p class="section__cta">
-        <a class="btn btn--outline" href={withBase('/chi-siamo')}>Scopri di più</a>
+        <a class="btn btn--gold" href={site.instagramUrl} target="_blank" rel="noopener">
+          @desideri.di.felicita
+        </a>
       </p>
     </div>
   </section>
 
-  <section class="section section--alt">
-    <div class="container">
+  <!-- FAQ -->
+  <section class="section">
+    <div class="container container--narrow">
       <div class="section__head">
-        <p class="eyebrow">Dicono di noi</p>
-        <h2>Recensioni</h2>
+        <p class="eyebrow">Domande frequenti</p>
+        <h2>Tutto quello che vuoi sapere</h2>
       </div>
-      {
-        site.reviews.length > 0 ? (
-          <div class="grid grid--3">
-            {site.reviews.map((r) => (
-              <blockquote class="card">
-                <p>“{r.text}”</p>
-                <footer class="note">— {r.author}</footer>
-              </blockquote>
-            ))}
-          </div>
-        ) : (
-          <p class="note">Le recensioni delle clienti saranno pubblicate a breve.</p>
-        )
-      }
+      <Faq items={site.faqs} />
     </div>
   </section>
 
-  <section class="section">
+  <!-- Contatti -->
+  <section class="section section--alt">
     <div class="container">
       <div class="section__head">
         <p class="eyebrow">Dove siamo</p>
@@ -109,14 +159,33 @@ const topServices = site.services.slice(0, 3);
 </BaseLayout>
 
 <style>
+  .intro {
+    display: grid;
+    gap: var(--space-xl);
+  }
+  @media (min-width: 880px) {
+    .intro {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2xl);
+      align-items: start;
+    }
+    .intro__head {
+      position: sticky;
+      top: calc(var(--header-h) + 2rem);
+    }
+  }
   .section__cta {
     margin-top: var(--space-xl);
   }
-  .center {
-    text-align: center;
+  .value {
+    border-top: 1px solid color-mix(in srgb, #fff 18%, transparent);
+    padding-top: var(--space-md);
   }
-  .center-block {
-    margin-inline: auto;
+  .value__title {
+    margin: var(--space-xs) 0 var(--space-sm);
+  }
+  .value p {
+    color: var(--color-on-dark-soft);
   }
   .contact-grid {
     align-items: start;
