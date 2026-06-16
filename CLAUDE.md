@@ -63,6 +63,7 @@ OG, performance); 3) design premium editoriale; 4) rifinitura "Awwwards-like".
 | Slogan | "La bellezza nasce da un desiderio, la felicità lo rende reale." |
 | Servizi | taglio donna/uomo/bambini, colore, balayage/biondo, cura del riccio, piega/frangia, trattamenti (Vitality's, anti-caduta) |
 | Prenotazioni | WhatsApp, telefono, DM Instagram |
+| P. IVA | IT04315221202 |
 
 I flag in `site.confirmed` per questi dati sono a `true` → entrano nel JSON-LD,
 la mappa è attiva, niente badge "da confermare".
@@ -75,7 +76,7 @@ la mappa è attiva, niente badge "da confermare".
 | Coordinate GPS esatte | mappa usa l'indirizzo; per il pin preciso servono lat/lng |
 | Prezzi servizi | mostrati come "su richiesta" |
 | Foto reali, logo, immagine OG | da caricare |
-| Dati legali (P.IVA), eventuale Facebook | da fornire |
+| Ragione sociale completa, eventuale Facebook | da fornire (P. IVA già fornita: IT04315221202) |
 
 ## 8. Convenzioni tecniche
 

@@ -59,6 +59,9 @@ export function buildHairSalonSchema(
   const sameAs = [site.social.instagram, site.social.facebook].filter(Boolean);
   if (sameAs.length > 0) schema.sameAs = sameAs;
 
+  // Partita IVA (segnale di legittimità per l'attività locale).
+  if (site.legal.vatNumber) schema.vatID = site.legal.vatNumber;
+
   return schema;
 }
 

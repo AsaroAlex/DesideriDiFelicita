@@ -150,10 +150,10 @@ export const site = {
     facebook: '',
   },
 
-  // — Dati legali (placeholder) —
+  // — Dati legali —
   legal: {
     companyName: '',
-    vatNumber: '',
+    vatNumber: 'IT04315221202',
   },
 
   /**
