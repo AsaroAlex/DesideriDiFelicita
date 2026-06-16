@@ -1,0 +1,59 @@
+/* ============================================================
+   FONTS — Desideri di Felicità
+   ------------------------------------------------------------
+   The salon repo self-hosts variable fonts via @fontsource:
+     · Fraunces Variable  (display / serif, high-contrast)
+     · Manrope Variable   (body / sans)
+     · Quicksand          (logo wordmark only)
+   Here we declare matching @font-face rules so the family names
+   used in tokens/typography.css resolve to real binaries. The
+   src URLs point at the same @fontsource(-variable) packages the
+   project uses, served from the jsDelivr CDN.
+   --> HANDOFF: in production, swap these src url() targets for the
+       locally bundled @fontsource files (identical family names),
+       e.g. import '@fontsource-variable/fraunces'.
+   ============================================================ */
+
+/* — Fraunces Variable (display serif) — weight axis, upright — */
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/fraunces@5/files/fraunces-latin-wght-normal.woff2') format('woff2');
+}
+
+/* — Fraunces Variable — weight axis, italic accents — */
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: italic;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/fraunces@5/files/fraunces-latin-wght-italic.woff2') format('woff2');
+}
+
+/* — Manrope Variable (body sans) — weight axis — */
+@font-face {
+  font-family: 'Manrope Variable';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/manrope@5/files/manrope-latin-wght-normal.woff2') format('woff2');
+}
+
+/* — Quicksand (logo wordmark only) — */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/quicksand@5/files/quicksand-latin-600-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/quicksand@5/files/quicksand-latin-700-normal.woff2') format('woff2');
+}

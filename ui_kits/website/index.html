@@ -1,0 +1,193 @@
+<!-- @dsCard group="Website" viewport="1280x760" name="Sito vetrina — Home" subtitle="Interactive multi-page recreation: home, servizi, galleria, chi siamo, contatti" -->
+<!-- @startingPoint section="Website" subtitle="Salon vetrina — full multi-page site" viewport="1280x900" -->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Desideri di Felicità · Parrucchiera a Galliera (BO)</title>
+<link rel="icon" href="../../assets/brand/favicon.svg" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font-body);font-size:var(--fs-200);line-height:var(--lh-normal);color:var(--color-ink);background:var(--color-bg);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  h1,h2,h3,h4{font-family:var(--font-display);font-weight:460;line-height:var(--lh-tight);letter-spacing:var(--tracking-tight);color:var(--color-ink);margin:0;text-wrap:balance}
+  p{margin:0;text-wrap:pretty}
+  em{font-style:italic;color:var(--color-gold-strong)}
+  .lead{font-size:var(--fs-300);color:var(--color-ink-soft);line-height:1.55;max-width:60ch}
+
+  .kit-container{width:100%;max-width:var(--container);margin-inline:auto;padding-inline:var(--gutter)}
+  .kit-container--narrow{max-width:var(--container-narrow)}
+  .section{padding-block:var(--space-3xl)}
+  .section--alt{background:var(--color-surface-alt)}
+  .section--blush{background:var(--color-blush-soft)}
+  .section--dark{background:linear-gradient(170deg,var(--color-dark),var(--color-dark-2));color:var(--color-on-dark)}
+  .grid-3{display:grid;gap:var(--space-lg)}
+  .grid-4{display:grid;gap:var(--space-lg)}
+  .grid-gallery{display:grid;gap:var(--space-md)}
+  @media(min-width:680px){.grid-gallery{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:760px){.grid-3{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.grid-4{grid-template-columns:repeat(4,1fr)}.grid-gallery{grid-template-columns:repeat(3,1fr)}}
+
+  /* Header */
+  .site-header{position:sticky;top:0;z-index:800;background:color-mix(in srgb,var(--color-bg) 80%,transparent);backdrop-filter:saturate(150%) blur(10px);border-bottom:1px solid transparent;transition:background-color var(--transition),border-color var(--transition),box-shadow var(--transition)}
+  .site-header.is-scrolled{background:color-mix(in srgb,var(--color-bg) 92%,transparent);border-bottom-color:var(--color-line);box-shadow:0 6px 24px rgba(34,44,57,.05)}
+  .site-header__inner{display:flex;align-items:center;justify-content:space-between;gap:var(--space-md);min-height:var(--header-h)}
+  .brand{display:inline-flex;text-decoration:none}
+  .site-nav{display:flex;align-items:center;gap:var(--space-xl)}
+  .site-nav ul{display:flex;align-items:center;gap:var(--space-lg);margin:0;padding:0;list-style:none}
+  .site-nav a{position:relative;text-decoration:none;color:var(--color-ink-soft);font-weight:500;font-size:.98rem;padding:.3rem 0;cursor:pointer;transition:color var(--transition)}
+  .site-nav a::after{content:'';position:absolute;left:0;bottom:-2px;width:100%;height:1.5px;background:var(--color-gold);transform:scaleX(0);transform-origin:right;transition:transform var(--transition)}
+  .site-nav a:hover{color:var(--color-ink)}
+  .site-nav a:hover::after,.site-nav a.is-active::after{transform:scaleX(1);transform-origin:left}
+  .site-nav a.is-active{color:var(--color-ink)}
+  .nav-toggle{display:none;flex-direction:column;gap:5px;width:2.85rem;height:2.85rem;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-line);border-radius:var(--radius-sm);cursor:pointer}
+  .nav-toggle span{width:22px;height:2px;background:var(--color-ink);transition:transform var(--transition),opacity var(--transition)}
+  .nav-toggle[aria-expanded=true] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .nav-toggle[aria-expanded=true] span:nth-child(2){opacity:0}
+  .nav-toggle[aria-expanded=true] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  @media(max-width:880px){
+    .nav-toggle{display:flex}
+    .site-nav{position:absolute;inset:var(--header-h) 0 auto 0;flex-direction:column;align-items:stretch;gap:var(--space-md);padding:var(--space-lg) var(--gutter) var(--space-xl);background:var(--color-bg);border-bottom:1px solid var(--color-line);box-shadow:var(--shadow-md);transform:translateY(-12px);opacity:0;visibility:hidden;transition:opacity var(--transition),transform var(--transition),visibility var(--transition)}
+    .site-nav.is-open{transform:none;opacity:1;visibility:visible}
+    .site-nav ul{flex-direction:column;align-items:stretch;gap:var(--space-sm)}
+    .site-nav li a{display:block;padding:.6rem 0;border-bottom:1px solid var(--color-line)}
+  }
+
+  /* Hero */
+  .hero{position:relative;overflow:hidden;background:radial-gradient(70% 90% at 88% 4%,var(--color-blush-soft) 0%,transparent 55%),linear-gradient(180deg,var(--color-bg) 0%,var(--color-surface-alt) 100%);padding-block:clamp(3rem,1rem + 9vw,7rem)}
+  .hero__glow{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;pointer-events:none}
+  .hero__glow--gold{width:26rem;height:26rem;top:-8rem;right:-6rem;background:radial-gradient(circle,color-mix(in srgb,var(--color-gold) 40%,transparent),transparent 70%)}
+  .hero__glow--blue{width:22rem;height:22rem;bottom:-10rem;left:-8rem;background:radial-gradient(circle,color-mix(in srgb,var(--color-primary) 30%,transparent),transparent 70%)}
+  @media(max-width:640px){.hero__glow{opacity:.28;filter:blur(56px)}}
+  .hero__inner{position:relative;display:grid;gap:var(--space-2xl);align-items:center}
+  @media(min-width:960px){.hero__inner{grid-template-columns:1.08fr .92fr}}
+  .hero__title{margin-top:var(--space-xs);font-size:var(--fs-700);max-width:15ch}
+  .hero__title em{color:var(--color-gold-strong)}
+  .hero__desc{margin-top:var(--space-lg)}
+  .hero__actions{display:flex;flex-wrap:wrap;gap:var(--space-md);margin-top:var(--space-xl)}
+  .hero__media{justify-self:center;width:100%}
+  .hero__img{width:100%;border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);object-fit:cover;aspect-ratio:4/5;display:block}
+
+  /* Values */
+  .value__num{font-family:var(--font-display);font-size:var(--fs-300);color:var(--color-gold-on-dark);font-feature-settings:'tnum'}
+  .value__t{font-size:var(--fs-400);color:var(--color-on-dark);margin:var(--space-xs) 0 var(--space-sm)}
+  .value__d{color:var(--color-on-dark-soft)}
+
+  /* Testimonials rating line */
+  .rating-line{display:flex;align-items:center;justify-content:center;gap:.6em;margin:0 0 var(--space-xl);font-weight:600;color:var(--color-ink-soft)}
+
+  /* About */
+  .about{display:grid;gap:var(--space-2xl);align-items:center}
+  @media(min-width:880px){.about{grid-template-columns:.85fr 1.15fr}}
+  .about__media img{width:100%;border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);aspect-ratio:4/5;object-fit:cover;display:block}
+  .about__title{font-size:var(--fs-600);margin-block:var(--space-xs) var(--space-md)}
+
+  /* Contatti */
+  .contatti{display:grid;gap:var(--space-2xl);align-items:start}
+  @media(min-width:880px){.contatti{grid-template-columns:1fr 1fr}}
+  .contact-list{list-style:none;margin:var(--space-lg) 0 0;padding:0;display:grid;gap:var(--space-md)}
+  .contact-list li{display:flex;gap:var(--space-md);align-items:flex-start;color:var(--color-ink-soft)}
+  .contact-list svg{color:var(--color-gold-strong);margin-top:.15em;flex:none}
+  .contact-list a{color:var(--color-primary-strong);text-decoration:none}
+  .contact-list a:hover{text-decoration:underline}
+  .hours{margin-top:var(--space-xl)}
+  .hours h3{font-size:var(--fs-400);margin-bottom:var(--space-sm)}
+  .hours table{border-collapse:collapse;width:100%;max-width:24rem}
+  .hours th{text-align:left;font-weight:600;color:var(--color-ink);padding:.35em 0;font-size:.92rem}
+  .hours td{text-align:right;color:var(--color-ink-soft);padding:.35em 0;font-size:.92rem}
+  .hours tr{border-bottom:1px solid var(--color-line)}
+  .map{position:relative;border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow-md);aspect-ratio:4/3}
+  .map img{width:100%;height:100%;object-fit:cover;filter:saturate(1.05)}
+  .map__pin{position:absolute;left:var(--space-md);bottom:var(--space-md);display:inline-flex;align-items:center;gap:.4em;background:var(--color-surface);color:var(--color-ink);font-weight:600;font-size:.85rem;padding:.5em .9em;border-radius:var(--radius-pill);box-shadow:var(--shadow-md)}
+  .map__pin svg{color:var(--color-gold-strong)}
+
+  /* Footer */
+  .site-footer{background:linear-gradient(170deg,var(--color-dark),var(--color-dark-2));color:var(--color-on-dark);padding-block:var(--space-2xl) var(--space-lg)}
+  .footer__grid{display:grid;gap:var(--space-xl)}
+  @media(min-width:720px){.footer__grid{grid-template-columns:1.6fr 1fr 1fr 1fr}}
+  .footer__motto{font-family:var(--font-display);font-style:italic;color:var(--color-gold-on-dark);margin-top:var(--space-xs);max-width:28ch}
+  .footer__note{font-size:var(--fs-100);color:var(--color-on-dark-soft);margin-top:var(--space-2xs)}
+  .site-footer h4{font-family:var(--font-body);font-size:.74rem;letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-gold-on-dark);margin-bottom:var(--space-sm)}
+  .footer__list{list-style:none;margin:0;padding:0;display:grid;gap:.35rem}
+  .site-footer a{color:var(--color-on-dark);text-decoration:none}
+  .site-footer a:hover{color:var(--color-gold-on-dark)}
+  .footer__bottom{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-sm);margin-top:var(--space-2xl);padding-top:var(--space-lg);border-top:1px solid rgba(255,255,255,.12)}
+
+  /* Reveal — base state is VISIBLE. Hiding is opt-in via `.anim-ready` (added
+     by JS only when the animation timeline is confirmed live), so a throttled
+     or pending timeline (background tab, prerender, PDF, offscreen iframe)
+     never leaves content stuck at opacity:0. Entrance fires on scroll-in. */
+  .reveal{opacity:1;transform:none}
+  @media(prefers-reduced-motion:no-preference){
+    .anim-ready .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s var(--ease-out),transform .7s var(--ease-out)}
+    .anim-ready .reveal.is-in{opacity:1;transform:none}
+  }
+
+  :where(a,button):focus-visible{outline:3px solid var(--color-gold);outline-offset:3px;border-radius:var(--radius-sm)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="data.js"></script>
+<script type="text/babel" src="sections.jsx"></script>
+<script type="text/babel" data-presets="react">
+  const { useEffect } = React;
+  function App() {
+    const [page, setPage] = useState('home');
+    const [scrolled, setScrolled] = useState(false);
+    useEffect(() => {
+      const onScroll = () => setScrolled(window.scrollY > 8);
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+    // Scroll-reveal, consistent across every section. Base state is visible;
+    // we only ARM hiding (.anim-ready) when motion is allowed, then reveal each
+    // block as it scrolls in. A rAF-liveness probe bails to the visible base
+    // state if the animation timeline is throttled (PDF, background, offscreen
+    // iframe); a hard net guarantees in-view blocks never stay hidden.
+    useEffect(() => {
+      const root = document.documentElement;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      root.classList.add('anim-ready');
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+      document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+      let alive = false;
+      requestAnimationFrame(() => { alive = true; });
+      const guard = setTimeout(() => {
+        if (!alive) { io.disconnect(); root.classList.remove('anim-ready'); }
+      }, 400);
+      const net = setTimeout(() => {
+        document.querySelectorAll('.reveal:not(.is-in)').forEach((el) => {
+          if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('is-in');
+        });
+      }, 1200);
+      return () => { io.disconnect(); clearTimeout(guard); clearTimeout(net); };
+    }, [page]);
+    return (
+      <>
+        <Header page={page} setPage={setPage} scrolled={scrolled} />
+        <main key={page}>
+          {page === 'home' && <><Hero setPage={setPage} /><Services compact /><Values /><Gallery compact /><Testimonials /><Faq /></>}
+          {page === 'servizi' && <><Services /><Values /><Faq /></>}
+          {page === 'galleria' && <><Gallery /><Testimonials /></>}
+          {page === 'chi-siamo' && <><About /><Values /></>}
+          {page === 'contatti' && <><Contatti /><Faq /></>}
+        </main>
+        <Footer setPage={setPage} />
+        <WhatsappButton variant="float" />
+      </>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

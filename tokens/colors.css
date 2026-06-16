@@ -1,0 +1,67 @@
+/* ============================================================
+   COLORS — Desideri di Felicità
+   Editorial luxury: warm cream light world + cinematic dark
+   sections. Dusty-blue primary, warm gold/bronze accent, powder
+   rose softener. Mirrors src/styles/tokens.css 1:1.
+   ============================================================ */
+
+:root {
+  /* — Base · light world — */
+  --color-bg: #f8f5f0;            /* crema caldo — page background */
+  --color-surface: #ffffff;       /* cards / panels */
+  --color-surface-alt: #f1ebe1;   /* sabbia tenue — alternating sections */
+
+  /* — Base · rose softener — */
+  --color-blush: #e6c3c6;         /* rosa cipria (accent) */
+  --color-blush-soft: #f7eded;    /* rosa cipria velato (backgrounds) */
+
+  /* — Base · ink / text — */
+  --color-ink: #222c39;           /* slate navy profondo */
+  --color-ink-soft: #4c5868;
+  --color-muted: #687085;         /* secondary text — AA (4.55:1) on cream */
+  --color-line: #e6ded2;          /* borders / dividers */
+
+  /* — Base · primary (dusty blue) — */
+  --color-primary: #4a5d7a;
+  --color-primary-strong: #374a64;
+  --color-primary-contrast: #ffffff;
+
+  /* — Base · gold / bronze accent — */
+  --color-gold: #c2a268;          /* decorative / large display only */
+  --color-gold-strong: #a6864a;   /* large headings, icons, borders (3:1 large) */
+  --color-gold-text: #856832;     /* gold for SMALL text on light — AA (4.80:1) */
+
+  /* — Base · dark sections (cinematic contrast) — */
+  --color-dark: #1e2733;          /* navy/slate profondo */
+  --color-dark-2: #28323f;
+  --color-on-dark: #eef1f5;
+  --color-on-dark-soft: #b8c0cc;
+  --color-gold-on-dark: #d4b277;
+
+  /* — Base · brand utility — */
+  --color-whatsapp: #25d366;
+  --color-whatsapp-strong: #1da851;
+
+  /* ----------------------------------------------------------
+     SEMANTIC ALIASES — prefer these in components
+     ---------------------------------------------------------- */
+  --bg-page: var(--color-bg);
+  --surface-card: var(--color-surface);
+  --surface-alt: var(--color-surface-alt);
+  --surface-blush: var(--color-blush-soft);
+
+  --text-strong: var(--color-ink);
+  --text-body: var(--color-ink-soft);
+  --text-muted: var(--color-muted);
+  --text-on-dark: var(--color-on-dark);
+  --text-on-dark-soft: var(--color-on-dark-soft);
+
+  --accent: var(--color-gold);
+  --accent-strong: var(--color-gold-strong);
+  --accent-text: var(--color-gold-text);   /* eyebrows / small gold labels */
+  --brand: var(--color-primary);
+  --brand-strong: var(--color-primary-strong);
+
+  --border-subtle: var(--color-line);
+  --focus-ring: var(--color-gold);
+}

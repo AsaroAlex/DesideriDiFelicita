@@ -1,0 +1,12 @@
+/* ============================================================
+   Desideri di Felicità — Design System entry point
+   Consumers link THIS one file. It is an @import manifest only.
+   Aesthetic source of truth: src/styles/tokens.css (the salon repo).
+   ============================================================ */
+
+/* Webfonts first (must precede other rules) */
+@import './tokens/fonts.css';
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/motion.css';
