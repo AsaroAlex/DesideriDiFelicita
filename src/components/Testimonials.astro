@@ -1,0 +1,124 @@
+---
+import { site } from '../data/site';
+
+const { reviews, googleReviews, googleBusinessUrl } = site;
+const hasReviews = reviews.length > 0;
+const hasRating = googleReviews.rating > 0;
+
+// 5 stelle, piene fino al voto arrotondato
+function stars(rating: number) {
+  const r = Math.round(rating);
+  return Array.from({ length: 5 }, (_, i) => i < r);
+}
+const ratingLabel = hasRating
+  ? `${googleReviews.rating.toLocaleString('it-IT')} su 5` +
+    (googleReviews.count > 0 ? ` · ${googleReviews.count} recensioni su Google` : ' su Google')
+  : '';
+---
+
+<div class="testimonials">
+  {
+    hasRating && (
+      <p class="testimonials__rating">
+        <span class="stars" role="img" aria-label={`Valutazione ${ratingLabel}`}>
+          {stars(googleReviews.rating).map((on) => (
+            <svg viewBox="0 0 24 24" class={on ? 'star star--on' : 'star'} aria-hidden="true">
+              <path d="M12 2l2.95 5.98 6.6.96-4.77 4.65 1.13 6.57L12 17.02 6.09 20.14l1.13-6.57L2.45 8.94l6.6-.96L12 2z" />
+            </svg>
+          ))}
+        </span>
+        <span class="testimonials__rating-text">{ratingLabel}</span>
+      </p>
+    )
+  }
+
+  {
+    hasReviews ? (
+      <ul class="testimonials__grid" role="list">
+        {reviews.map((r) => (
+          <li class="card testimonial">
+            {r.rating && (
+              <span class="stars" role="img" aria-label={`${r.rating} su 5`}>
+                {stars(r.rating).map((on) => (
+                  <svg viewBox="0 0 24 24" class={on ? 'star star--on' : 'star'} aria-hidden="true">
+                    <path d="M12 2l2.95 5.98 6.6.96-4.77 4.65 1.13 6.57L12 17.02 6.09 20.14l1.13-6.57L2.45 8.94l6.6-.96L12 2z" />
+                  </svg>
+                ))}
+              </span>
+            )}
+            <blockquote class="testimonial__text">“{r.text}”</blockquote>
+            <footer class="testimonial__author">— {r.author}</footer>
+            <span class="testimonial__src">Recensione Google</span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="note testimonials__empty">
+        Le recensioni delle nostre clienti sono su Google: leggile o lascia la tua.
+      </p>
+    )
+  }
+
+  <p class="testimonials__cta">
+    <a class="btn btn--outline" href={googleBusinessUrl} target="_blank" rel="noopener">
+      {hasReviews ? 'Tutte le recensioni su Google' : 'Leggi le recensioni su Google'}
+    </a>
+  </p>
+</div>
+
+<style>
+  .testimonials__rating {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    margin-bottom: var(--space-lg);
+    font-weight: 600;
+  }
+  .stars {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .star {
+    width: 1.1em;
+    height: 1.1em;
+    fill: color-mix(in srgb, var(--color-gold) 30%, var(--color-line));
+  }
+  .star--on {
+    fill: var(--color-gold);
+  }
+  .testimonials__grid {
+    display: grid;
+    gap: var(--space-lg);
+    margin: 0;
+  }
+  @media (min-width: 760px) {
+    .testimonials__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .testimonial {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .testimonial__text {
+    font-family: var(--font-display);
+    font-size: var(--fs-400);
+    line-height: 1.4;
+    color: var(--color-ink);
+    flex: 1;
+  }
+  .testimonial__author {
+    font-weight: 600;
+    color: var(--color-ink-soft);
+  }
+  .testimonial__src {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .testimonials__cta {
+    margin-top: var(--space-xl);
+  }
+</style>

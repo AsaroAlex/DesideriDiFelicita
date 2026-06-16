@@ -6,6 +6,7 @@ import Gallery from '../components/Gallery.astro';
 import MapEmbed from '../components/MapEmbed.astro';
 import ContactDetails from '../components/ContactDetails.astro';
 import Faq from '../components/Faq.astro';
+import Testimonials from '../components/Testimonials.astro';
 import Reveal from '../components/Reveal.astro';
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
@@ -112,6 +113,18 @@ const values = [
       <p class="section__cta">
         <a class="btn btn--outline" href={withBase('/galleria')}>Vai alla galleria</a>
       </p>
+    </div>
+  </section>
+
+  <!-- Recensioni -->
+  <section class="section section--alt">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Dicono di noi</p>
+        <h2>Le recensioni delle clienti</h2>
+        <p class="lead">La soddisfazione di chi ci ha scelto, direttamente da Google.</p>
+      </div>
+      <Testimonials />
     </div>
   </section>
 

@@ -103,8 +103,14 @@ export const site = {
     { name: 'Taglio bambini', description: 'Tagli per i più piccoli in un ambiente sereno e accogliente.' },
   ] satisfies Service[],
 
-  // — Recensioni (placeholder) —
-  reviews: [] satisfies Review[],
+  // — Recensioni —
+  // Testi reali delle recensioni Google (da incollare). Mostrati come vetrina,
+  // NON inseriti nel JSON-LD (policy Google sulle recensioni di terze parti).
+  reviews: [
+    // { author: 'Nome C.', rating: 5, text: 'Testo della recensione…' },
+  ] satisfies Review[],
+  // Valutazione media e numero recensioni Google (0 = sconosciuto, da compilare).
+  googleReviews: { rating: 0, count: 0 },
 
   // — Domande frequenti (per SEO: FAQPage) —
   faqs: [
