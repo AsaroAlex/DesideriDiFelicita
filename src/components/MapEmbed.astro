@@ -1,0 +1,82 @@
+---
+import { site } from '../data/site';
+
+/**
+ * Mostra la mappa SOLO se indirizzo o coordinate sono confermati.
+ * Altrimenti mostra un riquadro placeholder chiaro: NON visualizziamo mai
+ * un indirizzo inventato/non verificato su una mappa.
+ */
+const c = site.confirmed;
+const showMap = c.address || c.coordinates;
+
+const query = c.coordinates && (site.coordinates.lat !== 0 || site.coordinates.lng !== 0)
+  ? `${site.coordinates.lat},${site.coordinates.lng}`
+  : `${site.address.street}, ${site.address.postalCode} ${site.address.city}`;
+
+const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+---
+
+{
+  showMap ? (
+    <div class="map">
+      <iframe
+        title={`Mappa: dove si trova ${site.businessName}`}
+        src={mapSrc}
+        width="100%"
+        height="380"
+        style="border:0"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        allowfullscreen
+      />
+    </div>
+  ) : (
+    <div class="map map--placeholder">
+      <div class="map__inner">
+        <p class="map__title">Mappa in arrivo</p>
+        <p class="note">
+          L’indirizzo del salone è in fase di conferma: la mappa sarà attivata
+          appena i dati saranno verificati.
+        </p>
+        <p class="map__addr">
+          {site.address.street}, {site.address.postalCode} {site.address.city} (
+          {site.address.province})
+          <span class="badge-tbc">da confermare</span>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+<style>
+  .map {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-line);
+  }
+  .map iframe {
+    display: block;
+  }
+  .map--placeholder {
+    background:
+      linear-gradient(135deg, var(--color-blush) 0%, var(--color-surface-alt) 100%);
+    min-height: 320px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: var(--space-xl);
+  }
+  .map__inner {
+    max-width: 38ch;
+  }
+  .map__title {
+    font-family: var(--font-display);
+    font-size: var(--fs-500);
+    margin-bottom: var(--space-sm);
+  }
+  .map__addr {
+    margin-top: var(--space-md);
+    font-weight: 500;
+  }
+</style>

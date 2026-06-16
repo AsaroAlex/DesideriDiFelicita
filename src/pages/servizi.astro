@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import Reveal from '../components/Reveal.astro';
+import WhatsappButton from '../components/WhatsappButton.astro';
+import { site } from '../data/site';
+
+const title = 'Servizi';
+const description =
+  'Taglio, colore, piega, balayage e trattamenti su misura nel salone Desideri di Felicità a Galliera (BO).';
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Servizi</p>
+        <h1>I nostri servizi</h1>
+        <p class="lead">
+          Ogni trattamento nasce dall’ascolto del tuo desiderio. Di seguito i servizi
+          principali del salone: i prezzi verranno definiti insieme alla titolare.
+        </p>
+      </div>
+
+      <div class="grid grid--3">
+        {
+          site.services.map((s) => (
+            <Reveal>
+              <ServiceCard
+                name={s.name}
+                description={s.description}
+                price={s.price}
+                priceConfirmed={site.confirmed.services}
+              />
+            </Reveal>
+          ))
+        }
+      </div>
+
+      <div class="cta-band">
+        <p>Vuoi un consiglio sul servizio più adatto a te?</p>
+        <WhatsappButton label="Scrivici su WhatsApp" />
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .cta-band {
+    margin-top: var(--space-2xl);
+    padding: var(--space-xl);
+    text-align: center;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-lg);
+    display: grid;
+    gap: var(--space-md);
+    justify-items: center;
+  }
+</style>

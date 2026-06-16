@@ -1,0 +1,39 @@
+---
+interface Props {
+  name: string;
+  description: string;
+  price?: string;
+  /** Se true mostra il prezzo; altrimenti "su richiesta" (prezzi non confermati) */
+  priceConfirmed?: boolean;
+}
+const { name, description, price, priceConfirmed = false } = Astro.props;
+---
+
+<article class="card service">
+  <h3 class="service__name">{name}</h3>
+  <p class="service__desc">{description}</p>
+  <p class="service__price">
+    {priceConfirmed && price ? price : 'Prezzo su richiesta'}
+  </p>
+</article>
+
+<style>
+  .service {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .service__name {
+    font-size: var(--fs-400);
+  }
+  .service__desc {
+    margin-top: var(--space-sm);
+    color: var(--color-ink-soft);
+    flex: 1;
+  }
+  .service__price {
+    margin-top: var(--space-md);
+    font-weight: 600;
+    color: var(--color-primary-strong);
+  }
+</style>

@@ -1,0 +1,221 @@
+---
+import { site } from '../data/site';
+import { withBase } from '../lib/href';
+import WhatsappButton from './WhatsappButton.astro';
+
+const nav = [
+  { href: '/', label: 'Home' },
+  { href: '/servizi', label: 'Servizi' },
+  { href: '/galleria', label: 'Galleria' },
+  { href: '/chi-siamo', label: 'Chi siamo' },
+  { href: '/contatti', label: 'Contatti' },
+];
+
+const norm = (p: string) => '/' + p.replace(/^\/+|\/+$/g, '');
+const current = norm(Astro.url.pathname);
+const isActive = (href: string) => norm(withBase(href)) === current;
+---
+
+<header class="header">
+  <div class="container header__inner">
+    <a class="brand" href={withBase('/')} aria-label={`${site.businessName} — home`}>
+      <span class="brand__name">Desideri di Felicità</span>
+      <span class="brand__tag">{site.category.split('·')[0].trim()}</span>
+    </a>
+
+    <button
+      class="nav-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="site-nav"
+      aria-label="Apri il menu"
+    >
+      <span class="nav-toggle__bar" aria-hidden="true"></span>
+      <span class="nav-toggle__bar" aria-hidden="true"></span>
+      <span class="nav-toggle__bar" aria-hidden="true"></span>
+    </button>
+
+    <nav id="site-nav" class="nav" aria-label="Navigazione principale">
+      <ul class="nav__list" role="list">
+        {
+          nav.map((item) => (
+            <li>
+              <a
+                class="nav__link"
+                href={withBase(item.href)}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <WhatsappButton class="nav__cta" label="WhatsApp" />
+    </nav>
+  </div>
+</header>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 800;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    backdrop-filter: saturate(140%) blur(8px);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    min-height: var(--header-h);
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.05;
+    text-decoration: none;
+    color: var(--color-ink);
+  }
+  .brand__name {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  .brand__tag {
+    font-size: 0.66rem;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+  .nav__list {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    margin: 0;
+  }
+  .nav__link {
+    text-decoration: none;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+    transition: color var(--transition), border-color var(--transition);
+  }
+  .nav__link:hover {
+    color: var(--color-ink);
+  }
+  .nav__link[aria-current='page'] {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-primary);
+  }
+  .nav :global(.nav__cta) {
+    padding: 0.5em 1.1em;
+    font-size: 0.95rem;
+  }
+
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .nav-toggle__bar {
+    width: 22px;
+    height: 2px;
+    background: var(--color-ink);
+    transition: transform var(--transition), opacity var(--transition);
+  }
+  .nav-toggle[aria-expanded='true'] .nav-toggle__bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+  .nav-toggle[aria-expanded='true'] .nav-toggle__bar:nth-child(2) {
+    opacity: 0;
+  }
+  .nav-toggle[aria-expanded='true'] .nav-toggle__bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  /* Mobile */
+  @media (max-width: 860px) {
+    .nav-toggle {
+      display: flex;
+    }
+    .nav {
+      position: absolute;
+      inset: var(--header-h) 0 auto 0;
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-md);
+      padding: var(--space-lg) var(--gutter) var(--space-xl);
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-line);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-12px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--transition), transform var(--transition),
+        visibility var(--transition);
+    }
+    .nav.is-open {
+      transform: none;
+      opacity: 1;
+      visibility: visible;
+    }
+    .nav__list {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-sm);
+    }
+    .nav__link {
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .nav :global(.nav__cta) {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.nav-toggle');
+  const nav = document.getElementById('site-nav');
+
+  if (toggle && nav) {
+    const setOpen = (open: boolean) => {
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Chiudi il menu' : 'Apri il menu');
+      nav.classList.toggle('is-open', open);
+    };
+
+    toggle.addEventListener('click', () => {
+      setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+
+    nav.querySelectorAll('a').forEach((link) =>
+      link.addEventListener('click', () => setOpen(false))
+    );
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    });
+  }
+</script>

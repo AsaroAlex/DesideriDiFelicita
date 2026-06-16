@@ -1,0 +1,89 @@
+---
+import { Image } from 'astro:assets';
+import type { GalleryImage } from '../data/images';
+
+interface Props {
+  images?: GalleryImage[];
+  /** Numero di tessere placeholder se non ci sono ancora foto */
+  placeholders?: number;
+}
+const { images = [], placeholders = 6 } = Astro.props;
+const hasImages = images.length > 0;
+---
+
+{
+  hasImages ? (
+    <ul class="gallery" role="list">
+      {images.map((img) => (
+        <li class="gallery__item">
+          <Image
+            src={img.src}
+            alt={img.alt}
+            class="gallery__img"
+            widths={[320, 640, 960]}
+            sizes="(min-width: 900px) 30vw, (min-width: 600px) 45vw, 90vw"
+            loading="lazy"
+          />
+          {img.category && <span class="gallery__tag">{img.category}</span>}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <div class="gallery-empty">
+      <ul class="gallery" role="list" aria-hidden="true">
+        {Array.from({ length: placeholders }).map(() => (
+          <li class="gallery__item gallery__item--empty" />
+        ))}
+      </ul>
+      <p class="note gallery-empty__note">
+        Le foto dei lavori saranno disponibili a breve.
+      </p>
+    </div>
+  )
+}
+
+<style>
+  .gallery {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+    margin: 0;
+  }
+  .gallery__item {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    aspect-ratio: 3 / 4;
+    background: var(--color-surface-alt);
+  }
+  .gallery__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+  }
+  .gallery__item:hover .gallery__img {
+    transform: scale(1.04);
+  }
+  .gallery__tag {
+    position: absolute;
+    left: var(--space-sm);
+    bottom: var(--space-sm);
+    background: color-mix(in srgb, var(--color-ink) 75%, transparent);
+    color: #fff;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.25em 0.7em;
+    border-radius: var(--radius-pill);
+  }
+  .gallery__item--empty {
+    background:
+      linear-gradient(135deg, var(--color-blush) 0%, var(--color-surface-alt) 100%);
+    border: 1px dashed var(--color-line);
+  }
+  .gallery-empty__note {
+    margin-top: var(--space-md);
+    text-align: center;
+  }
+</style>

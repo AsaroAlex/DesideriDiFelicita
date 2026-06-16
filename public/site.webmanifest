@@ -1,0 +1,19 @@
+{
+  "name": "Desideri di Felicità",
+  "short_name": "Desideri",
+  "description": "Salone di parrucchiera a Galliera (BO): taglio, colore, piega e trattamenti su misura.",
+  "lang": "it",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#faf6f1",
+  "theme_color": "#b0865f",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

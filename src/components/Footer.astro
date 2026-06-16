@@ -1,0 +1,117 @@
+---
+import { site } from '../data/site';
+import { withBase } from '../lib/href';
+import { telHref } from '../lib/contact';
+
+const year = new Date().getFullYear();
+const c = site.confirmed;
+---
+
+<footer class="footer">
+  <div class="container footer__grid">
+    <div class="footer__brand">
+      <p class="footer__name">Desideri di Felicità</p>
+      <p class="note">{site.category}</p>
+    </div>
+
+    <div>
+      <h2 class="footer__title">Dove siamo</h2>
+      <address class="footer__address">
+        {site.address.street}<br />
+        {site.address.postalCode} {site.address.city} ({site.address.province})
+        {!c.address && <span class="badge-tbc">da confermare</span>}
+      </address>
+    </div>
+
+    <div>
+      <h2 class="footer__title">Contatti</h2>
+      <ul class="footer__list" role="list">
+        <li>
+          <a href={telHref(site.phone)}>{site.phone}</a>
+          {!c.phone && <span class="badge-tbc">da confermare</span>}
+        </li>
+        {site.email && <li><a href={`mailto:${site.email}`}>{site.email}</a></li>}
+        <li>
+          <a href={site.instagramUrl} target="_blank" rel="noopener">Instagram</a>
+        </li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="footer__title">Orari</h2>
+      <ul class="footer__list" role="list">
+        {site.openingHours.map((o) => <li>{o.label}: {o.opens}–{o.closes}</li>)}
+      </ul>
+      {!c.openingHours && <span class="badge-tbc">da confermare</span>}
+    </div>
+  </div>
+
+  <div class="container footer__bottom">
+    <p class="note">
+      © {year} {site.businessName}.{' '}
+      {site.legal.vatNumber && <>P.IVA {site.legal.vatNumber}. </>}
+      I dati contrassegnati con “da confermare” sono provvisori e in fase di verifica.
+    </p>
+    <p class="note">
+      <a href={withBase('/')}>Home</a> · <a href={withBase('/contatti')}>Contatti</a>
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: var(--color-ink);
+    color: #efe7df;
+    padding-block: var(--space-2xl) var(--space-lg);
+    margin-top: var(--space-3xl);
+  }
+  .footer :global(a) {
+    color: #f3e9df;
+  }
+  .footer__grid {
+    display: grid;
+    gap: var(--space-xl);
+  }
+  @media (min-width: 720px) {
+    .footer__grid {
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    }
+  }
+  .footer__name {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+  }
+  .footer__title {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: #cdbfb2;
+    margin-bottom: var(--space-sm);
+  }
+  .footer__address {
+    font-style: normal;
+    line-height: var(--lh-normal);
+  }
+  .footer__list {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .footer :global(.note) {
+    color: #b7a99c;
+  }
+  .footer :global(.badge-tbc) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f0dcc8;
+  }
+  .footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+</style>

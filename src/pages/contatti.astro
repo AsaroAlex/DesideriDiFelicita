@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ContactDetails from '../components/ContactDetails.astro';
+import MapEmbed from '../components/MapEmbed.astro';
+
+const title = 'Contatti';
+const description =
+  'Contatta il salone Desideri di Felicità: telefono, WhatsApp, indirizzo e orari. Ti aspettiamo a Galliera (BO).';
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Contatti</p>
+        <h1>Parliamo del tuo prossimo look</h1>
+        <p class="lead">
+          Scrivici su WhatsApp o chiamaci per informazioni e appuntamenti.
+        </p>
+        <p class="note">I recapiti riportati sono provvisori e in fase di conferma.</p>
+      </div>
+
+      <div class="grid grid--2 contact-grid">
+        <ContactDetails />
+        <MapEmbed />
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .contact-grid {
+    align-items: start;
+  }
+</style>

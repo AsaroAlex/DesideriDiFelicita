@@ -1,0 +1,85 @@
+/*
+ * DESIGN TOKEN — Desideri di Felicità
+ * -----------------------------------
+ * Punto UNICO per modificare l'estetica del sito (colori, tipografia,
+ * spaziature, raggi, ombre). In Fase 2, allineando palette e font allo
+ * stile reale dell'Instagram, basterà cambiare i valori qui.
+ *
+ * Base di partenza: elegante / editoriale, toni caldi e femminili.
+ */
+
+:root {
+  /* — Colori — */
+  --color-bg: #faf6f1;          /* avorio caldo */
+  --color-surface: #ffffff;
+  --color-surface-alt: #f3ece3; /* sezioni alternate */
+  --color-blush: #efe2d8;       /* dettagli morbidi */
+
+  --color-ink: #221b16;         /* testo principale (espresso) */
+  --color-ink-soft: #574d45;
+  --color-muted: #8a7e73;       /* testo secondario */
+  --color-line: #e7ddd1;        /* bordi / divisori */
+
+  --color-primary: #b0865f;     /* bronzo/oro caldo (accento) */
+  --color-primary-strong: #8f6743;
+  --color-primary-contrast: #ffffff;
+
+  --color-whatsapp: #25d366;
+  --color-whatsapp-strong: #1da851;
+
+  /* — Tipografia —
+     Fase 1: stack di sistema raffinati (zero richieste di rete, ottimo per
+     performance). In Fase 2 si possono sostituire con font self-hosted. */
+  --font-display: 'Iowan Old Style', 'Apple Garamond', 'Palatino Linotype',
+    Palatino, Georgia, 'Times New Roman', serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+
+  /* Scala tipografica fluida (clamp: min, preferita vw, max) */
+  --fs-100: 0.875rem;
+  --fs-200: 1rem;
+  --fs-300: 1.125rem;
+  --fs-400: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+  --fs-500: clamp(1.5rem, 1.25rem + 1.2vw, 2rem);
+  --fs-600: clamp(2rem, 1.6rem + 2vw, 3rem);
+  --fs-700: clamp(2.6rem, 1.9rem + 3.4vw, 4.5rem);
+
+  --lh-tight: 1.1;
+  --lh-snug: 1.25;
+  --lh-normal: 1.6;
+
+  --tracking-wide: 0.14em; /* per occhielli/etichette maiuscole */
+
+  /* — Spaziature — */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+
+  /* — Layout — */
+  --container: 72rem;       /* larghezza massima contenuto */
+  --container-narrow: 48rem;
+  --gutter: clamp(1.1rem, 0.6rem + 2.5vw, 2.5rem);
+
+  /* — Forme — */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* — Ombre — */
+  --shadow-sm: 0 1px 2px rgba(34, 27, 22, 0.06);
+  --shadow-md: 0 10px 30px rgba(34, 27, 22, 0.08);
+  --shadow-lg: 0 24px 60px rgba(34, 27, 22, 0.12);
+
+  /* — Movimento — */
+  --transition: 220ms ease;
+  --transition-slow: 420ms ease;
+
+  /* — Header — */
+  --header-h: 4.5rem;
+}

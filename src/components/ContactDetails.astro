@@ -1,0 +1,68 @@
+---
+import { site } from '../data/site';
+import { telHref } from '../lib/contact';
+import WhatsappButton from './WhatsappButton.astro';
+
+const c = site.confirmed;
+---
+
+<div class="contact stack">
+  <div>
+    <h3 class="contact__h">Indirizzo</h3>
+    <address class="contact__addr">
+      {site.address.street}<br />
+      {site.address.postalCode} {site.address.city} ({site.address.province})
+      {!c.address && <span class="badge-tbc">da confermare</span>}
+    </address>
+  </div>
+
+  <div>
+    <h3 class="contact__h">Orari</h3>
+    <ul class="contact__list" role="list">
+      {site.openingHours.map((o) => <li>{o.label}: {o.opens}–{o.closes}</li>)}
+    </ul>
+    {!c.openingHours && <span class="badge-tbc">da confermare</span>}
+  </div>
+
+  <div>
+    <h3 class="contact__h">Telefono</h3>
+    <p>
+      <a href={telHref(site.phone)}>{site.phone}</a>
+      {!c.phone && <span class="badge-tbc">da confermare</span>}
+    </p>
+  </div>
+
+  <div class="contact__actions">
+    <WhatsappButton />
+    <a class="btn btn--outline" href={telHref(site.phone)}>Chiama</a>
+    <a class="btn btn--outline" href={site.instagramUrl} target="_blank" rel="noopener">
+      Instagram
+    </a>
+  </div>
+</div>
+
+<style>
+  .contact__h {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: var(--space-2xs);
+  }
+  .contact__addr {
+    font-style: normal;
+    line-height: var(--lh-normal);
+  }
+  .contact__list {
+    margin: 0;
+    display: grid;
+    gap: 0.25rem;
+  }
+  .contact__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+</style>

@@ -1,0 +1,124 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import Gallery from '../components/Gallery.astro';
+import MapEmbed from '../components/MapEmbed.astro';
+import ContactDetails from '../components/ContactDetails.astro';
+import Reveal from '../components/Reveal.astro';
+import { site } from '../data/site';
+import { withBase } from '../lib/href';
+import { galleryImages } from '../data/images';
+
+const topServices = site.services.slice(0, 3);
+---
+
+<BaseLayout>
+  <Hero />
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Servizi</p>
+        <h2>Cura, stile e benessere per i tuoi capelli</h2>
+        <p class="lead">
+          Ogni servizio è pensato su misura, dall’ascolto del tuo desiderio fino al
+          risultato finale.
+        </p>
+      </div>
+      <div class="grid grid--3">
+        {
+          topServices.map((s) => (
+            <Reveal>
+              <ServiceCard
+                name={s.name}
+                description={s.description}
+                price={s.price}
+                priceConfirmed={site.confirmed.services}
+              />
+            </Reveal>
+          ))
+        }
+      </div>
+      <p class="section__cta">
+        <a class="btn btn--outline" href={withBase('/servizi')}>Tutti i servizi</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--alt">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Galleria</p>
+        <h2>I nostri lavori</h2>
+        <p class="lead">Tagli, colori e acconciature realizzati nel salone.</p>
+      </div>
+      <Gallery images={galleryImages.slice(0, 6)} placeholders={6} />
+      <p class="section__cta">
+        <a class="btn btn--outline" href={withBase('/galleria')}>Vai alla galleria</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container container--narrow center">
+      <p class="eyebrow">Chi siamo</p>
+      <h2>{site.slogan}</h2>
+      <p class="lead center-block">{site.description}</p>
+      <p class="section__cta">
+        <a class="btn btn--outline" href={withBase('/chi-siamo')}>Scopri di più</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--alt">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Dicono di noi</p>
+        <h2>Recensioni</h2>
+      </div>
+      {
+        site.reviews.length > 0 ? (
+          <div class="grid grid--3">
+            {site.reviews.map((r) => (
+              <blockquote class="card">
+                <p>“{r.text}”</p>
+                <footer class="note">— {r.author}</footer>
+              </blockquote>
+            ))}
+          </div>
+        ) : (
+          <p class="note">Le recensioni delle clienti saranno pubblicate a breve.</p>
+        )
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Dove siamo</p>
+        <h2>Vieni a trovarci</h2>
+      </div>
+      <div class="grid grid--2 contact-grid">
+        <ContactDetails />
+        <MapEmbed />
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .section__cta {
+    margin-top: var(--space-xl);
+  }
+  .center {
+    text-align: center;
+  }
+  .center-block {
+    margin-inline: auto;
+  }
+  .contact-grid {
+    align-items: start;
+  }
+</style>

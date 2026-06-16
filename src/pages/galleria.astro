@@ -1,0 +1,45 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Gallery from '../components/Gallery.astro';
+import WhatsappButton from '../components/WhatsappButton.astro';
+import { galleryImages } from '../data/images';
+
+const title = 'Galleria';
+const description =
+  'Una raccolta dei lavori realizzati nel salone Desideri di Felicità: tagli, colori e acconciature.';
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <p class="eyebrow">Galleria</p>
+        <h1>I nostri lavori</h1>
+        <p class="lead">
+          Lasciati ispirare dai tagli, dai colori e dalle acconciature realizzati nel
+          salone.
+        </p>
+      </div>
+
+      <Gallery images={galleryImages} placeholders={9} />
+
+      <div class="cta-band">
+        <p>Hai uno stile che ti piacerebbe realizzare?</p>
+        <WhatsappButton label="Parlane con noi su WhatsApp" />
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .cta-band {
+    margin-top: var(--space-2xl);
+    padding: var(--space-xl);
+    text-align: center;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-lg);
+    display: grid;
+    gap: var(--space-md);
+    justify-items: center;
+  }
+</style>

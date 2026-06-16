@@ -1,0 +1,15 @@
+---
+import { buildHairSalonSchema } from '../lib/structured-data';
+import { ogImage } from '../data/images';
+import { withBase } from '../lib/href';
+
+const canonicalPath = Astro.url.pathname.endsWith('/')
+  ? Astro.url.pathname
+  : `${Astro.url.pathname}/`;
+const canonical = new URL(canonicalPath, Astro.site).href;
+const ogUrl = ogImage ? new URL(withBase(ogImage), Astro.site).href : null;
+
+const schema = buildHairSalonSchema(canonical, ogUrl);
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />
