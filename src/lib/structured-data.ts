@@ -9,7 +9,8 @@ import { site } from '../data/site';
  */
 export function buildHairSalonSchema(
   canonicalUrl: string,
-  ogImageUrl?: string | null
+  ogImageUrl?: string | null,
+  logoUrl?: string | null
 ): Record<string, unknown> {
   const c = site.confirmed;
 
@@ -20,6 +21,8 @@ export function buildHairSalonSchema(
     url: canonicalUrl,
     description: site.description,
   };
+
+  if (logoUrl) schema.logo = logoUrl;
 
   if (ogImageUrl) schema.image = ogImageUrl;
 

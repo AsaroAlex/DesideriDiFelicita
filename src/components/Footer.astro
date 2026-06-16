@@ -2,6 +2,7 @@
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
 import { telHref } from '../lib/contact';
+import Logo from './Logo.astro';
 
 const year = new Date().getFullYear();
 const c = site.confirmed;
@@ -10,7 +11,7 @@ const c = site.confirmed;
 <footer class="footer">
   <div class="container footer__grid">
     <div class="footer__brand">
-      <p class="footer__name">Desideri di Felicità</p>
+      <Logo variant="horizontal" theme="dark" tagline={false} class="footer__logo" />
       <p class="footer__motto">{site.slogan}</p>
       <p class="footer__note">di {site.ownerName} · {site.role}</p>
     </div>
@@ -84,10 +85,8 @@ const c = site.confirmed;
       grid-template-columns: 1.5fr 1fr 1fr 1fr;
     }
   }
-  .footer__name {
-    font-family: var(--font-display);
-    font-size: 1.6rem;
-    color: var(--color-on-dark);
+  .footer :global(.footer__logo) {
+    margin-bottom: var(--space-sm);
   }
   .footer__motto {
     font-family: var(--font-display);

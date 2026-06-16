@@ -2,6 +2,7 @@
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
 import WhatsappButton from './WhatsappButton.astro';
+import Logo from './Logo.astro';
 
 const nav = [
   { href: '/', label: 'Home' },
@@ -19,8 +20,7 @@ const isActive = (href: string) => norm(withBase(href)) === current;
 <header class="header">
   <div class="container header__inner">
     <a class="brand" href={withBase('/')} aria-label={`${site.businessName} — home`}>
-      <span class="brand__name">Desideri di Felicità</span>
-      <span class="brand__tag">di {site.ownerName} · {site.role}</span>
+      <Logo variant="horizontal" />
     </a>
 
     <button
@@ -82,24 +82,14 @@ const isActive = (href: string) => norm(withBase(href)) === current;
   }
 
   .brand {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.02;
+    display: inline-flex;
+    align-items: center;
     text-decoration: none;
+    border-radius: var(--radius-sm);
   }
-  .brand__name {
-    font-family: var(--font-display);
-    font-size: 1.45rem;
-    font-weight: 480;
-    color: var(--color-primary);
-    letter-spacing: -0.01em;
-  }
-  .brand__tag {
-    font-size: 0.62rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-gold-strong);
-    margin-top: 0.2em;
+  .brand:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 4px;
   }
 
   .nav {

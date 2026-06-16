@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="46 34 132 176" role="img" aria-label="Desideri di Felicità">
+  <!-- Versione monocromatica 1 colore (stampa, ricamo, timbro). Eredita currentColor. -->
+  <g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M138 48 L72 48 C66 48 64 52 64 58 L64 150"/>
+    <path d="M64 101 L112 101"/>
+    <path d="M64 150 C64 182 98 194 126 176 C156 158 160 110 122 94 C102 86 88 102 100 118 C107 127 120 122 117 112"/>
+  </g>
+</svg>
