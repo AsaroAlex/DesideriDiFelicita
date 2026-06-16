@@ -82,7 +82,18 @@ const { title, description, image, noindex, breadcrumbs, faq } = Astro.props;
         );
         items.forEach((el) => revealObserver!.observe(el));
       }
+      // Rivela ad ogni caricamento pagina (View Transitions).
       document.addEventListener('astro:page-load', initReveal);
+      // Primo caricamento: esegui SUBITO per evitare la race in cui
+      // 'astro:page-load' scatta prima che questo script venga eseguito
+      // (altrimenti i [data-reveal] resterebbero invisibili). Ripeti su
+      // DOMContentLoaded e load come rete di sicurezza (initReveal è idempotente).
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initReveal);
+      } else {
+        initReveal();
+      }
+      window.addEventListener('load', initReveal);
     </script>
 
     <style>

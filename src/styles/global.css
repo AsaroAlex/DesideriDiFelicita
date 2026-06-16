@@ -415,7 +415,9 @@ html.js [data-reveal] {
 html.js [data-reveal='fade'] {
   transform: none;
 }
-[data-reveal].is-visible {
+/* Deve battere la specificità di `html.js [data-reveal]` (0,2,1): altrimenti
+   l'opacity:0 resterebbe vincente e con JS attivo il reveal non avverrebbe mai. */
+html.js [data-reveal].is-visible {
   opacity: 1;
   transform: none;
 }
