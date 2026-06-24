@@ -4,20 +4,34 @@ interface Props {
   description: string;
   index?: number;
   price?: string;
+  variant?: 'card' | 'line';
+  showPrice?: boolean;
   /** Se true mostra il prezzo; altrimenti "su richiesta" (prezzi non confermati) */
   priceConfirmed?: boolean;
 }
-const { name, description, index, price, priceConfirmed = false } = Astro.props;
+const {
+  name,
+  description,
+  index,
+  price,
+  variant = 'card',
+  showPrice = true,
+  priceConfirmed = false,
+} = Astro.props;
 const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
 ---
 
-<article class="card service">
+<article class:list={[variant === 'card' && 'card', 'service', `service--${variant}`]}>
   {num && <span class="index-num service__num">{num}</span>}
   <h3 class="service__name">{name}</h3>
   <p class="service__desc">{description}</p>
-  <p class="service__price">
-    {priceConfirmed && price ? price : 'Prezzo su richiesta'}
-  </p>
+  {
+    showPrice && (
+      <p class="service__price">
+        {priceConfirmed && price ? price : 'Prezzo su richiesta'}
+      </p>
+    )
+  }
 </article>
 
 <style>
@@ -44,5 +58,22 @@ const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
     color: var(--color-primary-strong);
     font-size: var(--fs-100);
     letter-spacing: 0.02em;
+  }
+  .service--line {
+    position: relative;
+    padding: var(--space-lg) 0 var(--space-md);
+    border-top: 1px solid var(--color-line);
+  }
+  .service--line::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    width: 4.5rem;
+    height: 1px;
+    background: var(--color-gold);
+  }
+  .service--line .service__name {
+    font-size: var(--fs-400);
   }
 </style>

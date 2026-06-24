@@ -107,3 +107,19 @@ la mappa è attiva, niente badge "da confermare".
   (deploy automatico dal branch di lavoro; non esiste ancora `main`).
 - Da fare: foto/logo reali, orari, prezzi; valutare dominio personalizzato + email
   professionale (ricerca hosting in corso); eventuale upgrade Astro 6.
+
+## 11. Feedback visuale utente — 2026-06-23
+
+- Il vecchio marchio DF monolinea viene percepito come un numero `5`: per ora usare
+  in header un wordmark solo testo, senza monogramma; favicon/emblemi restano ridotti
+  a una `D` semplice finché il segno definitivo non viene approvato.
+- Il verde WhatsApp puro è troppo aggressivo e dà l'impressione che l'obiettivo sia
+  solo spingere la prenotazione: mantenere la CTA riconoscibile ma più discreta.
+- La home deve mostrare prima i lavori: galleria subito dopo l'hero, con didascalia
+  sotto ogni foto per indicare il trattamento.
+- Jessica deve comparire in home con una presentazione fotografica e personale.
+- "Cura del riccio" va separata come sezione speciale, non ripetuta sia nei servizi
+  sia nei valori.
+- Recensioni non in card: meglio centrali, testuali, con stelline e autore.
+- Direzione estetica generale: meno box/template, più armonia, più morbidezza e
+  reveal dal basso più leggero.

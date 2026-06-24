@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import ServiceCard from '../components/ServiceCard.astro';
@@ -10,40 +11,98 @@ import Testimonials from '../components/Testimonials.astro';
 import Reveal from '../components/Reveal.astro';
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
-import { galleryImages } from '../data/images';
+import { galleryImages, teamImages } from '../data/images';
 
-const homeServices = site.services.slice(0, 6);
-
-const values = [
-  { title: 'Cura del riccio', text: 'Specializzati nei capelli ricci e mossi: tagli e consigli per definizione e volume naturali.' },
-  { title: 'Ascolto del desiderio', text: 'Ogni look parte da te: studiamo insieme la soluzione più adatta al tuo viso e al tuo stile.' },
-  { title: 'Prodotti professionali', text: 'Trattamenti e cura con linee professionali come Vitality’s, per capelli sani e luminosi.' },
-  { title: 'Atmosfera accogliente', text: 'Un ambiente caldo e rilassante dove prenderti cura di te è un vero momento felice.' },
-];
+const featuredGallery = [
+  galleryImages[0],
+  galleryImages[1],
+  galleryImages[3],
+  galleryImages[5],
+].filter(Boolean);
+const homeServices = site.services
+  .filter((service) => service.name !== 'Cura del riccio')
+  .slice(0, 6);
+const jessicaImage = teamImages[0];
+const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? galleryImages[1];
 ---
 
 <BaseLayout faq={site.faqs}>
   <Hero />
 
-  <!-- Intro / filosofia -->
-  <section class="section">
-    <div class="container intro">
-      <div class="intro__head">
-        <p class="eyebrow">Il salone</p>
-        <h2>Un salone dove la cura dei capelli diventa benessere</h2>
-      </div>
-      <div class="intro__body stack">
+  <!-- Galleria subito visibile -->
+  <section class="section section--tight gallery-first">
+    <div class="container">
+      <div class="section__head section__head--split">
+        <div>
+          <p class="eyebrow">Galleria</p>
+          <h2>Guarda i lavori, poi scegli il tuo desiderio</h2>
+        </div>
         <p class="lead">
-          Desideri di Felicità è il salone di <strong>{site.ownerName}</strong>, hair
-          stylist a Galliera (BO). Taglio, colore, balayage e una vera passione per la
-          cura del capello riccio.
+          Tagli, colori, ricci e pieghe realizzati in salone: sotto ogni foto trovi il
+          tipo di trattamento.
+        </p>
+      </div>
+      <Gallery images={featuredGallery} placeholders={6} />
+      <p class="section__cta">
+        <a class="btn btn--outline" href={withBase('/galleria')}>Apri tutta la galleria</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- Jessica -->
+  <section class="section section--alt">
+    <div class="container about-jessica">
+      <div class="about-jessica__copy stack">
+        <p class="eyebrow">Jessica Asaro</p>
+        <h2>Una consulenza tranquilla, prima ancora del taglio</h2>
+        <p class="lead">
+          Desideri di Felicità è il salone di Jessica: un luogo piccolo, curato e
+          accogliente dove ogni look parte dall’ascolto.
         </p>
         <p>
-          Crediamo che prendersi cura dei propri capelli sia molto più di un gesto
-          estetico: è un momento di benessere, ascolto e fiducia. {site.tagline}
+          Taglio, colore, balayage e trattamenti vengono scelti insieme, guardando il
+          tuo viso, la tua routine e il modo in cui vuoi sentirti quando esci dal salone.
         </p>
         <p>
-          <a class="link-underline" href={withBase('/chi-siamo')}>Scopri la nostra storia →</a>
+          <a class="link-underline" href={withBase('/chi-siamo')}>Conosci meglio Jessica →</a>
+        </p>
+      </div>
+      <Reveal class="about-jessica__media" data-reveal="fade">
+        <Image
+          src={jessicaImage.src}
+          alt={jessicaImage.alt}
+          class="about-jessica__img"
+          widths={[420, 720, 960]}
+          sizes="(min-width: 900px) 38vw, 90vw"
+          loading="lazy"
+        />
+      </Reveal>
+    </div>
+  </section>
+
+  <!-- Cura del riccio separata -->
+  <section class="section ricci-focus">
+    <div class="container ricci-focus__inner">
+      <Reveal class="ricci-focus__media" data-reveal="fade">
+        <Image
+          src={ricciImage.src}
+          alt={ricciImage.alt}
+          class="ricci-focus__img"
+          widths={[420, 720, 960]}
+          sizes="(min-width: 900px) 38vw, 90vw"
+          loading="lazy"
+        />
+      </Reveal>
+      <div class="ricci-focus__copy stack">
+        <p class="eyebrow">La specialità</p>
+        <h2>Cura del riccio, senza forzarlo</h2>
+        <p class="lead">
+          Una sezione a parte perché il riccio non è un servizio qualunque: ha bisogno di
+          ascolto, taglio giusto, asciugatura paziente e consigli semplici da rifare a casa.
+        </p>
+        <p>
+          L’obiettivo è lasciare forma, volume e morbidezza naturali, senza trasformare il
+          tuo capello in qualcosa che non ti somiglia.
         </p>
       </div>
     </div>
@@ -52,23 +111,26 @@ const values = [
   <!-- Servizi -->
   <section class="section section--alt">
     <div class="container">
-      <div class="section__head">
-        <p class="eyebrow">Servizi</p>
-        <h2>Cura, stile e benessere su misura</h2>
+      <div class="section__head section__head--split">
+        <div>
+          <p class="eyebrow">Servizi</p>
+          <h2>Cura, stile e colore su misura</h2>
+        </div>
         <p class="lead">
-          Una selezione dei nostri servizi: ogni trattamento è pensato sulle tue
-          esigenze.
+          I servizi principali, presentati in modo più leggero. Il dettaglio completo resta
+          nella pagina dedicata.
         </p>
       </div>
-      <div class="grid grid--3">
+      <div class="grid grid--3 services-preview">
         {
           homeServices.map((s, i) => (
-            <Reveal style={`--reveal-delay:${(i % 3) * 90}ms`}>
+            <Reveal style={`--reveal-delay:${(i % 3) * 70}ms`}>
               <ServiceCard
                 index={i + 1}
                 name={s.name}
                 description={s.description}
-                priceConfirmed={site.confirmed.prices}
+                variant="line"
+                showPrice={false}
               />
             </Reveal>
           ))
@@ -80,48 +142,12 @@ const values = [
     </div>
   </section>
 
-  <!-- Perché sceglierci (sezione scura d'effetto) -->
-  <section class="section section--dark">
-    <div class="container">
-      <div class="section__head">
-        <p class="eyebrow">Perché Desideri di Felicità</p>
-        <h2>Il tuo momento felice, in ogni dettaglio</h2>
-      </div>
-      <div class="grid grid--4 values">
-        {
-          values.map((v, i) => (
-            <Reveal class="value" style={`--reveal-delay:${(i % 4) * 80}ms`}>
-              <span class="index-num">0{i + 1}</span>
-              <h3 class="value__title">{v.title}</h3>
-              <p>{v.text}</p>
-            </Reveal>
-          ))
-        }
-      </div>
-    </div>
-  </section>
-
-  <!-- Galleria -->
-  <section class="section">
-    <div class="container">
-      <div class="section__head">
-        <p class="eyebrow">Galleria</p>
-        <h2>I nostri lavori</h2>
-        <p class="lead">Tagli, colori, ricci e acconciature realizzati nel salone.</p>
-      </div>
-      <Gallery images={galleryImages.slice(0, 6)} placeholders={6} />
-      <p class="section__cta">
-        <a class="btn btn--outline" href={withBase('/galleria')}>Vai alla galleria</a>
-      </p>
-    </div>
-  </section>
-
   <!-- Recensioni -->
-  <section class="section section--alt">
-    <div class="container">
-      <div class="section__head">
+  <section class="section testimonials-band">
+    <div class="container center">
+      <div class="section__head center-block">
         <p class="eyebrow">Dicono di noi</p>
-        <h2>Le recensioni delle clienti</h2>
+        <h2>Le parole delle clienti</h2>
         <p class="lead">La soddisfazione di chi ci ha scelto, direttamente da Google.</p>
       </div>
       <Testimonials />
@@ -172,33 +198,56 @@ const values = [
 </BaseLayout>
 
 <style>
-  .intro {
-    display: grid;
-    gap: var(--space-xl);
-  }
-  @media (min-width: 880px) {
-    .intro {
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-2xl);
-      align-items: start;
-    }
-    .intro__head {
-      position: sticky;
-      top: calc(var(--header-h) + 2rem);
-    }
-  }
   .section__cta {
     margin-top: var(--space-xl);
   }
-  .value {
-    border-top: 1px solid color-mix(in srgb, #fff 18%, transparent);
-    padding-top: var(--space-md);
+  .section__head--split {
+    display: grid;
+    gap: var(--space-lg);
   }
-  .value__title {
-    margin: var(--space-xs) 0 var(--space-sm);
+  @media (min-width: 900px) {
+    .section__head--split {
+      grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 0.7fr);
+      align-items: start;
+      max-width: none;
+    }
   }
-  .value p {
-    color: var(--color-on-dark-soft);
+  .gallery-first {
+    background:
+      linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
+  }
+  .about-jessica,
+  .ricci-focus__inner {
+    display: grid;
+    gap: var(--space-2xl);
+    align-items: center;
+  }
+  @media (min-width: 900px) {
+    .about-jessica,
+    .ricci-focus__inner {
+      grid-template-columns: minmax(0, 0.85fr) minmax(22rem, 0.7fr);
+    }
+    .ricci-focus__inner {
+      grid-template-columns: minmax(22rem, 0.7fr) minmax(0, 0.85fr);
+    }
+  }
+  .about-jessica__img,
+  .ricci-focus__img {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+  }
+  .ricci-focus {
+    background:
+      linear-gradient(180deg, var(--color-bg) 0%, var(--color-blush-soft) 100%);
+  }
+  .services-preview {
+    row-gap: var(--space-xl);
+  }
+  .testimonials-band {
+    background: var(--color-bg);
   }
   .contact-grid {
     align-items: start;

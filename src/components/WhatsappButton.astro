@@ -59,10 +59,13 @@ const hasNumber = site.whatsapp.replace(/[^\d]/g, '').length > 6;
     display: grid;
     place-items: center;
     box-shadow: var(--shadow-lg);
-    transition: transform var(--transition), background-color var(--transition);
+    opacity: 0.92;
+    transition: transform var(--transition), background-color var(--transition),
+      opacity var(--transition);
   }
   .wa-float:hover {
     background: var(--color-whatsapp-strong);
+    opacity: 1;
     transform: translateY(-2px);
   }
   .wa-float svg {

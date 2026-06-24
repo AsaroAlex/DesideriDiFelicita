@@ -1,7 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import { site } from '../data/site';
-import { telHref } from '../lib/contact';
+import { withBase } from '../lib/href';
 import { heroImage } from '../data/images';
 import WhatsappButton from './WhatsappButton.astro';
 ---
@@ -22,16 +22,8 @@ import WhatsappButton from './WhatsappButton.astro';
         balayage e cura del riccio, su misura per te.
       </p>
       <div class="hero__actions hero__a4">
-        <WhatsappButton label="Prenota su WhatsApp" />
-        <a class="btn btn--outline" href={telHref(site.phone)}>
-          <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              fill="currentColor"
-              d="M6.6 10.8a15.5 15.5 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2Z"
-            />
-          </svg>
-          Chiama ora
-        </a>
+        <a class="btn btn--primary" href={withBase('/galleria')}>Guarda i lavori</a>
+        <WhatsappButton label="WhatsApp" class="hero__wa" />
       </div>
     </div>
 
@@ -40,7 +32,7 @@ import WhatsappButton from './WhatsappButton.astro';
         heroImage ? (
           <Image
             src={heroImage}
-            alt={`Interno del salone ${site.businessName} a Galliera`}
+            alt={`${site.ownerName}, hair stylist del salone ${site.businessName}`}
             class="hero__img"
             widths={[480, 768, 1100]}
             sizes="(min-width: 960px) 45vw, 90vw"
@@ -67,7 +59,7 @@ import WhatsappButton from './WhatsappButton.astro';
     background:
       radial-gradient(70% 90% at 88% 4%, var(--color-blush-soft) 0%, transparent 55%),
       linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
-    padding-block: clamp(3rem, 1rem + 9vw, 7rem);
+    padding-block: clamp(2.8rem, 1rem + 6vw, 5.8rem);
   }
 
   .hero__glow {
@@ -120,6 +112,15 @@ import WhatsappButton from './WhatsappButton.astro';
     flex-wrap: wrap;
     gap: var(--space-md);
     margin-top: var(--space-xl);
+  }
+  .hero__actions :global(.hero__wa) {
+    --btn-bg: transparent;
+    --btn-fg: var(--color-primary-strong);
+    border-color: color-mix(in srgb, var(--color-primary) 26%, transparent);
+  }
+  .hero__actions :global(.hero__wa:hover) {
+    --btn-bg: var(--color-whatsapp);
+    --btn-fg: #fff;
   }
 
   .hero__media {

@@ -1,7 +1,7 @@
 ---
 /**
- * Logo Desideri di Felicità — marchio "ricciolo" (DF monolinea) + wordmark.
- * Marchio SVG inline (tema chiaro/scuro via CSS) + nome (Quicksand) + sottotitolo.
+ * Logo Desideri di Felicità — wordmark tipografico.
+ * Niente monogramma: il marchio resta pulito e leggibile in header/footer.
  *
  * Props:
  *  - variant: 'horizontal' (default) | 'stacked'
@@ -34,17 +34,6 @@ const {
     className,
   ]}
 >
-  <svg class="logo__mark" viewBox="46 34 132 176" aria-hidden="true" focusable="false">
-    <g fill="none" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-      <path class="logo__ink" d="M138 48 L72 48 C66 48 64 52 64 58 L64 150" />
-      <path class="logo__ink" d="M64 101 L112 101" />
-      <path
-        class="logo__accent"
-        d="M64 150 C64 182 98 194 126 176 C156 158 160 110 122 94 C102 86 88 102 100 118 C107 127 120 122 117 112"
-      />
-    </g>
-  </svg>
-
   {
     !emblemOnly && (
       <span class="logo__text">
@@ -59,52 +48,35 @@ const {
   .logo {
     display: inline-flex;
     align-items: center;
-    gap: 0.6em;
     text-decoration: none;
     line-height: 1;
     /* colori del marchio per tema */
-    --logo-ink: var(--color-primary-strong, #34425c);
-    --logo-accent: var(--color-gold, #c2a268);
     --logo-name: var(--color-primary-strong, #34425c);
     --logo-tag: var(--color-gold-strong, #a6864a);
   }
   .logo--dark {
-    --logo-ink: var(--color-on-dark, #eef1f5);
-    --logo-accent: var(--color-gold-on-dark, #d4b277);
     --logo-name: var(--color-on-dark, #eef1f5);
     --logo-tag: var(--color-gold-on-dark, #d4b277);
-  }
-
-  .logo__mark {
-    width: auto;
-    height: 2.6em;
-    flex: none;
-    overflow: visible;
-  }
-  .logo__ink {
-    stroke: var(--logo-ink);
-  }
-  .logo__accent {
-    stroke: var(--logo-accent);
   }
 
   .logo__text {
     display: flex;
     flex-direction: column;
-    gap: 0.15em;
+    gap: 0.22em;
   }
   .logo__name {
-    font-family: 'Quicksand', var(--font-body);
-    font-weight: 600;
-    font-size: 1.3rem;
-    letter-spacing: -0.005em;
+    font-family: var(--font-display);
+    font-weight: 440;
+    font-size: 1.48rem;
+    letter-spacing: 0;
+    line-height: 0.94;
     color: var(--logo-name);
   }
   .logo__tag {
     font-family: var(--font-body);
     font-weight: 600;
-    font-size: 0.6rem;
-    letter-spacing: 0.14em;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--logo-tag);
   }
@@ -112,11 +84,7 @@ const {
   /* Impilato: marchio sopra, testo centrato sotto */
   .logo--stacked {
     flex-direction: column;
-    gap: 0.4em;
     text-align: center;
-  }
-  .logo--stacked .logo__mark {
-    height: 3.4em;
   }
   .logo--stacked .logo__text {
     align-items: center;
@@ -128,7 +96,11 @@ const {
 
   @media (max-width: 420px) {
     .logo__name {
-      font-size: 1.12rem;
+      font-size: 1.3rem;
+    }
+    .logo__tag {
+      font-size: 0.52rem;
+      letter-spacing: 0.14em;
     }
   }
 </style>

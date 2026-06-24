@@ -1,8 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Desideri di Felicità">
-  <rect width="64" height="64" rx="15" fill="#1e2733" />
-  <g transform="translate(4,1.5) scale(0.25)" fill="none" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-    <path stroke="#eef1f5" d="M138 48 L72 48 C66 48 64 52 64 58 L64 150" />
-    <path stroke="#eef1f5" d="M64 101 L112 101" />
-    <path stroke="#d4b277" d="M64 150 C64 182 98 194 126 176 C156 158 160 110 122 94 C102 86 88 102 100 118 C107 127 120 122 117 112" />
-  </g>
+  <rect width="64" height="64" rx="22" fill="#f8f5f0" />
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#c2a268" stroke-width="2" />
+  <text x="21" y="43" fill="#374a64" font-family="Georgia, 'Times New Roman', serif" font-size="32" font-style="italic">D</text>
 </svg>

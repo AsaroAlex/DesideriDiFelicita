@@ -16,15 +16,24 @@ const hasImages = images.length > 0;
     <ul class="gallery" role="list">
       {images.map((img) => (
         <li class="gallery__item">
-          <Image
-            src={img.src}
-            alt={img.alt}
-            class="gallery__img"
-            widths={[320, 640, 960]}
-            sizes="(min-width: 900px) 30vw, (min-width: 600px) 45vw, 90vw"
-            loading="lazy"
-          />
-          {img.category && <span class="gallery__tag">{img.category}</span>}
+          <figure class="gallery__figure">
+            <div class="gallery__frame">
+              <Image
+                src={img.src}
+                alt={img.alt}
+                class="gallery__img"
+                widths={[320, 640, 960]}
+                sizes="(min-width: 900px) 30vw, (min-width: 600px) 45vw, 90vw"
+                loading="lazy"
+              />
+            </div>
+            {(img.treatment || img.category) && (
+              <figcaption class="gallery__caption">
+                {img.treatment && <span class="gallery__treatment">{img.treatment}</span>}
+                {img.category && <span class="gallery__category">{img.category}</span>}
+              </figcaption>
+            )}
+          </figure>
         </li>
       ))}
     </ul>
@@ -50,9 +59,16 @@ const hasImages = images.length > 0;
     margin: 0;
   }
   .gallery__item {
+    min-width: 0;
+  }
+  .gallery__figure {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .gallery__frame {
     position: relative;
-    border-radius: var(--radius-md);
     overflow: hidden;
+    border-radius: var(--radius-lg);
     aspect-ratio: 3 / 4;
     background: var(--color-surface-alt);
   }
@@ -62,20 +78,29 @@ const hasImages = images.length > 0;
     object-fit: cover;
     transition: transform var(--transition-slow);
   }
-  .gallery__item:hover .gallery__img {
+  .gallery__frame:hover .gallery__img {
     transform: scale(1.04);
   }
-  .gallery__tag {
-    position: absolute;
-    left: var(--space-sm);
-    bottom: var(--space-sm);
-    background: color-mix(in srgb, var(--color-ink) 75%, transparent);
-    color: #fff;
+  .gallery__caption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-inline: 0.15rem;
+  }
+  .gallery__treatment {
+    font-family: var(--font-display);
+    font-size: var(--fs-300);
+    line-height: 1.2;
+    color: var(--color-ink);
+  }
+  .gallery__category {
+    flex: none;
+    color: var(--color-gold-strong);
     font-size: 0.72rem;
-    letter-spacing: 0.04em;
+    font-weight: 700;
+    letter-spacing: 0.11em;
     text-transform: uppercase;
-    padding: 0.25em 0.7em;
-    border-radius: var(--radius-pill);
   }
   .gallery__item--empty {
     background:

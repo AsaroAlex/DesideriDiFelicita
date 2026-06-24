@@ -43,25 +43,27 @@ export interface GalleryImage {
   alt: string;
   /** Categoria opzionale per filtrare la galleria (es. "Tagli", "Colore") */
   category?: string;
+  /** Didascalia breve da mostrare sotto la foto. */
+  treatment?: string;
 }
 
 /** Immagine principale dell'hero (verticale). */
-export const heroImage: ImageMetadata | null = heroOnde;
+export const heroImage: ImageMetadata | null = jessica01;
 
 /** Galleria lavori — le prime 6 compaiono in home, tutte nella pagina galleria. */
 export const galleryImages: GalleryImage[] = [
-  { src: ondeLungheCoda, alt: 'Onde morbide su capelli lunghi raccolti in coda', category: 'Pieghe' },
-  { src: curaRiccio, alt: 'Cura del capello riccio: ricci scuri definiti e luminosi', category: 'Ricci' },
-  { src: risultatoMonica, alt: 'Piega a onde su balayage luminoso, risultato finale', category: 'Pieghe' },
-  { src: acconciatura, alt: 'Acconciatura raccolta elegante con accessorio gioiello', category: 'Acconciature' },
-  { src: ritrattoMonica, alt: 'Ritratto con onde morbide e colore naturale', category: 'Pieghe' },
-  { src: balayageLob, alt: 'Balayage su taglio medio ondulato (lob)', category: 'Colore' },
-  { src: pixieRosa, alt: 'Colore creativo: taglio pixie rosa', category: 'Colore' },
-  { src: coloreLungo, alt: 'Colore su capelli lunghi con riflessi caldi', category: 'Colore' },
-  { src: biondoBalayage, alt: 'Biondo balayage su capelli lunghi mossi', category: 'Colore' },
-  { src: ricciStyling, alt: 'Styling di ricci definiti in salone', category: 'Ricci' },
-  { src: ondeLunghe, alt: 'Onde su capelli lunghi', category: 'Pieghe' },
-  { src: taglioUomo, alt: 'Taglio uomo sfumato', category: 'Tagli' },
+  { src: ondeLungheCoda, alt: 'Onde morbide su capelli lunghi raccolti in coda', category: 'Pieghe', treatment: 'Piega onde morbide' },
+  { src: curaRiccio, alt: 'Cura del capello riccio: ricci scuri definiti e luminosi', category: 'Ricci', treatment: 'Cura del riccio' },
+  { src: risultatoMonica, alt: 'Piega a onde su balayage luminoso, risultato finale', category: 'Pieghe', treatment: 'Onde su balayage' },
+  { src: acconciatura, alt: 'Acconciatura raccolta elegante con accessorio gioiello', category: 'Acconciature', treatment: 'Acconciatura raccolta' },
+  { src: ritrattoMonica, alt: 'Ritratto con onde morbide e colore naturale', category: 'Pieghe', treatment: 'Piega naturale' },
+  { src: balayageLob, alt: 'Balayage su taglio medio ondulato (lob)', category: 'Colore', treatment: 'Balayage luminoso' },
+  { src: pixieRosa, alt: 'Colore creativo: taglio pixie rosa', category: 'Colore', treatment: 'Colore creativo' },
+  { src: coloreLungo, alt: 'Colore su capelli lunghi con riflessi caldi', category: 'Colore', treatment: 'Riflessi caldi' },
+  { src: biondoBalayage, alt: 'Biondo balayage su capelli lunghi mossi', category: 'Colore', treatment: 'Biondo balayage' },
+  { src: ricciStyling, alt: 'Styling di ricci definiti in salone', category: 'Ricci', treatment: 'Styling ricci' },
+  { src: ondeLunghe, alt: 'Onde su capelli lunghi', category: 'Pieghe', treatment: 'Onde lunghe' },
+  { src: taglioUomo, alt: 'Taglio uomo sfumato', category: 'Tagli', treatment: 'Taglio uomo sfumato' },
 ];
 
 /** Foto degli interni / ambiente del salone. */

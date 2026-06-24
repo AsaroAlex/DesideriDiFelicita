@@ -19,7 +19,7 @@ const canonicalPath = Astro.url.pathname.endsWith('/')
   : `${Astro.url.pathname}/`;
 const canonical = new URL(canonicalPath, Astro.site).href;
 const ogUrl = ogImage ? new URL(withBase(ogImage), Astro.site).href : null;
-const logoUrl = new URL(withBase('images/brand/logo.png'), Astro.site).href;
+const logoUrl = new URL(withBase('images/brand/logo.svg'), Astro.site).href;
 
 const salon = buildHairSalonSchema(canonical, ogUrl, logoUrl);
 

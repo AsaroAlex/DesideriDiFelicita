@@ -26,7 +26,7 @@ export function buildHairSalonSchema(
 
   if (ogImageUrl) schema.image = ogImageUrl;
 
-  if (c.priceRange && site.priceRange) schema.priceRange = site.priceRange;
+  if (site.priceRange) schema.priceRange = site.priceRange;
 
   if (c.phone && site.phone) schema.telephone = site.phone;
 

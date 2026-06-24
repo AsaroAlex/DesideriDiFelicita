@@ -34,9 +34,9 @@ const ratingLabel = hasRating
 
   {
     hasReviews ? (
-      <ul class="testimonials__grid" role="list">
+      <ul class="testimonials__list" role="list">
         {reviews.map((r) => (
-          <li class="card testimonial">
+          <li class="testimonial">
             {r.rating && (
               <span class="stars" role="img" aria-label={`${r.rating} su 5`}>
                 {stars(r.rating).map((on) => (
@@ -47,7 +47,7 @@ const ratingLabel = hasRating
               </span>
             )}
             <blockquote class="testimonial__text">“{r.text}”</blockquote>
-            <footer class="testimonial__author">— {r.author}</footer>
+            <footer class="testimonial__author">{r.author}</footer>
             <span class="testimonial__src">Recensione Google</span>
           </li>
         ))}
@@ -69,10 +69,13 @@ const ratingLabel = hasRating
 <style>
   .testimonials__rating {
     display: flex;
+    justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.6em;
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-xl);
     font-weight: 600;
+    text-align: center;
   }
   .stars {
     display: inline-flex;
@@ -86,27 +89,30 @@ const ratingLabel = hasRating
   .star--on {
     fill: var(--color-gold);
   }
-  .testimonials__grid {
+  .testimonials__list {
     display: grid;
-    gap: var(--space-lg);
-    margin: 0;
-  }
-  @media (min-width: 760px) {
-    .testimonials__grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
+    gap: var(--space-xl);
+    max-width: 54rem;
+    margin: 0 auto;
   }
   .testimonial {
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    align-items: center;
+    gap: var(--space-md);
+    text-align: center;
+    padding-block: var(--space-sm) var(--space-xl);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .testimonial:last-child {
+    border-bottom: 0;
   }
   .testimonial__text {
     font-family: var(--font-display);
-    font-size: var(--fs-400);
+    font-size: clamp(1.35rem, 1.1rem + 1vw, 2rem);
     line-height: 1.4;
     color: var(--color-ink);
-    flex: 1;
+    max-width: 34ch;
   }
   .testimonial__author {
     font-weight: 600;
@@ -120,5 +126,6 @@ const ratingLabel = hasRating
   }
   .testimonials__cta {
     margin-top: var(--space-xl);
+    text-align: center;
   }
 </style>

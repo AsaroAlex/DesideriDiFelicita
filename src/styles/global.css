@@ -160,6 +160,9 @@ a {
 .section {
   padding-block: var(--space-3xl);
 }
+.section--tight {
+  padding-block: var(--space-2xl);
+}
 .section--alt {
   background-color: var(--color-surface-alt);
 }
@@ -407,7 +410,7 @@ a {
    resta visibile (resilienza e accessibilità). */
 html.js [data-reveal] {
   opacity: 0;
-  transform: translateY(22px);
+  transform: translateY(16px);
   transition: opacity var(--transition-slow), transform var(--transition-slow);
   transition-delay: var(--reveal-delay, 0ms);
   will-change: opacity, transform;

@@ -136,8 +136,15 @@ const isActive = (href: string) => norm(withBase(href)) === current;
     color: var(--color-ink);
   }
   .nav :global(.nav__cta) {
+    --btn-bg: transparent;
+    --btn-fg: var(--color-primary-strong);
+    border-color: color-mix(in srgb, var(--color-primary) 24%, transparent);
     padding: 0.55em 1.2em;
     font-size: 0.92rem;
+  }
+  .nav :global(.nav__cta:hover) {
+    --btn-bg: var(--color-primary);
+    --btn-fg: #fff;
   }
 
   .nav-toggle {

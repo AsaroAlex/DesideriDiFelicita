@@ -138,13 +138,15 @@ set of **inline SVGs**, thin and rounded, matching the logo's mono-line feel and
 
 **No emoji** are ever used. Unicode is used only for typographic touches — guillemets
 «…», the curly apostrophe ', the middot · in eyebrows/meta, and zero-padded numerals
-("01", "02") set in Fraunces with tabular figures. The WhatsApp glyph + green is the one
-fixed brand-utility mark and recurs as the floating booking button.
+("01", "02") set in Fraunces with tabular figures. The WhatsApp glyph is a utility
+mark only and uses a muted sage treatment so it does not overpower the brand.
 
-**Brand marks** live in `assets/brand/`: the primary `logo.png` (DF curl mark + wordmark),
-plus `emblema.svg`, `emblema-mono.svg`, `emblema-reverse.svg` and `favicon.svg`. The live
-`Logo` component recreates the **mono-line "DF" curl mark** (a navy *F* whose descender
-becomes a gold spiral — a stylised curl of hair) used in the header/footer.
+**Brand marks** live in `assets/brand/` and `public/images/brand/`: the current
+public logo is `logo.svg`, plus `emblema.svg`, `emblema-mono.svg`,
+`emblema-reverse.svg` and `favicon.svg`. The live `Logo` component now uses a
+typographic wordmark only; avoid the previous mono-line curl mark because it could be
+read as the number `5`. The small emblem/favicons are intentionally reduced to a
+simple italic `D` until a definitive salon mark is approved.
 *Note: the logo is still being finalised by the salon and is not yet definitive.*
 
 ---
