@@ -1,42 +1,44 @@
 /*
  * DESIGN TOKEN — Desideri di Felicità
  * -----------------------------------
- * Palette allineata al BRAND reale (logo Instagram @desideri.di.felicita):
- *   - blu polvere/slate  → colore principale
- *   - oro/bronzo caldo    → accento
- *   - rosa cipria         → colore morbido (fiori acquerello)
- *   - crema/bianco        → sfondo
- * Stile: editoriale luxury, chiaro, con sezioni scure d'effetto.
+ * Palette "Azzurro elettrico & inchiostro" (azzurro · azzurro-nero · bianco):
+ *   - azzurro vivido      → colore principale
+ *   - azzurro luce        → accento chiaro
+ *   - blu-nero (inchiostro) → testo + sezioni scure d'effetto
+ *   - bianco puro         → sfondo
+ * Stile: editoriale bold, alto contrasto, gesti grafici netti.
  * Punto UNICO per modificare l'estetica del sito.
+ * NB: i nomi di token "gold/blush" sono mantenuti per compatibilità ma ora
+ *     valgono toni AZZURRI (accento e fondali tenui).
  */
 
 :root {
   /* — Colori chiari — */
-  --color-bg: #f8f5f0;          /* crema caldo */
+  --color-bg: #ffffff;          /* bianco puro */
   --color-surface: #ffffff;
-  --color-surface-alt: #f1ebe1; /* sabbia tenue per sezioni alternate */
+  --color-surface-alt: #f4f8ff; /* azzurro velato per sezioni alternate */
 
-  --color-blush: #e6c3c6;       /* rosa cipria (accento) */
-  --color-blush-soft: #f7eded;  /* rosa cipria velato (fondali) */
+  --color-blush: #cfe0fb;       /* azzurro tenue (accento morbido) */
+  --color-blush-soft: #eef4fe;  /* azzurro velatissimo (fondali) */
 
-  --color-ink: #222c39;         /* slate navy profondo (testo) */
-  --color-ink-soft: #4c5868;
-  --color-muted: #8a909b;       /* testo secondario */
-  --color-line: #e6ded2;        /* bordi / divisori */
+  --color-ink: #0b1220;         /* inchiostro blu-nero (testo) */
+  --color-ink-soft: #374961;
+  --color-muted: #5e6b7e;       /* testo secondario */
+  --color-line: #e2e8f3;        /* bordi / divisori */
 
-  --color-primary: #4a5d7a;     /* blu polvere del brand */
-  --color-primary-strong: #374a64;
+  --color-primary: #2e6be6;     /* azzurro vivido */
+  --color-primary-strong: #1e54c8;
   --color-primary-contrast: #ffffff;
 
-  --color-gold: #c2a268;        /* oro/bronzo caldo del brand */
-  --color-gold-strong: #a6864a;
+  --color-gold: #2e6be6;        /* accento (ex oro) → azzurro vivido */
+  --color-gold-strong: #1b4bbf; /* accento forte / testo etichette */
 
   /* — Sezioni scure (contrasto cinematografico) — */
-  --color-dark: #1e2733;        /* navy/slate profondo */
-  --color-dark-2: #28323f;
-  --color-on-dark: #eef1f5;
-  --color-on-dark-soft: #b8c0cc;
-  --color-gold-on-dark: #d4b277;
+  --color-dark: #070c18;        /* blu-nero (inchiostro) */
+  --color-dark-2: #0e1830;
+  --color-on-dark: #eaf1ff;
+  --color-on-dark-soft: #9fb4d6;
+  --color-gold-on-dark: #7cb2ff; /* azzurro luce su scuro */
 
   --color-whatsapp: #6f8f7c;
   --color-whatsapp-strong: #557563;
@@ -87,9 +89,9 @@
   --radius-pill: 999px;
 
   /* — Ombre — */
-  --shadow-sm: 0 1px 2px rgba(34, 44, 57, 0.06);
-  --shadow-md: 0 14px 36px rgba(34, 44, 57, 0.10);
-  --shadow-lg: 0 30px 70px rgba(34, 44, 57, 0.16);
+  --shadow-sm: 0 1px 2px rgba(11, 18, 32, 0.07);
+  --shadow-md: 0 14px 36px rgba(11, 18, 32, 0.13);
+  --shadow-lg: 0 30px 70px rgba(11, 18, 32, 0.20);
 
   /* — Movimento — */
   --transition: 240ms cubic-bezier(0.22, 1, 0.36, 1);

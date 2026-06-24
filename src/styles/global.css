@@ -275,7 +275,7 @@ a {
 }
 .btn--gold {
   --btn-bg: var(--color-gold);
-  --btn-fg: #2a2110;
+  --btn-fg: #fff;
 }
 .btn--gold:hover {
   --btn-bg: var(--color-gold-strong);

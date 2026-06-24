@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Desideri di Felicità">
-  <rect width="64" height="64" rx="22" fill="#f8f5f0" />
-  <circle cx="32" cy="32" r="24" fill="none" stroke="#c2a268" stroke-width="2" />
-  <text x="21" y="43" fill="#374a64" font-family="Georgia, 'Times New Roman', serif" font-size="32" font-style="italic">D</text>
+  <rect width="64" height="64" rx="22" fill="#070c18" />
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#7cb2ff" stroke-width="2" />
+  <text x="21" y="43" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif" font-size="32" font-style="italic">D</text>
 </svg>
