@@ -14,16 +14,22 @@
 - **Slogan:** "La bellezza nasce da un desiderio, la felicità lo rende reale."
 - **Tagline:** "Creiamo insieme il tuo momento felice."
 
-## 2. Identità visiva (dal logo / Instagram ufficiale)
+## 2. Identità visiva — palette "Azzurro elettrico & inchiostro" (2026-06-24)
 
-- **Blu polvere/slate** `#4a5d7a` → colore principale (testo logo).
-- **Oro/bronzo caldo** `#c2a268` → accento (sottotitolo + decori).
-- **Rosa cipria** `#e6c3c6` → colore morbido (fiori acquerello del logo).
-- **Crema/bianco** `#f8f5f0` → sfondo.
-- **Slate navy scuro** `#1e2733` → sezioni scure d'effetto.
-- Logo: serif elegante "Desideri di felicità" blu + "DI JESSICA ASARO HAIR STYLIST"
-  oro spaziato + forbici lineari + fiori acquerello blu/rosa + decori oro.
-- Font sito: **Fraunces** (display serif, self-hosted) + **Manrope** (testo).
+> Cambio direzione approvato dall'utente: dismessa la palette calda oro/rosa/crema,
+> adottata una palette **azzurro · azzurro-nero · bianco** bold ad alto contrasto
+> (riferimenti: salon premiati Awwwards — foto grandi, tanto bianco, monocromia).
+
+- **Azzurro vivido** `#2e6be6` → colore principale + accento (token `--color-primary`/`--color-gold`).
+- **Azzurro luce** `#7cb2ff` → accento chiaro / su fondo scuro (`--color-gold-on-dark`).
+- **Inchiostro (blu-nero)** `#070c18` → testo forte + sezioni scure full-bleed (`--color-dark`/`--color-ink`).
+- **Bianco puro** `#ffffff` → sfondo; **azzurro velato** `#f4f8ff` → superfici alternate.
+- WhatsApp: ora **azzurro** (non più verde) — CTA discreta e coerente con la palette.
+- Logo: wordmark serif blu (armonizza nativamente con l'azzurro); favicon = tile
+  blu-nero + anello azzurro luce + "D" bianca.
+- ⚠️ I nomi token `--color-gold*` / `--color-blush*` sono **mantenuti** per
+  compatibilità ma ora valgono toni **azzurri** (accento e fondali tenui).
+- Font sito: **Fraunces** (display serif, self-hosted) + **Manrope** (testo) — invariati.
 - Token in `src/styles/tokens.css` (cambiare lì = cambiare tutto il look).
 
 ## 3. Obiettivo del sito
@@ -123,3 +129,16 @@ la mappa è attiva, niente badge "da confermare".
 - Recensioni non in card: meglio centrali, testuali, con stelline e autore.
 - Direzione estetica generale: meno box/template, più armonia, più morbidezza e
   reveal dal basso più leggero.
+
+## 12. Svolta grafica — 2026-06-24
+
+- **Palette rifatta**: dismessa oro/rosa/crema → **azzurro elettrico + inchiostro +
+  bianco** (vedi sez. 2). Applicata via `tokens.css` + favicon/manifest/theme-color.
+- **WhatsApp → azzurro** (token `--color-whatsapp`), su richiesta esplicita.
+- **Mosse "bold" (Awwwards-like) implementate in home**:
+  1. **Hero** a tutta altezza con foto su **blocco blu-nero** e tipografia gigante.
+  2. **Sezione "Cura del riccio"** convertita in **band full-bleed inchiostro** con
+     foto che sanguina sul bordo (riusa `section--dark` per i colori).
+  3. **Galleria** con didascalia-trattamento + **hover azzurro** (velo + ring).
+  4. **Micro-interazioni** sui pulsanti (lift, glow azzurro, focus ring, press).
+- Obiettivo dichiarato dall'utente: «il miglior sito al mondo di parrucchieri».

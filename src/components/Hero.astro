@@ -56,10 +56,16 @@ import WhatsappButton from './WhatsappButton.astro';
   .hero {
     position: relative;
     overflow: hidden;
+    display: grid;
+    align-items: center;
+    min-height: min(94svh, 900px);
     background:
       radial-gradient(70% 90% at 88% 4%, var(--color-blush-soft) 0%, transparent 55%),
       linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
     padding-block: clamp(2.8rem, 1rem + 6vw, 5.8rem);
+  }
+  .hero > .container {
+    width: 100%;
   }
 
   .hero__glow {
@@ -97,12 +103,14 @@ import WhatsappButton from './WhatsappButton.astro';
   }
 
   .hero__title {
-    margin-top: var(--space-xs);
-    font-size: var(--fs-700);
-    max-width: 15ch;
+    margin-top: var(--space-sm);
+    font-size: clamp(2.9rem, 1.2rem + 7vw, 6.1rem);
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    max-width: 14ch;
   }
   .hero__title em {
-    color: var(--color-gold-strong);
+    color: var(--color-primary);
   }
   .hero__desc {
     margin-top: var(--space-lg);
@@ -124,10 +132,23 @@ import WhatsappButton from './WhatsappButton.astro';
   }
 
   .hero__media {
+    position: relative;
     justify-self: center;
     width: 100%;
+    isolation: isolate;
+  }
+  /* Blocco blu-nero offset dietro la foto (gesto editoriale bold) */
+  .hero__media::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 13% -7% -9% 15%;
+    border-radius: var(--radius-xl);
+    background: linear-gradient(150deg, var(--color-dark) 0%, var(--color-dark-2) 100%);
+    box-shadow: 0 40px 90px color-mix(in srgb, var(--color-primary) 28%, transparent);
   }
   .hero__img {
+    position: relative;
     width: 100%;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);

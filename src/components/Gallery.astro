@@ -71,6 +71,22 @@ const hasImages = images.length > 0;
     border-radius: var(--radius-lg);
     aspect-ratio: 3 / 4;
     background: var(--color-surface-alt);
+    box-shadow: 0 0 0 0 transparent;
+    transition: box-shadow var(--transition);
+  }
+  /* Velo inchiostro che sale all'hover (look editoriale) */
+  .gallery__frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--color-dark) 58%, transparent) 0%,
+      transparent 52%
+    );
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
   }
   .gallery__img {
     width: 100%;
@@ -78,8 +94,14 @@ const hasImages = images.length > 0;
     object-fit: cover;
     transition: transform var(--transition-slow);
   }
-  .gallery__frame:hover .gallery__img {
-    transform: scale(1.04);
+  .gallery__figure:hover .gallery__frame {
+    box-shadow: 0 0 0 3px var(--color-primary);
+  }
+  .gallery__figure:hover .gallery__img {
+    transform: scale(1.05);
+  }
+  .gallery__figure:hover .gallery__frame::after {
+    opacity: 1;
   }
   .gallery__caption {
     display: flex;
@@ -93,6 +115,10 @@ const hasImages = images.length > 0;
     font-size: var(--fs-300);
     line-height: 1.2;
     color: var(--color-ink);
+    transition: color var(--transition);
+  }
+  .gallery__figure:hover .gallery__treatment {
+    color: var(--color-primary);
   }
   .gallery__category {
     flex: none;

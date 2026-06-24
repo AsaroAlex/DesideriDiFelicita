@@ -80,20 +80,20 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
     </div>
   </section>
 
-  <!-- Cura del riccio separata -->
-  <section class="section ricci-focus">
-    <div class="container ricci-focus__inner">
-      <Reveal class="ricci-focus__media" data-reveal="fade">
+  <!-- Cura del riccio — band full-bleed inchiostro (foto a sanguinare sul bordo) -->
+  <section class="ricci-band section--dark">
+    <div class="ricci-band__inner">
+      <Reveal class="ricci-band__media" data-reveal="fade">
         <Image
           src={ricciImage.src}
           alt={ricciImage.alt}
-          class="ricci-focus__img"
-          widths={[420, 720, 960]}
-          sizes="(min-width: 900px) 38vw, 90vw"
+          class="ricci-band__img"
+          widths={[480, 768, 1100]}
+          sizes="(min-width: 900px) 50vw, 100vw"
           loading="lazy"
         />
       </Reveal>
-      <div class="ricci-focus__copy stack">
+      <div class="ricci-band__copy stack">
         <p class="eyebrow">La specialità</p>
         <h2>Cura del riccio, senza forzarlo</h2>
         <p class="lead">
@@ -216,32 +216,58 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
     background:
       linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
   }
-  .about-jessica,
-  .ricci-focus__inner {
+  .about-jessica {
     display: grid;
     gap: var(--space-2xl);
     align-items: center;
   }
   @media (min-width: 900px) {
-    .about-jessica,
-    .ricci-focus__inner {
+    .about-jessica {
       grid-template-columns: minmax(0, 0.85fr) minmax(22rem, 0.7fr);
     }
-    .ricci-focus__inner {
-      grid-template-columns: minmax(22rem, 0.7fr) minmax(0, 0.85fr);
-    }
   }
-  .about-jessica__img,
-  .ricci-focus__img {
+  .about-jessica__img {
     width: 100%;
     aspect-ratio: 4 / 5;
     object-fit: cover;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-md);
   }
-  .ricci-focus {
-    background:
-      linear-gradient(180deg, var(--color-bg) 0%, var(--color-blush-soft) 100%);
+
+  /* Band full-bleed inchiostro: la foto sanguina sul bordo dello schermo */
+  .ricci-band {
+    position: relative;
+    overflow: hidden;
+  }
+  .ricci-band__inner {
+    display: grid;
+  }
+  .ricci-band__media {
+    position: relative;
+    min-height: 62vw;
+  }
+  .ricci-band__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .ricci-band__copy {
+    padding: var(--space-3xl) var(--gutter);
+    max-width: 44rem;
+  }
+  @media (min-width: 900px) {
+    .ricci-band__inner {
+      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
+    }
+    .ricci-band__media {
+      min-height: 34rem;
+    }
+    .ricci-band__copy {
+      align-self: center;
+      padding-block: var(--space-3xl);
+      padding-inline: clamp(2rem, 4vw, 4.5rem) var(--gutter);
+    }
   }
   .services-preview {
     row-gap: var(--space-xl);

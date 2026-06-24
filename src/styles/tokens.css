@@ -40,8 +40,8 @@
   --color-on-dark-soft: #9fb4d6;
   --color-gold-on-dark: #7cb2ff; /* azzurro luce su scuro */
 
-  --color-whatsapp: #6f8f7c;
-  --color-whatsapp-strong: #557563;
+  --color-whatsapp: #2e6be6;        /* CTA WhatsApp ora in azzurro (palette coerente) */
+  --color-whatsapp-strong: #1e54c8;
 
   /* — Tipografia (font variabili self-hosted) — */
   --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype',
