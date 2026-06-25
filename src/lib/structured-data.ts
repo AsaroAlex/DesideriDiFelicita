@@ -67,6 +67,13 @@ export function buildHairSalonSchema(
   const sameAs = [site.social.instagram, site.social.facebook].filter(Boolean);
   if (sameAs.length > 0) schema.sameAs = sameAs;
 
+  // Area servita (segnale di SEO locale). Solo dati confermati: comune e regione
+  // della sede; nessun comune limitrofo inventato.
+  schema.areaServed = [
+    { '@type': 'City', name: site.address.city },
+    { '@type': 'AdministrativeArea', name: site.address.region },
+  ];
+
   // Partita IVA (segnale di legittimità per l'attività locale).
   if (site.legal.vatNumber) schema.vatID = site.legal.vatNumber;
 

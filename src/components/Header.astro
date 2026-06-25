@@ -1,5 +1,4 @@
 ---
-import { site } from '../data/site';
 import { withBase } from '../lib/href';
 import WhatsappButton from './WhatsappButton.astro';
 import Logo from './Logo.astro';
@@ -19,7 +18,7 @@ const isActive = (href: string) => norm(withBase(href)) === current;
 
 <header class="header">
   <div class="container header__inner">
-    <a class="brand" href={withBase('/')} aria-label={`${site.businessName} — home`}>
+    <a class="brand" href={withBase('/')}>
       <Logo variant="horizontal" />
     </a>
 

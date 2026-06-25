@@ -164,9 +164,8 @@ export const site = {
     defaultTitle: 'Desideri di Felicità · Parrucchiera a Galliera (BO)',
     titleTemplate: '%s · Desideri di Felicità',
     defaultDescription:
-      'Parrucchiera a Galliera (BO): taglio donna, uomo e bambino, colore, ' +
-      'balayage, cura del riccio e trattamenti. Salone Desideri di Felicità di ' +
-      'Jessica Asaro. Prenota su WhatsApp.',
+      'Parrucchiera a Galliera (BO): taglio, colore, balayage e cura del riccio. ' +
+      'Il salone di Jessica Asaro, Desideri di Felicità. Prenota su WhatsApp.',
     locale: 'it_IT',
     lang: 'it',
   },
