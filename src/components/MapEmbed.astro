@@ -57,6 +57,10 @@ const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(query)}&outpu
   }
   .map iframe {
     display: block;
+    width: 100%;
+    /* Altezza fluida: sovrascrive l'attributo height="380" dell'iframe.
+       Pavimento a 300px per non comprimere i controlli di Google Maps. */
+    height: clamp(300px, 45vh, 420px);
   }
   .map--placeholder {
     background:

@@ -12,20 +12,26 @@ const title = 'Pagina non trovata';
       <h1>Questa pagina non esiste</h1>
       <p class="lead center-block">
         La pagina che cerchi potrebbe essere stata spostata o non essere più
-        disponibile.
+        disponibile. Da qui puoi tornare alla home o raggiungere le sezioni principali.
       </p>
       <p>
         <a class="btn btn--primary" href={withBase('/')}>Torna alla home</a>
       </p>
+      <nav class="error-links" aria-label="Sezioni principali">
+        <a class="link-underline" href={withBase('/servizi')}>Servizi</a>
+        <a class="link-underline" href={withBase('/galleria')}>Galleria</a>
+        <a class="link-underline" href={withBase('/contatti')}>Contatti</a>
+      </nav>
     </div>
   </section>
 </BaseLayout>
 
 <style>
-  .center {
-    text-align: center;
-  }
-  .center-block {
-    margin-inline: auto;
+  .error-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-lg);
+    margin-top: var(--space-sm);
   }
 </style>

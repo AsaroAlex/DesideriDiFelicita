@@ -70,6 +70,24 @@ export function buildHairSalonSchema(
   // Partita IVA (segnale di legittimità per l'attività locale).
   if (site.legal.vatNumber) schema.vatID = site.legal.vatNumber;
 
+  // Catalogo dei servizi offerti. NB: nessun prezzo — `confirmed.prices` è false
+  // e i servizi non hanno `price`, quindi non emettiamo `priceSpecification`
+  // (coerente con la regola di sicurezza: niente dati non confermati nello schema).
+  if (site.services.length > 0) {
+    schema.hasOfferCatalog = {
+      '@type': 'OfferCatalog',
+      name: 'Servizi',
+      itemListElement: site.services.map((s) => ({
+        '@type': 'Offer',
+        itemOffered: {
+          '@type': 'Service',
+          name: s.name,
+          description: s.description,
+        },
+      })),
+    };
+  }
+
   return schema;
 }
 

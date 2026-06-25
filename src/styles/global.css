@@ -203,6 +203,31 @@ a {
   }
 }
 
+/* Banda CTA condivisa (pagine Servizi e Galleria) */
+.cta-band {
+  margin-top: var(--space-2xl);
+  padding: var(--space-2xl) var(--space-xl);
+  text-align: center;
+  background: var(--color-blush-soft);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--space-md);
+  justify-items: center;
+}
+
+/* Griglia contatti (dettagli + mappa). Resta a 1 colonna fino al desktop:
+   sotto i 900px la mappa a fianco dei contatti risulterebbe compressa.
+   La regola sovrascrive `.grid--2` (stessa specificità, ordine successivo). */
+.contact-grid {
+  align-items: start;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .contact-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Numero indice editoriale (01, 02…) */
 .index-num {
   font-family: var(--font-display);
