@@ -12,9 +12,6 @@
 
 import type { ImageMetadata } from 'astro';
 
-// Hero
-import heroOnde from '../assets/images/hero/hero-onde-balayage-01.jpg'; // [WM → swap]
-
 // Galleria lavori
 import ondeLungheCoda from '../assets/images/gallery/onde-lunghe-coda-01.jpg';
 import curaRiccio from '../assets/images/gallery/cura-del-riccio-01.jpg';

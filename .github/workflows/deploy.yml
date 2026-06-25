@@ -1,13 +1,12 @@
 name: Deploy to GitHub Pages
 
-# Pubblica il sito quando si fa push sul branch di lavoro/default (oppure manualmente).
-# NB: in GitHub → Settings → Pages, impostare "Source: GitHub Actions".
-# Quando adotterai un branch "main" come default, il deploy partirà anche da lì.
+# Pubblica il sito a ogni push su `main` (branch di produzione) oppure manualmente.
+# NB: in GitHub → Settings → Pages impostare "Source: GitHub Actions" e impostare
+# `main` come branch di default del repository.
 on:
   push:
     branches:
       - main
-      - claude/elegant-rubin-k4j11u
   workflow_dispatch:
 
 permissions:
