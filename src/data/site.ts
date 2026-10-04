@@ -137,7 +137,7 @@ export const site = {
   faqs: [
     {
       q: 'Come posso prenotare un appuntamento?',
-      a: 'Apri il calendario dalla voce Prenota e scegli tra i servizi e gli orari disponibili. La prenotazione è confermata quando ricevi il riferimento sul sito. Per consulenze o richieste su misura puoi anche scriverci su WhatsApp, chiamarci o contattarci su Instagram.',
+      a: 'Apri il calendario dalla voce Prenota, scegli il servizio, il giorno e l’orario desiderato e invia la richiesta. Jessica ti contatterà per confermare l’appuntamento. Per i servizi con conferma immediata, il calendario mostra gli orari liberi e conferma direttamente la prenotazione. La pagina indica sempre se hai inviato una richiesta o ricevuto una conferma.',
     },
     {
       q: 'Quali servizi offre il salone?',
@@ -165,7 +165,7 @@ export const site = {
     titleTemplate: '%s · Desideri di Felicità',
     defaultDescription:
       'Parrucchiera a Galliera (BO): taglio, colore, balayage e cura del riccio. ' +
-      'Il salone di Jessica Asaro, Desideri di Felicità. Prenota su WhatsApp.',
+      'Il salone di Jessica Asaro, Desideri di Felicità. Scegli il tuo appuntamento nel calendario online.',
     locale: 'it_IT',
     lang: 'it',
   },

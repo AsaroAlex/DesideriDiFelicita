@@ -1,0 +1,139 @@
+---
+import { withBase } from '../lib/href';
+---
+
+<section
+  class="consent-banner"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="consent-title"
+  aria-describedby="consent-description"
+  data-consent-banner
+  hidden
+>
+  <div class="consent-banner__copy">
+    <p class="consent-banner__eyebrow">La tua privacy</p>
+    <h2 id="consent-title">Cookie e mappa</h2>
+    <p id="consent-description">
+      Puoi visitare il sito senza cookie facoltativi. Per mostrarti la mappa usiamo Google Maps,
+      che può usare cookie e raccogliere dati di navigazione.
+      <a href={withBase('/privacy')}>Leggi la privacy</a>.
+    </p>
+    <p class="consent-banner__note">La scelta dura 6 mesi. Puoi cambiarla da “Preferenze cookie”.</p>
+  </div>
+  <div class="consent-banner__actions">
+    <button class="btn btn--outline" type="button" data-consent-choose="false">Solo necessari</button>
+    <button class="btn btn--outline" type="button" data-consent-choose="true">Consenti la mappa</button>
+  </div>
+</section>
+
+<script>
+  import {
+    CONSENT_CHANGE_EVENT,
+    CONSENT_OPEN_EVENT,
+    getConsent,
+    openConsentPreferences,
+    saveConsent,
+    watchConsentStorage,
+  } from '../lib/consent';
+
+  let pageEvents: AbortController | undefined;
+
+  function initConsentBanner() {
+    pageEvents?.abort();
+    pageEvents = new AbortController();
+    const { signal } = pageEvents;
+    const banner = document.querySelector<HTMLElement>('[data-consent-banner]');
+    if (!banner) return;
+    let returnFocus: HTMLElement | null = null;
+    watchConsentStorage();
+    banner.hidden = getConsent() !== null;
+
+    function closeBanner() {
+      banner!.hidden = true;
+      // Restore focus only when the visitor explicitly opened the preferences.
+      if (returnFocus?.isConnected) returnFocus.focus();
+      returnFocus = null;
+    }
+
+    banner.querySelectorAll<HTMLButtonElement>('[data-consent-choose]').forEach((button) => {
+      button.addEventListener('click', () => {
+        saveConsent(button.dataset.consentChoose === 'true');
+        closeBanner();
+      }, { signal });
+    });
+    window.addEventListener(CONSENT_CHANGE_EVENT, () => {
+      if (getConsent()) closeBanner();
+      else banner.hidden = false;
+    }, { signal });
+    window.addEventListener(CONSENT_OPEN_EVENT, ((event: CustomEvent) => {
+      returnFocus = event.detail?.trigger instanceof HTMLElement ? event.detail.trigger : null;
+      banner.hidden = false;
+      banner.querySelector<HTMLButtonElement>('[data-consent-choose]')?.focus({ preventScroll: true });
+    }) as EventListener, { signal });
+    document.querySelectorAll<HTMLElement>('[data-consent-settings]').forEach((trigger) => {
+      trigger.hidden = false;
+      trigger.addEventListener('click', () => openConsentPreferences(trigger), { signal });
+    });
+    banner.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      // Dismissal is not consent; a map remains blocked until an explicit choice.
+      event.preventDefault();
+      closeBanner();
+    }, { signal });
+  }
+
+  document.addEventListener('astro:before-swap', () => pageEvents?.abort());
+  document.addEventListener('astro:page-load', initConsentBanner);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initConsentBanner, { once: true });
+  } else {
+    initConsentBanner();
+  }
+</script>
+
+<style>
+  .consent-banner {
+    position: fixed;
+    inset: auto var(--gutter) 1rem;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: 1.5rem 1.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: 0 12px 60px rgb(7 12 24 / 20%);
+  }
+  .consent-banner[hidden] { display: none; }
+  .consent-banner__copy { flex: 1; }
+  .consent-banner__eyebrow {
+    color: var(--color-primary-strong);
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+  }
+  .consent-banner h2 { margin-block: .2rem .5rem; font-size: 1.6rem; }
+  .consent-banner__copy > p:not(:first-child) { font-size: .85rem; line-height: 1.55; }
+  .consent-banner__note { margin-top: .4rem; color: var(--color-muted); }
+  .consent-banner__actions { display: grid; gap: .65rem; min-width: 12.5rem; }
+  .consent-banner__actions .btn { min-height: 2.75rem; font-size: .85rem; }
+  @media (max-width: 700px) {
+    .consent-banner {
+      inset-inline: .7rem;
+      bottom: .7rem;
+      display: grid;
+      gap: 1rem;
+      padding: 1.15rem;
+      max-height: calc(100dvh - 1.4rem);
+      overflow-y: auto;
+    }
+    .consent-banner__actions { grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+    .consent-banner__actions .btn { padding-inline: .7rem; line-height: 1.2; }
+  }
+</style>

@@ -190,10 +190,16 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       limit(`availability:${ip}`, 100, 60_000);
       return json(response, 200, store.getAvailability({ serviceId: url.searchParams.get('serviceId'), date: url.searchParams.get('date') }, now()));
     }
-    if (method === 'POST' && path === '/api/public/bookings') {
+    if (method === 'GET' && path === '/api/public/request-availability') {
+      limit(`availability:${ip}`, 100, 60_000);
+      return json(response, 200, store.getRequestAvailability({ serviceId: url.searchParams.get('serviceId'), date: url.searchParams.get('date') }, now()));
+    }
+    if (method === 'POST' && (path === '/api/public/bookings' || path === '/api/public/requests')) {
+      // Both customer flows share one budget, so alternating endpoints cannot bypass it.
       limit('bookings:global', 60, 3_600_000);
       limit(`bookings:${ip}`, 10, 3_600_000);
-      return json(response, 201, store.createPublicBooking(await jsonBody(request), now()));
+      const body = await jsonBody(request);
+      return json(response, 201, path.endsWith('/requests') ? store.createPublicRequest(body, now()) : store.createPublicBooking(body, now()));
     }
     if (method === 'GET' && path === '/api/auth/session') return json(response, 200, sessionResult(auth.getSession(request)));
     if (method === 'POST' && (path === '/api/auth/setup' || path === '/api/auth/login')) {
@@ -221,6 +227,20 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       if (method === 'POST' && path === '/api/admin/appointments') return json(response, 201, store.createAdminAppointment(await jsonBody(request), now()));
       const appointmentMatch = path.match(/^\/api\/admin\/appointments\/([^/]+)$/);
       if (method === 'PATCH' && appointmentMatch) return json(response, 200, store.updateAppointment(resourceId(appointmentMatch[1]), await jsonBody(request), now()));
+      if (method === 'GET' && path === '/api/admin/requests') {
+        const count = url.searchParams.get('limit') || '100';
+        if (!/^\d+$/.test(count) || Number(count) < 1 || Number(count) > 500) throw new DomainError(400, 'invalid_limit', 'Il numero di richieste visualizzate non è valido.');
+        const status = url.searchParams.get('status') || 'pending';
+        if (!['pending', 'confirmed', 'declined'].includes(status)) throw new DomainError(400, 'invalid_status', 'Lo stato delle richieste non è valido.');
+        return json(response, 200, { items: store.listRequests({ status, limit: Number(count) }) });
+      }
+      const requestMatch = path.match(/^\/api\/admin\/requests\/([^/]+)\/(confirm|decline)$/);
+      if (method === 'POST' && requestMatch) {
+        const id = resourceId(requestMatch[1]);
+        const body = await jsonBody(request);
+        if (requestMatch[2] === 'confirm') return json(response, 201, store.confirmRequest(id, body, now()));
+        return json(response, 200, store.declineRequest(id, now()));
+      }
       if (method === 'GET' && path === '/api/admin/services') return json(response, 200, { items: store.listServices() });
       const serviceMatch = path.match(/^\/api\/admin\/services\/([^/]+)$/);
       if (method === 'PATCH' && serviceMatch) return json(response, 200, store.updateService(resourceId(serviceMatch[1]), await jsonBody(request), now()));

@@ -11,7 +11,7 @@ import StructuredData from '../components/StructuredData.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import WhatsappButton from '../components/WhatsappButton.astro';
+import ConsentBanner from '../components/ConsentBanner.astro';
 
 interface Props {
   title?: string;
@@ -23,7 +23,7 @@ interface Props {
 }
 
 const { title, description, image, noindex, breadcrumbs, faq } = Astro.props;
-const showWhatsappFloat = !/\/(agenda|prenota)\/?$/.test(Astro.url.pathname);
+const isPrivateAgenda = /\/agenda\/?$/.test(Astro.url.pathname);
 ---
 
 <!doctype html>
@@ -52,9 +52,7 @@ const showWhatsappFloat = !/\/(agenda|prenota)\/?$/.test(Astro.url.pathname);
     </main>
     <Footer />
 
-    {showWhatsappFloat && <aside aria-label="Contatta il salone">
-      <WhatsappButton variant="float" />
-    </aside>}
+    {!isPrivateAgenda && <ConsentBanner />}
 
     <!-- Reveal leggero: rivela [data-reveal] al loro ingresso in viewport.
          Compatibile con le View Transitions (astro:page-load) e rispetta

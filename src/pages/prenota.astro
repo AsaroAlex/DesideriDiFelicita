@@ -4,7 +4,7 @@ import BookingCalendar from '../components/BookingCalendar.astro';
 import { site } from '../data/site';
 
 const title = 'Prenota il tuo appuntamento';
-const description = `Scegli il servizio e un orario disponibile da ${site.businessName} a ${site.address.city}. Prenota online oppure scrivici su WhatsApp.`;
+const description = `Scegli il servizio, il giorno e l’orario da ${site.businessName} a ${site.address.city}. Prenota dal calendario del salone.`;
 const breadcrumbs = [
   { name: 'Home', href: '/' },
   { name: 'Prenota', href: '/prenota' },
@@ -15,11 +15,9 @@ const breadcrumbs = [
   <section class="section booking-page">
     <div class="container">
       <header class="section__head">
-        <p class="eyebrow">Il tuo momento felice</p>
-        <h1>Prenota il tuo appuntamento</h1>
+        <h1>Prenota in salone</h1>
         <p class="lead">
-          Scegli il servizio, il giorno e l’orario che preferisci. Per un consiglio
-          sul tuo prossimo look, siamo sempre a un messaggio di distanza.
+          Scegli il servizio, il giorno e l’orario che desideri.
         </p>
       </header>
       <BookingCalendar />
@@ -29,12 +27,16 @@ const breadcrumbs = [
 
 <style>
   .booking-page {
-    padding-top: var(--space-2xl);
+    padding-top: var(--space-lg);
   }
   .section__head {
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
+  }
+  .section__head h1 {
+    font-size: var(--fs-600);
   }
   .section__head .lead {
-    margin-top: var(--space-lg);
+    margin-top: var(--space-sm);
+    font-size: var(--fs-200);
   }
 </style>

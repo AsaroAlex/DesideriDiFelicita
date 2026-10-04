@@ -79,10 +79,10 @@ con file di origine e asset del sito. I JPEG (compresi gli HEIC convertiti) veng
 ottimizzati da Astro in varianti responsive; i provini con watermark restano esclusi
 dalle pagine. La selezione in home usa il flag `featured` nel manifest immagini.
 
-La mappa Google viene caricata solo dopo il clic su «Carica la mappa»; il collegamento
-alle indicazioni resta disponibile anche senza JavaScript. La pagina `/privacy`
-descrive navigazione, hosting e collegamenti esterni. Non vengono salvate preferenze
-per la mappa nel browser.
+La mappa Google si carica automaticamente dopo il consenso nel banner «Cookie e
+mappa». La scelta dura al massimo 180 giorni e si può cambiare da «Preferenze
+cookie» nel footer; prima del consenso non partono richieste Google. Indirizzo e
+indicazioni restano disponibili anche dopo il rifiuto o senza JavaScript.
 
 ## Deploy
 
@@ -129,7 +129,8 @@ installazione del builder Railway, che altrimenti manterrebbero le librerie di b
 
 Per attivazione iniziale, configurazione Meta, limiti di costo, backup e recupero,
 leggere [la guida dell’agenda](docs/agenda-proprietaria.md). Le durate dei servizi
-devono essere impostate da Jessica: il calendario parte disabilitato.
+devono essere impostate da Jessica per la conferma immediata. Il calendario
+riceve già richieste con giorno e orario desiderati senza inventare durate.
 
 ### GitHub Pages
 

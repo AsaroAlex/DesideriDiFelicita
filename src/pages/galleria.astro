@@ -4,6 +4,7 @@ import Gallery from '../components/Gallery.astro';
 import WhatsappButton from '../components/WhatsappButton.astro';
 import { site } from '../data/site';
 import { galleryImages } from '../data/images';
+import { salonQuestionMessage } from '../lib/contact';
 
 const title = 'Galleria';
 const description =
@@ -32,7 +33,7 @@ const breadcrumbs = [
 
       <div class="cta-band">
         <p>Hai uno stile che ti piacerebbe realizzare?</p>
-        <WhatsappButton label="Parlane con noi su WhatsApp" />
+        <WhatsappButton label="Chiedi un consiglio a Jessica" message={salonQuestionMessage(site.ownerName, 'galleria')} />
       </div>
     </div>
   </section>

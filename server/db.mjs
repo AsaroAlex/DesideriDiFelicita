@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { randomUUID, randomBytes } from 'node:crypto';
+import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { DatabaseSync, backup as sqliteBackup } from 'node:sqlite';
 import { DomainError, fail, requireObject, cleanText, normalizePhone, integer, boolean, duration } from './domain.mjs';
 import { TIMEZONE, DAY_NAMES, parseDate, parseTime, toLocalParts, localDateTimeToEpoch, addDays, weekday, minutesToTime, reminderDueAt } from './time.mjs';
@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS appointments (
 );
 CREATE INDEX IF NOT EXISTS appointments_start_status ON appointments(status,start_at,end_at);
 CREATE INDEX IF NOT EXISTS appointments_phone ON appointments(phone,status,start_at);
+CREATE TABLE IF NOT EXISTS booking_requests (
+ id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE, client_request_id TEXT NOT NULL UNIQUE, payload_hash TEXT NOT NULL,
+ service_id TEXT NOT NULL REFERENCES services(id), name TEXT NOT NULL, phone TEXT NOT NULL, requested_start_at INTEGER NOT NULL,
+ reminder_consent INTEGER NOT NULL CHECK(reminder_consent IN (0,1)), status TEXT NOT NULL CHECK(status IN ('pending','confirmed','declined')),
+ appointment_id TEXT REFERENCES appointments(id), created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+ CHECK((status='confirmed' AND appointment_id IS NOT NULL) OR (status IN ('pending','declined') AND appointment_id IS NULL))
+);
+CREATE INDEX IF NOT EXISTS booking_requests_status_start ON booking_requests(status,requested_start_at);
+CREATE INDEX IF NOT EXISTS booking_requests_phone ON booking_requests(phone,status,requested_start_at);
 CREATE TABLE IF NOT EXISTS reminders (
  id TEXT PRIMARY KEY, appointment_id TEXT NOT NULL REFERENCES appointments(id), appointment_revision INTEGER NOT NULL,
  due_at INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ('pending','sending','accepted','delivered','read','failed','skipped','needs_review')),
@@ -86,7 +95,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
   }
   function setting(key, value) { db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, JSON.stringify(value)); }
   const defaults = {
-    bookingEnabled: false, reminderTime: '18:00', bookingDays: 60,
+    bookingEnabled: false, requestEnabled: true, reminderTime: '18:00', bookingDays: 60,
     openingHours: validateHours(business.openingHours, business.openingHours), closedDates: [], dailyReminderLimit: 20, monthlyReminderLimit: 200,
   };
   transaction(() => {
@@ -103,7 +112,13 @@ export function createStore({ dataDir, business, now = Date.now }) {
   function activeServices() { return listServices().filter((service) => service.enabled && service.durationMinutes !== null); }
   function getPublicConfig(at = clock()) {
     const settings = getSettings();
-    return { businessName: business.businessName, timezone: TIMEZONE, bookingEnabled: Boolean(settings.bookingEnabled && activeServices().length), today: toLocalParts(at).date, bookingDays: settings.bookingDays, services: activeServices().map(({ id, name, durationMinutes }) => ({ id, name, durationMinutes })), openingHours: settings.openingHours };
+    return {
+      businessName: business.businessName, timezone: TIMEZONE, bookingEnabled: Boolean(settings.bookingEnabled && activeServices().length),
+      requestEnabled: settings.requestEnabled, today: toLocalParts(at).date, bookingDays: settings.bookingDays,
+      services: activeServices().map(({ id, name, durationMinutes }) => ({ id, name, durationMinutes })),
+      requestServices: settings.requestEnabled ? listServices().map(({ id, name, durationMinutes, enabled }) => ({ id, name, durationMinutes, instantBooking: Boolean(settings.bookingEnabled && enabled && durationMinutes !== null) })) : [],
+      openingHours: settings.openingHours, closedDates: settings.closedDates,
+    };
   }
   function getService(id, { publicOnly = false } = {}) {
     if (typeof id !== 'string') fail('invalid_service', 'Scegli un servizio.');
@@ -149,11 +164,137 @@ export function createStore({ dataDir, business, now = Date.now }) {
     }
     return { date, serviceId: id, slots };
   }
+  function getRequestAvailability({ serviceId: id, date }, at = clock()) {
+    const settings = getSettings();
+    if (!settings.requestEnabled) fail('request_disabled', 'Le richieste dal calendario sono momentaneamente sospese.', 409);
+    getService(id);
+    publicDate(date, at, settings);
+    const slots = [];
+    if (settings.closedDates.includes(date)) return { mode: 'request', date, serviceId: id, slots };
+    const day = settings.openingHours.find((entry) => entry.day === weekday(date));
+    const occupied = db.prepare("SELECT start_at,end_at FROM appointments WHERE status='confirmed' AND start_at < ? AND end_at > ?").all(localDateTimeToEpoch(addDays(date, 1), '00:00'), localDateTimeToEpoch(date, '00:00'));
+    for (const range of day?.ranges || []) {
+      const closes = parseTime(range.closes).minutes;
+      for (let minute = Math.ceil(parseTime(range.opens).minutes / 15) * 15; minute < closes; minute += 15) {
+        const time = minutesToTime(minute);
+        let startsAt;
+        try { startsAt = localDateTimeToEpoch(date, time); } catch (error) { if (error instanceof DomainError && ['invalid_local_time', 'ambiguous_local_time'].includes(error.code)) continue; throw error; }
+        if (startsAt <= at || occupied.some((row) => row.start_at <= startsAt && row.end_at > startsAt)) continue;
+        slots.push({ time, label: time, startsAt, endsAt: null });
+      }
+    }
+    return { mode: 'request', date, serviceId: id, slots };
+  }
   function mapAppointment(row) {
     const local = toLocalParts(row.start_at);
     return { id: row.id, reference: row.reference, serviceId: row.service_id, title: row.title, name: row.name, phone: row.phone, date: local.date, time: local.time, durationMinutes: (row.end_at - row.start_at) / 60_000, status: row.status, reminderConsent: Boolean(row.reminder_consent), revision: row.revision, createdAt: row.created_at };
   }
   function audit(event, id, at, detail = null) { db.prepare('INSERT INTO audit_log(event,resource_id,created_at,detail) VALUES(?,?,?,?)').run(event, id, at, detail); }
+  function upcomingCustomerCount(phone, at) {
+    return db.prepare("SELECT (SELECT COUNT(*) FROM appointments WHERE phone=? AND status='confirmed' AND start_at>?) + (SELECT COUNT(*) FROM booking_requests WHERE phone=? AND status='pending' AND requested_start_at>?) AS total").get(phone, at, phone, at).total;
+  }
+  function mapRequest(row) {
+    const local = toLocalParts(row.requested_start_at);
+    const service = getService(row.service_id);
+    const appointment = row.appointment_id ? db.prepare('SELECT * FROM appointments WHERE id=?').get(row.appointment_id) : null;
+    return {
+      id: row.id, reference: row.reference, serviceId: row.service_id, serviceName: service.name, name: row.name, phone: row.phone,
+      date: local.date, time: local.time, reminderConsent: Boolean(row.reminder_consent), status: row.status, appointmentId: row.appointment_id,
+      appointment: appointment ? mapAppointment(appointment) : null, createdAt: row.created_at,
+    };
+  }
+  function publicRequestReceipt(row) {
+    if (row.status === 'confirmed') {
+      const appointment = db.prepare('SELECT * FROM appointments WHERE id=?').get(row.appointment_id);
+      const local = toLocalParts(appointment.start_at);
+      return { id: row.id, reference: row.reference, status: appointment.status === 'cancelled' ? 'cancelled' : 'confirmed', serviceName: appointment.title, date: local.date, time: local.time };
+    }
+    const local = toLocalParts(row.requested_start_at);
+    return { id: row.id, reference: row.reference, status: row.status, serviceName: getService(row.service_id).name, date: local.date, time: local.time };
+  }
+  function createPublicRequest(input, at = clock()) {
+    requireObject(input);
+    // A UUID belongs to one normalized payload forever, including after the
+    // request is confirmed or declined. Retrying never inserts another row.
+    if (typeof input.clientRequestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.clientRequestId)) {
+      fail('invalid_request_id', 'Riprova a inviare la richiesta dal calendario.');
+    }
+    const clientRequestId = input.clientRequestId.toLowerCase();
+    const name = cleanText(input.name, 'Nome', { min: 2, max: 100 });
+    const phone = normalizePhone(input.phone);
+    const reminderConsent = boolean(input.reminderConsent, 'Promemoria WhatsApp');
+    const service = getService(input.serviceId);
+    const startsAt = localDateTimeToEpoch(input.date, input.time);
+    const payloadHash = createHash('sha256').update(JSON.stringify({ serviceId: service.id, date: input.date, time: input.time, name, phone, reminderConsent })).digest('hex');
+    return transaction(() => {
+      const previous = db.prepare('SELECT * FROM booking_requests WHERE client_request_id=?').get(clientRequestId);
+      if (previous) {
+        if (previous.payload_hash !== payloadHash) fail('request_id_reused', 'La richiesta è stata modificata. Invia una nuova richiesta dal calendario.', 409);
+        return publicRequestReceipt(previous);
+      }
+      const slots = getRequestAvailability({ serviceId: service.id, date: input.date }, at).slots;
+      if (!slots.some((slot) => slot.startsAt === startsAt)) fail('request_unavailable', 'Questo orario non è più selezionabile. Scegli un altro orario.', 409);
+      if (upcomingCustomerCount(phone, at) >= 3) fail('booking_limit', 'Per altri appuntamenti contatta direttamente il salone.', 429);
+      const row = {
+        id: randomUUID(), reference: `DR-${randomBytes(5).toString('hex').toUpperCase()}`, client_request_id: clientRequestId, payload_hash: payloadHash,
+        service_id: service.id, name, phone, requested_start_at: startsAt, reminder_consent: Number(reminderConsent), status: 'pending',
+        appointment_id: null, created_at: at, updated_at: at,
+      };
+      db.prepare('INSERT INTO booking_requests(id,reference,client_request_id,payload_hash,service_id,name,phone,requested_start_at,reminder_consent,status,appointment_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(...Object.values(row));
+      audit('public_request_created', row.id, at);
+      return publicRequestReceipt(row);
+    });
+  }
+  function listRequests({ status = 'pending', limit = 100 } = {}) {
+    if (!['pending', 'confirmed', 'declined'].includes(status)) fail('invalid_status', 'Stato richiesta non valido.');
+    integer(limit, 'Numero richieste', 1, 500);
+    return db.prepare('SELECT * FROM booking_requests WHERE status=? ORDER BY requested_start_at,created_at,id LIMIT ?').all(status, limit).map(mapRequest);
+  }
+  function getRequest(id) {
+    if (typeof id !== 'string') fail('request_not_found', 'Richiesta non trovata.', 404);
+    const row = db.prepare('SELECT * FROM booking_requests WHERE id=?').get(id);
+    if (!row) fail('request_not_found', 'Richiesta non trovata.', 404);
+    return row;
+  }
+  function confirmRequest(id, input = {}, at = clock()) {
+    requireObject(input);
+    return transaction(() => {
+      const row = getRequest(id);
+      if (row.status === 'confirmed') {
+        const request = mapRequest(row);
+        return { request, appointment: request.appointment };
+      }
+      if (row.status !== 'pending') fail('request_not_pending', 'Questa richiesta è già stata rifiutata.', 409);
+      const service = getService(row.service_id);
+      const requestedLocal = toLocalParts(row.requested_start_at);
+      const date = input.date ?? requestedLocal.date;
+      const time = input.time ?? requestedLocal.time;
+      const length = duration(Object.hasOwn(input, 'durationMinutes') ? input.durationMinutes : service.duration_minutes);
+      const settings = getSettings();
+      publicDate(date, at, settings);
+      const start = localDateTimeToEpoch(date, time);
+      const endLocal = toLocalParts(start + length * 60_000);
+      if (start <= at || !rangeContains(date, time, length, settings) || endLocal.date !== date || parseTime(endLocal.time).minutes !== parseTime(time).minutes + length) {
+        fail('slot_unavailable', 'La durata dell’appuntamento deve rientrare negli orari di apertura. Scegli un altro orario.', 409);
+      }
+      // This nested insert shares the outer BEGIN IMMEDIATE transaction: no
+      // other connection can occupy the interval between the check and link.
+      const appointment = createAdminAppointment({ serviceId: service.id, date, time, durationMinutes: length, name: row.name, phone: row.phone, reminderConsent: Boolean(row.reminder_consent) }, at);
+      db.prepare("UPDATE booking_requests SET status='confirmed',appointment_id=?,updated_at=? WHERE id=?").run(appointment.id, at, row.id);
+      audit('request_confirmed', row.id, at);
+      return { request: mapRequest(getRequest(id)), appointment };
+    });
+  }
+  function declineRequest(id, at = clock()) {
+    return transaction(() => {
+      const row = getRequest(id);
+      if (row.status === 'declined') return mapRequest(row);
+      if (row.status !== 'pending') fail('request_not_pending', 'Questa richiesta è già stata confermata. Per annullarla modifica l’appuntamento in agenda.', 409);
+      db.prepare("UPDATE booking_requests SET status='declined',updated_at=? WHERE id=?").run(at, row.id);
+      audit('request_declined', row.id, at);
+      return mapRequest(getRequest(id));
+    });
+  }
   function planReminder(row, at) {
     if (row.status !== 'confirmed' || !row.reminder_consent) return;
     const dueAt = reminderDueAt(toLocalParts(row.start_at).date, getSettings().reminderTime);
@@ -183,7 +324,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
       if (start <= at || parseTime(time).minutes % 15 || !rangeContains(date, time, length, settings)) fail('slot_unavailable', 'Questo orario non è disponibile. Scegli un altro orario.', 409);
       const endLocal = toLocalParts(end);
       if (endLocal.date !== date || parseTime(endLocal.time).minutes !== parseTime(time).minutes + length) fail('slot_unavailable', 'Questo orario non è disponibile. Scegli un altro orario.', 409);
-      const count = db.prepare("SELECT COUNT(*) AS total FROM appointments WHERE phone=? AND status='confirmed' AND start_at>? ").get(phone, at).total;
+      const count = upcomingCustomerCount(phone, at);
       if (count >= 3) fail('booking_limit', 'Per altri appuntamenti contatta direttamente il salone.', 429);
     }
     if (conflicts(start, end)) fail('slot_conflict', 'Questo orario è già occupato. Scegli un altro orario.', 409);
@@ -261,6 +402,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
       for (const key of Object.keys(patch)) if (!Object.hasOwn(defaults, key)) fail('invalid_setting', 'Impostazione non valida.');
       const next = { ...current, ...patch };
       boolean(next.bookingEnabled, 'Prenotazioni online');
+      boolean(next.requestEnabled, 'Richieste dal calendario');
       parseTime(next.reminderTime);
       integer(next.bookingDays, 'Periodo prenotabile', 1, 365);
       integer(next.dailyReminderLimit, 'Limite giornaliero', 0, 1000);
@@ -300,6 +442,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
       todayAppointments: db.prepare("SELECT COUNT(*) AS count FROM appointments WHERE status='confirmed' AND start_at>=? AND start_at<?").get(start, end).count,
       upcomingAppointments: db.prepare("SELECT COUNT(*) AS count FROM appointments WHERE status='confirmed' AND start_at>? ").get(at).count,
       pendingReminders: db.prepare("SELECT COUNT(*) AS count FROM reminders WHERE status='pending'").get().count,
+      pendingRequests: db.prepare("SELECT COUNT(*) AS count FROM booking_requests WHERE status='pending'").get().count,
       sentThisMonth: db.prepare("SELECT COUNT(DISTINCT r.id) AS count FROM reminders r JOIN audit_log a ON a.resource_id=r.id AND a.event='whatsapp_send_claimed' WHERE (r.status IN ('accepted','delivered','read') OR r.provider_message_id IS NOT NULL) AND a.created_at>=? AND a.created_at<=?").get(month, at).count,
     };
   }
@@ -328,5 +471,5 @@ export function createStore({ dataDir, business, now = Date.now }) {
     await Promise.all(copies.slice(7).map((file) => unlink(resolve(backupDirectory, file))));
     return destination;
   }
-  return { db, transaction, close: () => db.close(), getPublicConfig, getAvailability, createPublicBooking, listAppointments, createAdminAppointment, updateAppointment, listServices, updateService, getSettings, updateSettings, listReminders, getStats, backup };
+  return { db, transaction, close: () => db.close(), getPublicConfig, getAvailability, getRequestAvailability, createPublicBooking, createPublicRequest, listRequests, confirmRequest, declineRequest, listAppointments, createAdminAppointment, updateAppointment, listServices, updateService, getSettings, updateSettings, listReminders, getStats, backup };
 }

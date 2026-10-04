@@ -229,3 +229,28 @@ la mappa è attiva, niente badge "da confermare".
   dalla titolare; identità/contatti del brand rimangono centralizzati in `site.ts`.
 - Privacy aggiornata per modulo prenotazioni, agenda privata/cookie tecnico,
   hosting e consenso facoltativo ai promemoria, senza marketing o analytics.
+
+
+## 16. Correzione del percorso clienti — 2026-10-04
+
+- L’utente ha segnalato che il calendario era nascosto quando le durate non erano
+  configurate e «Prenota» duplicava WhatsApp. Il prodotto deve essere usabile dalle
+  clienti al primo accesso, senza richiedere configurazioni tecniche al visitatore.
+- Il calendario parte con **richieste attive**, catalogo reale completo, giorni e
+  orari desiderati dalle aperture/chiusure effettive. Nessuna durata viene inventata.
+  Le richieste sono persistite in `booking_requests` e visibili nell’agenda privata.
+- «Richiesta ricevuta» non significa appuntamento confermato. Jessica conferma con
+  durata reale, data/ora e controllo atomico dell’intero intervallo; solo allora
+  parte la coda promemoria. Conferma e retry sono idempotenti.
+- I servizi già configurati possono usare la conferma immediata nello stesso
+  calendario. `requestEnabled=true` è indipendente da `bookingEnabled=false`.
+  Disabilitare le richieste non disabilita gli slot già configurati, e viceversa.
+- Un unico scopo per CTA: Prenota porta al calendario; WhatsApp è consulenza
+  contestuale, con testo naturale e senza pulsanti duplicati/flottanti.
+- **Mappa richiesta subito dall’utente:** banner Cookie e mappa con consenso o
+  Solo necessari, stesso rilievo; nessuna richiesta Google prima della scelta,
+  caricamento automatico dopo consenso e alle visite successive. Scelta 180 giorni
+  in localStorage tecnico, nessuna PII; revoca da Preferenze cookie nel footer.
+- Mappa prima dei dettagli contatto nella pagina Contatti, anche su mobile.
+- L’utente ha autorizzato esplicitamente questo popup cookie. Non ripristinare il
+  vecchio pulsante «Carica la mappa» come passaggio aggiuntivo dopo il consenso.

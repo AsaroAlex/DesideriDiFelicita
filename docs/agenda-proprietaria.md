@@ -11,17 +11,22 @@ e l’eventuale costo dei messaggi stabilito da Meta.
    subito dalla barra dell’indirizzo. Non condividerlo né inserirlo nel repository.
 2. Scegliere email e password di almeno 12 caratteri. I dati clienti sono visibili
    solo dopo l’accesso. La sessione scade dopo 12 ore; logout revoca il cookie.
-3. In **Servizi**, impostare la durata reale di ogni servizio prenotabile e abilitarlo.
-   Le durate non sono precompilate perché non sono state confermate dalla titolare.
-4. Verificare orari, pause e giorni di chiusura in **Impostazioni**; attivare le
-   prenotazioni online. Il calendario propone solo intervalli liberi abbastanza
-   lunghi per il servizio scelto. Prima dell’attivazione offre il contatto WhatsApp.
+3. Il calendario pubblico riceve già richieste con servizio, giorno e orario
+   desiderato, anche senza durate configurate. In **Richieste**, Jessica verifica
+   data, ora e durata effettiva e conferma o rifiuta. Una richiesta ancora pendente
+   non occupa un appuntamento e non genera promemoria.
+4. Per la conferma immediata, impostare in **Servizi** le durate reali e abilitare
+   i servizi; in **Impostazioni**, verificare orari/chiusure e attivare «Conferma
+   automaticamente i servizi configurati». Gli altri servizi continuano a ricevere
+   richieste. «Ricevi richieste dal calendario» permette di sospenderle separatamente.
 5. Inserire nell’agenda gli appuntamenti già presenti sulla carta: devono occupare
    gli orari prima di aprire il calendario alle clienti.
 
 L’agenda permette inserimento, modifica, spostamento, cancellazione, vista giornaliera
 e settimanale ed esportazione CSV. Le clienti non creano un account; la conferma
-sul sito include il riferimento della prenotazione. In caso di modifica o
+sul sito include un riferimento e distingue **Richiesta ricevuta** da
+**Appuntamento confermato**. Retry identici di una richiesta restituiscono lo
+stesso riferimento, senza creare duplicati. In caso di modifica o
 cancellazione, contattano il salone. Non sono previsti pagamenti sul sito.
 
 ## Promemoria e costi

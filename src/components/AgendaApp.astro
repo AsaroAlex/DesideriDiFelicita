@@ -25,7 +25,7 @@ import { site } from '../data/site';
 <section class="agenda section" data-agenda data-business={site.businessName} data-owner-email={site.email}>
   <div class="container">
     <header class="agenda-heading">
-      <div><p class="eyebrow">Il tuo salone, organizzato</p><h1>Agenda di Jessica</h1><p class="lead">Appuntamenti e promemoria, in un unico posto.</p></div>
+      <div><p class="eyebrow">Il tuo salone, organizzato</p><h1>Agenda di Jessica</h1><p class="lead">Richieste, appuntamenti e promemoria, in un unico posto.</p></div>
       <div data-owner-controls hidden><span data-owner-email-label></span><button type="button" class="agenda-button secondary" data-logout>Esci</button></div>
     </header>
     <p class="agenda-notice" role="status" aria-live="polite" data-notice>Caricamento dell’agenda…</p>
@@ -52,6 +52,7 @@ import { site } from '../data/site';
       <section class="agenda-stats" aria-label="Riepilogo dell’agenda" data-stats></section>
       <nav class="agenda-tabs" aria-label="Sezioni dell’agenda">
         <button type="button" class="agenda-button" data-tab="calendar" aria-pressed="true">Appuntamenti</button>
+        <button type="button" class="agenda-button secondary" data-tab="requests" aria-pressed="false">Richieste <span class="request-count" data-request-count aria-label="Richieste da confermare">0</span></button>
         <button type="button" class="agenda-button secondary" data-tab="services" aria-pressed="false">Servizi</button>
         <button type="button" class="agenda-button secondary" data-tab="settings" aria-pressed="false">Impostazioni</button>
         <button type="button" class="agenda-button secondary" data-tab="reminders" aria-pressed="false">Promemoria</button>
@@ -88,9 +89,17 @@ import { site } from '../data/site';
         </section>
       </section>
 
+      <section data-panel="requests" hidden aria-labelledby="requests-title">
+        <div class="agenda-section-head"><h2 id="requests-title" tabindex="-1">Richieste delle clienti</h2><button type="button" class="agenda-button secondary" data-requests-refresh>Aggiorna richieste</button></div>
+        <p class="agenda-note">Le clienti scelgono un servizio e un orario desiderato. Controlla la durata e conferma: solo allora l’appuntamento occupa l’agenda. Le richieste non inviano messaggi automatici.</p>
+        <div class="agenda-card request-toolbar"><label>Mostra<select data-request-status><option value="pending">Da confermare</option><option value="confirmed">Confermate</option><option value="declined">Non accettate</option></select></label></div>
+        <div class="agenda-card request-result" data-request-result hidden aria-live="polite"></div>
+        <div class="request-list" data-requests aria-live="polite"></div>
+      </section>
+
       <section data-panel="services" hidden aria-labelledby="services-title">
         <h2 id="services-title" tabindex="-1">Servizi e durate</h2>
-        <p class="agenda-note">Imposta tu la durata di ciascun servizio. Solo i servizi abilitati, con una durata definita, compaiono nella prenotazione online. Le modifiche non cambiano gli appuntamenti già inseriti.</p>
+        <p class="agenda-note">Tutti i servizi possono ricevere richieste dal calendario. Per confermare un servizio automaticamente, imposta la durata, abilitalo qui e attiva la conferma automatica nelle Impostazioni. Le modifiche non cambiano gli appuntamenti già inseriti.</p>
         <div class="service-settings" data-services></div>
       </section>
 
@@ -98,8 +107,10 @@ import { site } from '../data/site';
         <h2 id="settings-title" tabindex="-1">Impostazioni del salone</h2>
         <form class="agenda-card" data-settings-form>
           <h3>Prenotazioni online</h3>
-          <label class="checkbox-label"><input type="checkbox" name="bookingEnabled" />Permetti alle clienti di prenotare dal sito.</label>
-          <p class="agenda-note" data-booking-help>Prima di attivare le prenotazioni, imposta almeno un servizio con durata e disponibilità.</p>
+          <label class="checkbox-label"><input type="checkbox" name="requestEnabled" />Ricevi richieste dal calendario.</label>
+          <p class="agenda-note">Le richieste arrivano nella sezione Richieste: scegli tu quali confermare, con la durata effettiva del servizio.</p>
+          <label class="checkbox-label"><input type="checkbox" name="bookingEnabled" />Conferma automaticamente i servizi configurati.</label>
+          <p class="agenda-note" data-booking-help>Per la conferma automatica servono almeno un servizio abilitato e la sua durata.</p>
           <label>Giorni prenotabili in anticipo<input type="number" name="bookingDays" min="1" max="365" required /></label>
           <h3>Orari di disponibilità</h3>
           <p class="agenda-note">Usa fasce come 09:00-13:00, 17:00-19:00. Lascia vuoto un giorno di chiusura.</p>
@@ -142,9 +153,10 @@ import { site } from '../data/site';
   import { whatsappHref } from '../lib/contact';
 
   type Appointment = { id: string; reference: string; serviceId?: string | null; title: string; name: string; phone: string; date: string; time: string; durationMinutes: number; status: string; reminderConsent: boolean };
+  type BookingRequest = { id: string; reference: string; serviceId: string; serviceName: string; name: string; phone: string; date: string; time: string; reminderConsent: boolean; status: 'pending' | 'confirmed' | 'declined'; appointmentId?: string | null; createdAt: number; appointment?: Pick<Appointment, 'id' | 'date' | 'time' | 'durationMinutes' | 'status' | 'title'> | null };
   type Service = { id: string; name: string; durationMinutes: number | null; enabled: boolean };
   type OpeningHour = { day: string; label: string; ranges: { opens: string; closes: string }[] };
-  type Settings = { bookingEnabled: boolean; bookingDays: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; dailyReminderLimit: number; monthlyReminderLimit: number };
+  type Settings = { requestEnabled: boolean; bookingEnabled: boolean; bookingDays: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; dailyReminderLimit: number; monthlyReminderLimit: number };
   type Reminder = { id: string; appointmentId: string; name: string; phone: string; date: string; time: string; status: string; dueAt: number; attemptCount: number; errorCode?: string; errorText?: string };
   type Session = { authenticated: boolean; setupRequired?: boolean; email?: string; csrfToken?: string; whatsappConfigured?: boolean };
   type Automation = { configured: boolean; missing: string[]; dailyLimit: number; monthlyLimit: number; sentThisMonth: number };
@@ -165,6 +177,8 @@ import { site } from '../data/site';
     let session: Session = { authenticated: false };
     let services: Service[] = [];
     let appointments: Appointment[] = [];
+    let requests: BookingRequest[] = [];
+    let requestStatus = 'pending';
     let reminders: Reminder[] = [];
     let settings: Settings | undefined;
     let editingId = '';
@@ -172,6 +186,7 @@ import { site } from '../data/site';
     let view = 'day';
     let selectedDate = today();
     let busy = false;
+    let backgroundRefreshing = false;
 
     const el = <T extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
     const notice = el('[data-notice]');
@@ -221,8 +236,9 @@ import { site } from '../data/site';
       el('[data-owner-controls]').hidden = !next.authenticated;
       el('[data-auth]').hidden = next.authenticated;
       if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; return; }
-      services = []; appointments = []; reminders = []; settings = undefined;
+      services = []; appointments = []; requests = []; reminders = []; settings = undefined; requestStatus = 'pending'; el<HTMLSelectElement>('[data-request-status]').value = requestStatus;
       el('[data-calendar]').replaceChildren(); el('[data-services]').replaceChildren(); el('[data-reminders]').replaceChildren(); el('[data-stats]').replaceChildren(); el('[data-automation]').replaceChildren();
+      el('[data-requests]').replaceChildren(); el('[data-request-result]').replaceChildren(); el('[data-request-result]').hidden = true; el('[data-request-count]').textContent = '0';
       appointmentForm.reset(); passwordForm.reset(); el('[data-editor]').hidden = true;
       const setup = Boolean(next.setupRequired);
       el('[data-auth-title]').textContent = setup ? 'Benvenuta nella tua agenda' : 'Accedi alla tua agenda';
@@ -234,29 +250,139 @@ import { site } from '../data/site';
     async function loadCalendar() {
       const { from, to } = period();
       const result = await api<{ items: Appointment[] }>(`/api/admin/appointments?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      if (!session.authenticated || lifetime.signal.aborted) return;
       appointments = result.items; renderCalendar();
     }
 
+    async function loadRequests() {
+      const result = await api<{ items: BookingRequest[] }>(`/api/admin/requests?status=${encodeURIComponent(requestStatus)}&limit=100`);
+      if (!session.authenticated || lifetime.signal.aborted) return;
+      requests = result.items; renderRequests();
+    }
+
     async function loadAll() {
-      const [serviceData, settingsData, reminderData, stats, automation] = await Promise.all([
+      const [serviceData, settingsData, reminderData, stats, automation, requestData] = await Promise.all([
         api<{ items: Service[] }>('/api/admin/services'), api<Settings>('/api/admin/settings'), api<{ items: Reminder[] }>('/api/admin/reminders'),
         api<Record<string, number>>('/api/admin/stats'), api<Automation>('/api/admin/automation'),
+        api<{ items: BookingRequest[] }>(`/api/admin/requests?status=${encodeURIComponent(requestStatus)}&limit=100`),
       ]);
       if (!session.authenticated || lifetime.signal.aborted) return;
-      services = serviceData.items; settings = settingsData; reminders = reminderData.items;
-      renderServices(); renderSettings(); renderReminders(); renderStats(stats); renderAutomation(automation); populateServiceSelect();
+      services = serviceData.items; settings = settingsData; reminders = reminderData.items; requests = requestData.items;
+      renderServices(); renderSettings(); renderReminders(); renderStats(stats); renderAutomation(automation); renderRequests(); populateServiceSelect();
       await loadCalendar();
     }
 
+    async function refreshIncomingRequests() {
+      if (!session.authenticated || lifetime.signal.aborted || document.hidden || busy || backgroundRefreshing) return;
+      backgroundRefreshing = true;
+      try {
+        const panel = el('[data-panel=requests]');
+        const editingRequest = Boolean(panel.querySelector('[data-request-confirm]:not([hidden]), .request-decline:not([hidden])'));
+        const focusInRequest = Boolean(document.activeElement?.closest('[data-request-id]'));
+        const refreshList = !panel.hidden && !editingRequest && !focusInRequest;
+        const requestedStatus = requestStatus;
+        const [stats, result] = await Promise.all([
+          api<Record<string, number>>('/api/admin/stats'),
+          refreshList ? api<{ items: BookingRequest[] }>(`/api/admin/requests?status=${encodeURIComponent(requestStatus)}&limit=100`) : Promise.resolve(null),
+        ]);
+        if (!session.authenticated || lifetime.signal.aborted || document.hidden || busy) return;
+        renderStats(stats);
+        // Se Jessica apre una conferma durante la richiesta, conserva il modulo e i dati inseriti.
+        const nowEditing = Boolean(panel.querySelector('[data-request-confirm]:not([hidden]), .request-decline:not([hidden])'));
+        const nowFocused = Boolean(document.activeElement?.closest('[data-request-id]'));
+        if (result && requestStatus === requestedStatus && !panel.hidden && !nowEditing && !nowFocused && JSON.stringify(result.items) !== JSON.stringify(requests)) { requests = result.items; renderRequests(); }
+      } catch { /* Un aggiornamento in background non interrompe il lavoro; resta disponibile Aggiorna richieste. */ }
+      finally { backgroundRefreshing = false; }
+    }
+
     function renderStats(stats: Record<string, number>) {
-      const labels = [['todayAppointments', 'Appuntamenti oggi'], ['upcomingAppointments', 'In programma'], ['pendingReminders', 'Promemoria in attesa'], ['sentThisMonth', 'Invii questo mese']];
+      const labels = [['pendingRequests', 'Richieste da confermare'], ['todayAppointments', 'Appuntamenti oggi'], ['upcomingAppointments', 'In programma'], ['pendingReminders', 'Promemoria in attesa'], ['sentThisMonth', 'Invii questo mese']];
       el('[data-stats]').replaceChildren(...labels.map(([key, label]) => { const card = textNode('div', '', 'stat-card'); card.append(textNode('strong', String(stats[key] ?? 0)), textNode('span', label)); return card; }));
+      el('[data-request-count]').textContent = String(stats.pendingRequests ?? 0);
     }
 
     function manualLink(appointment: { name: string; phone: string; date: string; time: string }) {
       const message = `Ciao ${appointment.name}, ti ricordiamo l’appuntamento da ${root.dataset.business} il ${prettyDate(appointment.date, false)} alle ${appointment.time}. Per modifiche o cancellazioni contatta il salone.`;
       const link = textNode('a', 'Apri WhatsApp', 'agenda-button secondary') as HTMLAnchorElement;
       link.href = whatsappHref(appointment.phone, message); link.target = '_blank'; link.rel = 'noopener noreferrer'; link.setAttribute('aria-label', `Prepara un promemoria WhatsApp per ${appointment.name}`); return link;
+    }
+
+    function confirmationLink(appointment: { name: string; phone: string; date: string; time: string; title: string }) {
+      const message = `Ciao ${appointment.name}, il tuo appuntamento per ${appointment.title} da ${root.dataset.business} è confermato per ${prettyDate(appointment.date, false)} alle ${appointment.time}. Se hai bisogno di cambiare l’orario, scrivimi qui. A presto, Jessica`;
+      const link = textNode('a', 'Comunica conferma', 'agenda-button secondary') as HTMLAnchorElement;
+      link.href = whatsappHref(appointment.phone, message); link.target = '_blank'; link.rel = 'noopener noreferrer'; link.setAttribute('aria-label', `Prepara la conferma WhatsApp per ${appointment.name}`); return link;
+    }
+
+    function showRequestResult(appointment: Appointment) {
+      const result = el('[data-request-result]');
+      const actions = textNode('div', '', 'button-group');
+      const close = textNode('button', 'Chiudi', 'agenda-button secondary') as HTMLButtonElement; close.type = 'button';
+      on(close, 'click', () => { result.hidden = true; result.replaceChildren(); focus('#requests-title'); });
+      actions.append(confirmationLink(appointment), close);
+      result.replaceChildren(textNode('h3', 'Appuntamento confermato'), textNode('p', `${appointment.name} · ${appointment.title}`), textNode('p', `${prettyDate(appointment.date)} alle ${appointment.time} · ${appointment.durationMinutes} minuti`), textNode('p', 'È stato aggiunto all’agenda. Per avvisare la cliente, apri il messaggio di conferma e premi Invia su WhatsApp.', 'agenda-note'), actions);
+      result.hidden = false;
+    }
+
+    function renderRequests() {
+      const list = el('[data-requests]');
+      if (!requests.length) {
+        const copy = requestStatus === 'pending' ? 'Non ci sono richieste da confermare. Le richieste ricevute dal sito compariranno qui.' : requestStatus === 'confirmed' ? 'Non ci sono ancora richieste confermate.' : 'Non ci sono richieste non accettate.';
+        list.replaceChildren(textNode('p', copy, 'agenda-card')); return;
+      }
+      list.replaceChildren(...requests.map(request => {
+        const card = textNode('article', '', 'agenda-card request-card'); card.dataset.requestId = request.id;
+        const heading = textNode('div', '', 'appointment-top');
+        heading.append(textNode('h3', request.name), textNode('span', request.status === 'pending' ? 'Da confermare' : request.status === 'confirmed' ? 'Confermata' : 'Non accettata', 'status-badge')); card.append(heading);
+        card.append(textNode('p', request.serviceName), textNode('p', `Orario desiderato: ${prettyDate(request.date)} alle ${request.time}`), textNode('p', request.phone, 'agenda-note'), textNode('small', `Riferimento ${request.reference}`));
+        if (request.status !== 'pending') {
+          if (request.appointment) {
+            const appointment = request.appointment;
+            card.append(textNode('p', appointment.status === 'cancelled' ? 'L’appuntamento collegato è stato annullato.' : `In agenda: ${prettyDate(appointment.date)} alle ${appointment.time} · ${appointment.durationMinutes} minuti`, 'agenda-note'));
+            if (appointment.status === 'confirmed') card.append(confirmationLink({ ...appointment, name: request.name, phone: request.phone, title: appointment.title || request.serviceName }));
+          }
+          return card;
+        }
+
+        const actions = textNode('div', '', 'button-group request-actions');
+        const confirm = textNode('button', 'Controlla e conferma', 'agenda-button') as HTMLButtonElement; confirm.type = 'button';
+        const decline = textNode('button', 'Non accettare', 'agenda-button secondary') as HTMLButtonElement; decline.type = 'button';
+        actions.append(confirm, decline); card.append(actions);
+
+        const form = document.createElement('form'); form.className = 'request-confirm-form'; form.hidden = true; form.dataset.requestConfirm = request.id;
+        const title = textNode('h4', 'Conferma i dettagli'); title.tabIndex = -1;
+        const fields = textNode('div', '', 'form-grid');
+        const field = (labelText: string, name: string, type: string, value: string) => {
+          const label = textNode('label', labelText); const control = document.createElement('input'); control.name = name; control.type = type; control.value = value; control.required = true; label.append(control); fields.append(label); return control;
+        };
+        const date = field('Giorno', 'date', 'date', request.date); date.min = today();
+        field('Ora', 'time', 'time', request.time);
+        const knownDuration = services.find(service => service.id === request.serviceId)?.durationMinutes;
+        const duration = field('Durata effettiva, in minuti', 'durationMinutes', 'number', knownDuration ? String(knownDuration) : ''); duration.min = '5'; duration.max = '480'; duration.step = '1';
+        const save = textNode('button', 'Conferma appuntamento', 'agenda-button') as HTMLButtonElement; save.type = 'submit';
+        const cancel = textNode('button', 'Lascia in attesa', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button';
+        const formActions = textNode('div', '', 'button-group'); formActions.append(save, cancel);
+        form.append(title, fields, textNode('p', knownDuration ? 'Puoi cambiare giorno, orario e durata prima di confermare. Il sistema controlla gli impegni già presenti.' : 'Indica la durata reale del servizio. Puoi cambiare giorno e orario; il sistema controlla gli impegni già presenti.', 'agenda-note'), textNode('p', request.reminderConsent ? 'La cliente ha accettato il promemoria WhatsApp.' : 'La cliente non ha richiesto il promemoria WhatsApp.', 'agenda-note'), formActions);
+        card.append(form);
+
+        const declineBox = textNode('div', '', 'request-decline'); declineBox.hidden = true;
+        declineBox.append(textNode('p', 'Vuoi rifiutare questa richiesta? Non verrà creato alcun appuntamento. Avvisa la cliente se avete già parlato dell’orario.'));
+        const declineActions = textNode('div', '', 'button-group');
+        const declineSave = textNode('button', 'Sì, non accettare', 'agenda-button secondary') as HTMLButtonElement; declineSave.type = 'button';
+        const declineCancel = textNode('button', 'Torna alla richiesta', 'agenda-button secondary') as HTMLButtonElement; declineCancel.type = 'button';
+        declineActions.append(declineSave, declineCancel); declineBox.append(declineActions); card.append(declineBox);
+        on(confirm, 'click', () => { actions.hidden = true; declineBox.hidden = true; form.hidden = false; title.focus({ preventScroll: true }); });
+        on(cancel, 'click', () => { form.hidden = true; actions.hidden = false; confirm.focus({ preventScroll: true }); });
+        on(decline, 'click', () => { actions.hidden = true; form.hidden = true; declineBox.hidden = false; declineSave.focus({ preventScroll: true }); });
+        on(declineCancel, 'click', () => { declineBox.hidden = true; actions.hidden = false; decline.focus({ preventScroll: true }); });
+        on(form, 'submit', event => { event.preventDefault(); void act(form, async () => {
+          if (!duration.value || !Number.isInteger(Number(duration.value))) { duration.focus(); throw new Error('Indica la durata effettiva del servizio, in minuti.'); }
+          const result = await api<{ request: BookingRequest; appointment: Appointment }>(`/api/admin/requests/${encodeURIComponent(request.id)}/confirm`, 'POST', { date: input(form, 'date').value, time: input(form, 'time').value, durationMinutes: Number(duration.value) });
+          selectedDate = result.appointment.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate;
+          showRequestResult(result.appointment); await loadAll(); inform('Richiesta confermata. L’appuntamento è in agenda.'); focus('#requests-title');
+        }); });
+        on(declineSave, 'click', () => { void act(null, async () => { await api(`/api/admin/requests/${encodeURIComponent(request.id)}/decline`, 'POST', {}); await loadAll(); inform('Richiesta non accettata. Non è stato creato un appuntamento.'); focus('#requests-title'); }); });
+        return card;
+      }));
     }
 
     function renderCalendar() {
@@ -306,7 +432,7 @@ import { site } from '../data/site';
         const form = document.createElement('form'); form.className = 'agenda-card service-form';
         const title = textNode('h3', service.name); form.append(title);
         const durationLabel = textNode('label', 'Durata, in minuti'); const duration = document.createElement('input'); duration.type = 'number'; duration.min = '5'; duration.max = '480'; duration.step = '1'; duration.name = 'durationMinutes'; duration.value = service.durationMinutes ? String(service.durationMinutes) : ''; durationLabel.append(duration);
-        const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = Boolean(service.enabled); enabledLabel.append(enabled, document.createTextNode('Disponibile per la prenotazione online'));
+        const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = Boolean(service.enabled); enabledLabel.append(enabled, document.createTextNode('Abilita la conferma automatica per questo servizio'));
         const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit'; form.append(durationLabel, enabledLabel, save);
         on(form, 'submit', event => { event.preventDefault(); void act(form, async () => {
           if (enabled.checked && !duration.value) { duration.focus(); throw new Error('Imposta la durata prima di abilitare questo servizio.'); }
@@ -317,11 +443,12 @@ import { site } from '../data/site';
 
     function renderSettings() {
       if (!settings) return;
+      input(settingsForm, 'requestEnabled').checked = settings.requestEnabled !== false;
       input(settingsForm, 'bookingEnabled').checked = settings.bookingEnabled;
       input(settingsForm, 'bookingDays').value = String(settings.bookingDays); input(settingsForm, 'reminderTime').value = settings.reminderTime;
       input(settingsForm, 'dailyReminderLimit').value = String(settings.dailyReminderLimit); input(settingsForm, 'monthlyReminderLimit').value = String(settings.monthlyReminderLimit);
       input<HTMLTextAreaElement>(settingsForm, 'closedDates').value = settings.closedDates.join('\n');
-      el('[data-booking-help]').textContent = services.some(service => service.enabled && service.durationMinutes) ? 'Le clienti vedranno solo gli orari liberi dei servizi abilitati.' : 'Prima di attivare le prenotazioni, abilita almeno un servizio e imposta la sua durata nella sezione Servizi.';
+      el('[data-booking-help]').textContent = services.some(service => service.enabled && service.durationMinutes) ? 'I servizi abilitati vengono confermati solo negli orari effettivamente liberi. Gli altri servizi continuano a ricevere richieste, se abilitate.' : 'Prima di attivare la conferma automatica, abilita almeno un servizio e imposta la sua durata nella sezione Servizi. Puoi già ricevere richieste dal calendario.';
       el('[data-hours]').replaceChildren(...settings.openingHours.map(day => { const label = textNode('label', day.label); const rangeInput = document.createElement('input'); rangeInput.name = `hours-${day.day}`; rangeInput.value = day.ranges.map(range => `${range.opens}-${range.closes}`).join(', '); rangeInput.placeholder = 'Chiuso'; rangeInput.setAttribute('aria-label', `Fasce orarie di ${day.label}`); label.append(rangeInput); return label; }));
     }
 
@@ -349,7 +476,7 @@ import { site } from '../data/site';
     }
 
     on(loginForm, 'submit', event => { event.preventDefault(); void act(loginForm, async () => { showAccess(await api<Session>('/api/auth/login', 'POST', { email: input(loginForm, 'email').value.trim(), password: input(loginForm, 'password').value })); input(loginForm, 'password').value = ''; await loadAll(); inform('Accesso riuscito. La tua agenda è pronta.'); focus('#calendar-title'); }); });
-    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim() })); activationToken = ''; setupForm.reset(); await loadAll(); inform('Agenda attivata. Imposta le durate dei servizi per aprire le prenotazioni online.'); focus('#calendar-title'); }); });
+    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim() })); activationToken = ''; setupForm.reset(); await loadAll(); inform('Agenda attivata. Le richieste ricevute dal calendario sono nella sezione Richieste.'); focus('#calendar-title'); }); });
     on(el('[data-logout]'), 'click', () => { void act(null, async () => { await api('/api/auth/logout', 'POST', {}); activationToken = ''; showAccess({ authenticated: false, setupRequired: false }); loginForm.reset(); input(loginForm, 'email').value = root.dataset.ownerEmail || ''; inform('Sei uscita dall’agenda.'); input(loginForm, 'email').focus(); }); });
     on(el('[data-new]'), 'click', () => openEditor(undefined, el('[data-new]')));
     root.querySelectorAll<HTMLElement>('[data-editor-close]').forEach(button => on(button, 'click', closeEditor));
@@ -362,11 +489,11 @@ import { site } from '../data/site';
       if (!settings) return;
       const openingHours = settings.openingHours.map(day => { const value = input(settingsForm, `hours-${day.day}`).value.trim(); const ranges = value ? value.split(',').map(part => { const match = part.trim().match(/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/); if (!match) { input(settingsForm, `hours-${day.day}`).focus(); throw new Error(`Controlla gli orari di ${day.label}: usa il formato 09:00-13:00.`); } return { opens: match[1], closes: match[2] }; }) : []; return { day: day.day, label: day.label, ranges }; });
       const closedDates = input<HTMLTextAreaElement>(settingsForm, 'closedDates').value.split(/[\s,]+/).filter(Boolean);
-      await api('/api/admin/settings', 'PATCH', { bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); await loadAll(); inform('Impostazioni salvate.');
+      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); await loadAll(); inform('Impostazioni salvate.');
     }); });
     on(passwordForm, 'submit', event => { event.preventDefault(); void act(passwordForm, async () => { const password = input(passwordForm, 'password').value; if (password !== input(passwordForm, 'confirmation').value) { input(passwordForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const result = await api<Session>('/api/admin/password', 'POST', { currentPassword: input(passwordForm, 'currentPassword').value, password }); if (result.csrfToken) { session = result; csrfToken = result.csrfToken; } else { const refreshed = await api<Session>('/api/auth/session'); session = refreshed; csrfToken = refreshed.csrfToken || ''; } passwordForm.reset(); inform('Password aggiornata. Gli altri accessi sono stati chiusi.'); }); });
 
-    root.querySelectorAll<HTMLElement>('[data-tab]').forEach(button => on(button, 'click', () => { const tab = button.dataset.tab!; root.querySelectorAll<HTMLElement>('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== tab; }); root.querySelectorAll<HTMLElement>('[data-tab]').forEach(candidate => { const selected = candidate === button; candidate.setAttribute('aria-pressed', String(selected)); candidate.classList.toggle('secondary', !selected); }); focus(`#${tab === 'calendar' ? 'calendar' : tab}-title`); }));
+    root.querySelectorAll<HTMLElement>('[data-tab]').forEach(button => on(button, 'click', () => { const tab = button.dataset.tab!; root.querySelectorAll<HTMLElement>('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== tab; }); root.querySelectorAll<HTMLElement>('[data-tab]').forEach(candidate => { const selected = candidate === button; candidate.setAttribute('aria-pressed', String(selected)); candidate.classList.toggle('secondary', !selected); }); focus(`#${tab === 'calendar' ? 'calendar' : tab}-title`); if (tab === 'requests') void refreshIncomingRequests(); }));
     async function moveDate(date: string) { selectedDate = date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; await loadCalendar(); inform('Agenda aggiornata.'); }
     el<HTMLInputElement>('[data-calendar-date]').value = selectedDate;
     on(el('[data-date-prev]'), 'click', () => { void act(null, () => moveDate(addDays(selectedDate, view === 'week' ? -7 : -1))); });
@@ -374,9 +501,13 @@ import { site } from '../data/site';
     on(el('[data-today]'), 'click', () => { void act(null, () => moveDate(today())); });
     on(el('[data-calendar-date]'), 'change', () => { const date = el<HTMLInputElement>('[data-calendar-date]').value; if (date) void act(null, () => moveDate(date)); });
     on(el('[data-refresh]'), 'click', () => { void act(null, async () => { await loadAll(); inform('Agenda aggiornata.'); }); });
+    on(el('[data-requests-refresh]'), 'click', () => { void act(null, async () => { await loadAll(); inform('Richieste aggiornate.'); }); });
+    on(el('[data-request-status]'), 'change', () => { if (busy) { el<HTMLSelectElement>('[data-request-status]').value = requestStatus; return; } void act(null, async () => { requestStatus = el<HTMLSelectElement>('[data-request-status]').value; await loadRequests(); inform('Elenco delle richieste aggiornato.'); }); });
     root.querySelectorAll<HTMLElement>('[data-view]').forEach(button => on(button, 'click', () => { void act(null, async () => { view = button.dataset.view!; root.querySelectorAll<HTMLElement>('[data-view]').forEach(candidate => { const selected = candidate === button; candidate.setAttribute('aria-pressed', String(selected)); candidate.classList.toggle('secondary', !selected); }); await loadCalendar(); inform('Vista calendario aggiornata.'); }); }));
 
-    dispose = () => { lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; reminders = []; settings = undefined; activeRoot = null; };
+    const incomingInterval = window.setInterval(() => { void refreshIncomingRequests(); }, 60_000);
+    on(document, 'visibilitychange', () => { if (!document.hidden) void refreshIncomingRequests(); });
+    dispose = () => { window.clearInterval(incomingInterval); lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; requests = []; reminders = []; settings = undefined; activeRoot = null; };
     void act(null, async () => { showAccess(await api<Session>('/api/auth/session')); if (session.authenticated) { await loadAll(); inform('La tua agenda è pronta.'); } else inform(session.setupRequired ? 'Il primo accesso è riservato a Jessica.' : 'Accedi per vedere e gestire gli appuntamenti.'); });
   }
 
@@ -420,6 +551,7 @@ import { site } from '../data/site';
   .stat-card strong { font-size: 1.8rem; color: #2459c8; }
   .stat-card span { font-size: .75rem; color: #48536b; }
   .agenda-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1.5rem 2rem; }
+  .request-count { min-width: 1.5rem; padding: .1rem .4rem; margin-left: .45rem; border-radius: 1rem; background: #dce8ff; color: #17396f; font-size: .75rem; line-height: 1.4; }
   .agenda-section-head { margin-block: 0 1.2rem; }
   .calendar-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
   .calendar-toolbar label { flex: 1 1 10rem; }
@@ -433,7 +565,15 @@ import { site } from '../data/site';
   .appointment-card.is-cancelled { border-color: #adb6c8; background: #f5f5f6; }
   .appointment-card.is-cancelled .status-badge { background: #e8e8ed; color: #545b69; }
   .appointment-editor { margin-top: 1.5rem; scroll-margin-top: calc(var(--header-h) + 1rem); }
-  .service-settings, .reminder-list { display: grid; gap: 1rem; margin-top: 1.5rem; }
+  .service-settings, .reminder-list, .request-list { display: grid; gap: 1rem; margin-top: 1.5rem; }
+  .request-toolbar { max-width: 24rem; }
+  .request-card { overflow-wrap: anywhere; }
+  .request-card > p { margin-top: .7rem; }
+  .request-actions, .request-confirm-form, .request-decline { margin-top: 1.2rem; }
+  .request-confirm-form, .request-decline { padding-top: 1.2rem; border-top: 1px solid #dbe1ed; }
+  .request-decline .button-group { margin-top: 1rem; }
+  .request-result { margin-top: 1rem; border-color: #adc8ed; background: #f3f7ff; }
+  .request-result p { margin-top: .7rem; }
   .security-card { margin-top: 1.5rem; }
   .security-card form { max-width: 32rem; margin-top: 1.2rem; }
   .reminder-card h3 { overflow-wrap: anywhere; }
@@ -443,6 +583,6 @@ import { site } from '../data/site';
   .agenda [data-automation] { margin-top: 1.5rem; }
   .agenda [data-automation] h3 { margin-bottom: .8rem; }
   @media (min-width: 640px) { .agenda .form-grid, .agenda .hours-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .service-settings, .reminder-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (min-width: 960px) { .agenda-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } .calendar-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .calendar-day:only-child { grid-column: 1 / -1; } }
+  @media (min-width: 960px) { .agenda-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); } .calendar-days, .request-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .calendar-day:only-child { grid-column: 1 / -1; } }
   @media (max-width: 360px) { .agenda-button { padding-inline: .7rem; } .agenda-tabs .agenda-button { flex: 1 1 calc(50% - .5rem); } .calendar-toolbar .button-group { gap: .35rem; } }
 </style>

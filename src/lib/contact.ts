@@ -24,3 +24,12 @@ export function whatsappHref(phone: string, message?: string): string {
   const base = `https://wa.me/${number}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
+
+/** Messaggi di consulenza: distinti dalla richiesta inviata con il calendario. */
+export function salonQuestionMessage(ownerName: string, subject?: 'ricci' | 'galleria'): string {
+  const firstName = ownerName.trim().split(/\s+/)[0];
+  const greeting = `Ciao ${firstName},`;
+  if (subject === 'ricci') return `${greeting} vorrei un consiglio per prendermi cura dei miei ricci.`;
+  if (subject === 'galleria') return `${greeting} ho visto un look nella galleria e vorrei capire se è adatto ai miei capelli. Posso mandarti una foto?`;
+  return `${greeting} vorrei un consiglio per i miei capelli.`;
+}

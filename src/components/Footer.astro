@@ -61,6 +61,7 @@ const c = site.confirmed;
       <a href={withBase('/')}>Home</a> · <a href={withBase('/contatti')}>Contatti</a> ·
       <a href={withBase('/privacy')}>Privacy e servizi esterni</a> ·
       <a href={withBase('/agenda')}>Area Jessica</a>
+      · <button type="button" class="footer__preferences" data-consent-settings hidden>Preferenze cookie</button>
     </p>
   </div>
 </footer>
@@ -78,6 +79,18 @@ const c = site.confirmed;
   .footer :global(a:hover) {
     color: var(--color-gold-on-dark);
   }
+  .footer__preferences {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .footer__preferences:hover { color: var(--color-gold-on-dark); }
+  .footer__preferences[hidden] { display: none; }
   .footer__grid {
     display: grid;
     gap: var(--space-xl);

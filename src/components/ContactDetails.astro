@@ -1,8 +1,7 @@
 ---
 import { site } from '../data/site';
-import { telHref } from '../lib/contact';
+import { telHref, whatsappHref, salonQuestionMessage } from '../lib/contact';
 import { withBase } from '../lib/href';
-import WhatsappButton from './WhatsappButton.astro';
 
 interface Props {
   headingLevel?: 'h2' | 'h3';
@@ -53,19 +52,18 @@ const c = site.confirmed;
   <div>
     <Heading class="contact__h">Prenotazioni</Heading>
     <p class="note">
-      Consulta il calendario per scegliere un appuntamento. Per una consulenza
-      o un servizio su misura, scrivici su WhatsApp o chiamaci.
+      Scegli il servizio, il giorno e l’orario dal calendario e invia la tua
+      richiesta direttamente al salone.
     </p>
   </div>
 
   <div class="contact__actions">
     <a class="btn btn--primary" href={withBase('/prenota')}>Prenota</a>
-    <WhatsappButton />
-    <a class="btn btn--outline" href={telHref(site.phone)}>Chiama</a>
-    <a class="btn btn--outline" href={site.instagramUrl} target="_blank" rel="noopener">
-      Instagram
-    </a>
   </div>
+  <p class="note">
+    Hai bisogno di un consiglio prima di scegliere?
+    <a class="link-underline" href={whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerName))} target="_blank" rel="noopener noreferrer">Scrivi a Jessica su WhatsApp</a>.
+  </p>
 </div>
 
 <style>

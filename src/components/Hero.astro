@@ -20,8 +20,8 @@ import { heroImage, heroImageAlt } from '../data/images';
         Taglio, colore, balayage e cura del riccio a Galliera, su misura per te.
       </p>
       <div class="hero__actions hero__a4">
-        <a class="btn btn--primary" href={withBase('/galleria')}>Guarda i lavori</a>
-        <a class="btn hero__wa" href={withBase('/prenota')}>Prenota</a>
+        <a class="btn btn--primary" href={withBase('/prenota')}>Prenota il tuo appuntamento</a>
+        <a class="btn btn--outline" href={withBase('/galleria')}>Guarda i lavori</a>
       </div>
     </div>
 
@@ -124,16 +124,6 @@ import { heroImage, heroImageAlt } from '../data/images';
     gap: var(--space-md);
     margin-top: var(--space-lg);
   }
-  .hero__actions :global(.hero__wa) {
-    --btn-bg: transparent;
-    --btn-fg: var(--color-primary-strong);
-    border-color: color-mix(in srgb, var(--color-primary) 26%, transparent);
-  }
-  .hero__actions :global(.hero__wa:hover) {
-    --btn-bg: var(--color-whatsapp);
-    --btn-fg: #fff;
-  }
-
   .hero__media {
     position: relative;
     justify-self: center;

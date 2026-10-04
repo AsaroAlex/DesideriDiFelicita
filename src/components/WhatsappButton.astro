@@ -1,6 +1,6 @@
 ---
 import { site } from '../data/site';
-import { whatsappHref } from '../lib/contact';
+import { whatsappHref, salonQuestionMessage } from '../lib/contact';
 
 interface Props {
   variant?: 'inline' | 'float';
@@ -12,7 +12,7 @@ interface Props {
 const {
   variant = 'inline',
   label = 'Scrivici su WhatsApp',
-  message = `Ciao! Vorrei avere informazioni sui servizi di ${site.businessName}.`,
+  message = salonQuestionMessage(site.ownerName),
   class: className = '',
 } = Astro.props;
 
