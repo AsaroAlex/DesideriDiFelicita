@@ -151,14 +151,16 @@ export function createAuth({ store, config, now = Date.now }) {
   async function changePassword(request, body) {
     const session = requireSession(request);
     checkCsrf(request, session);
-    const owner = ownerQuery.get();
-    if (!(await verifyPassword(body.currentPassword, owner.password_hash))) {
-      throw new DomainError(401, 'invalid_credentials', 'La password attuale non è corretta.');
-    }
+    const owner = await requireCurrentPassword(request, body.currentPassword);
     const passwordHash = await hashPassword(body.password);
     return store.transaction(() => {
       // A session revoked by another request cannot change the password.
-      if (!getSession(request)) throw new DomainError(401, 'authentication_required', 'Accedi di nuovo per modificare la password.');
+      const currentSession = getSession(request);
+      const currentOwner = ownerQuery.get();
+      if (!currentSession || currentSession.idHash !== session.idHash ||
+        currentOwner?.password_hash !== owner.password_hash || currentOwner?.email !== owner.email) {
+        throw new DomainError(401, 'authentication_required', 'Accedi di nuovo per modificare la password.');
+      }
       const instant = now();
       db.prepare('UPDATE owners SET password_hash = ? WHERE id = 1').run(passwordHash);
       db.prepare('DELETE FROM sessions').run();
@@ -167,5 +169,38 @@ export function createAuth({ store, config, now = Date.now }) {
     });
   }
 
-  return { getSession, requireSession, checkCsrf, sessionShape, setup, login, logout, changePassword };
+  async function requireCurrentPassword(request, password) {
+    const session = requireSession(request);
+    const owner = ownerQuery.get();
+    if (!owner || !(await verifyPassword(password, owner.password_hash))) {
+      throw new DomainError(400, 'invalid_current_password', 'La password attuale non è corretta.');
+    }
+    // Verification is asynchronous; reject a session or credential changed meanwhile.
+    const currentSession = getSession(request);
+    const currentOwner = ownerQuery.get();
+    if (!currentSession || currentSession.idHash !== session.idHash || !currentOwner ||
+      currentOwner.password_hash !== owner.password_hash || currentOwner.email !== owner.email) {
+      throw new DomainError(401, 'authentication_required', 'Accedi di nuovo per continuare.');
+    }
+    return owner;
+  }
+
+  async function changeAccount(request, body) {
+    const email = normalizeEmail(body.email);
+    const owner = await requireCurrentPassword(request, body.currentPassword);
+    return store.transaction(() => {
+      const currentOwner = ownerQuery.get();
+      if (!getSession(request) || currentOwner?.password_hash !== owner.password_hash || currentOwner?.email !== owner.email) {
+        throw new DomainError(401, 'authentication_required', 'Accedi di nuovo per modificare il tuo account.');
+      }
+      const instant = now();
+      db.prepare('UPDATE owners SET email = ? WHERE id = 1').run(email);
+      db.prepare('DELETE FROM sessions').run();
+      db.prepare('INSERT INTO audit_log (event, resource_id, created_at, detail) VALUES (?, ?, ?, ?)')
+        .run('owner_email_changed', '1', instant, '{}');
+      return createSession({ ...owner, email }, instant);
+    });
+  }
+
+  return { getSession, requireSession, checkCsrf, sessionShape, setup, login, logout, changePassword, requireCurrentPassword, changeAccount };
 }

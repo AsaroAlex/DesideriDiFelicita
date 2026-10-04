@@ -1,0 +1,124 @@
+<div data-whatsapp-settings>
+  <p class="agenda-notice" role="status" aria-live="polite" data-connection-notice>Apri questa sezione per controllare il collegamento.</p>
+  <section class="agenda-card" aria-labelledby="connection-status-title">
+    <h3 id="connection-status-title" data-connection-title>Collegamento WhatsApp</h3>
+    <p class="agenda-note" data-connection-state></p>
+    <p class="agenda-note">Un solo promemoria per appuntamento con consenso. Orario e limiti di invio si modificano nelle Impostazioni.</p>
+  </section>
+  <details class="agenda-card connection-help">
+    <summary>Cosa serve per collegare WhatsApp</summary>
+    <p>Il collegamento usa WhatsApp Business Platform di Meta. Servono un numero registrato sulla piattaforma, un token del sistema, il segreto dell’app e un modello di messaggio approvato come <strong>utility</strong>.</p>
+    <p>Il modello deve avere tre parametri nel testo: nome della cliente, data e ora. Puoi proporre questo testo:</p>
+    <blockquote>Ciao &#123;&#123;1&#125;&#125;, ti ricordiamo l’appuntamento da Desideri di Felicità il &#123;&#123;2&#125;&#125; alle &#123;&#123;3&#125;&#125;. Per modifiche o cancellazioni contatta il salone.</blockquote>
+    <p>Genera un token e copialo, poi salva il collegamento in questo portale. Successivamente incolla l’indirizzo webhook e il token nel pannello Meta e sottoscrivi gli eventi <strong>messages</strong>. Gli invii restano sospesi finché li attivi.</p>
+    <p class="agenda-note">Il numero già nell’app WhatsApp Business richiede un percorso Meta compatibile o una migrazione. I messaggi hanno il costo applicato da Meta; i limiti riducono gli invii, senza fissare una spesa in euro.</p>
+    <a class="agenda-button secondary" href="https://business.facebook.com/wa/manage/" target="_blank" rel="noopener noreferrer">Apri WhatsApp Manager</a>
+  </details>
+  <form class="agenda-card" data-connection-form autocomplete="off">
+    <h3>Configura il collegamento</h3>
+    <p class="agenda-note">I segreti sono cifrati sul server. I campi vuoti conservano i valori già salvati. Salvare il collegamento lascia gli invii sospesi.</p>
+    <fieldset data-connection-fields disabled>
+      <div class="form-grid">
+        <label>Identificativo del numero su Meta<input name="phoneNumberId" inputmode="numeric" pattern="[0-9]+" maxlength="40" required /><small>Phone number ID, diverso dal numero di telefono.</small></label>
+        <label>Nome del modello approvato<input name="templateName" pattern="[a-z0-9_]+" maxlength="100" required /></label>
+        <label>Lingua del modello<input name="templateLanguage" value="it" maxlength="20" required /></label>
+        <label>Versione API Meta<input name="graphVersion" value="v26.0" pattern="v[0-9]+\.[0-9]+" maxlength="20" required /></label>
+        <label>Token di accesso<input type="password" name="accessToken" autocomplete="new-password" maxlength="4096" data-secret="accessToken" /><small data-secret-note="accessToken"></small></label>
+        <label>Segreto dell’app Meta<input type="password" name="appSecret" autocomplete="new-password" maxlength="512" data-secret="appSecret" /><small data-secret-note="appSecret"></small></label>
+        <label>Token di verifica webhook<input type="password" name="verifyToken" autocomplete="new-password" minlength="16" maxlength="512" data-secret="verifyToken" /><small data-secret-note="verifyToken"></small></label>
+      </div>
+      <div class="button-group"><button type="button" class="agenda-button secondary" data-generate-verify>Genera token di verifica</button><button type="button" class="agenda-button secondary" data-copy-verify>Copia il nuovo token</button></div>
+      <label>Indirizzo webhook<input name="webhookUrl" readonly /></label>
+      <label>La tua password del portale<input type="password" name="currentPassword" autocomplete="current-password" required /></label>
+      <button type="submit" class="agenda-button">Salva collegamento</button>
+    </fieldset>
+  </form>
+  <form class="agenda-card" data-automation-toggle>
+    <h3>Attiva o sospendi i promemoria</h3>
+    <p class="agenda-note">Attiva gli invii dopo aver completato il numero, l’approvazione del modello e il webhook su Meta. Il salvataggio dei dati non verifica l’approvazione e non invia messaggi di prova.</p>
+    <label>La tua password del portale<input type="password" name="currentPassword" autocomplete="current-password" required /></label>
+    <button type="submit" class="agenda-button secondary" data-toggle-automation disabled>Attiva promemoria automatici</button>
+  </form>
+</div>
+
+<script>
+  import { mountAdminPanel } from '../lib/admin-panel';
+  type Connection = { storageAvailable: boolean; source: string; enabled: boolean; configured: boolean; webhookConfigured: boolean; missing: string[]; phoneNumberId: string; templateName: string; templateLanguage: string; graphVersion: string; secrets: Record<string, boolean>; webhookUrl: string };
+  mountAdminPanel('[data-whatsapp-settings]', 'connection', ({ root, api, on, isSignedIn }) => {
+    const el = <T extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const form = el<HTMLFormElement>('[data-connection-form]');
+    const toggleForm = el<HTMLFormElement>('[data-automation-toggle]');
+    const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
+    const notice = el('[data-connection-notice]');
+    const toggle = el<HTMLButtonElement>('[data-toggle-automation]');
+    let connection: Connection | undefined;
+    let busy = false;
+    let dirty = false;
+    function inform(message: string, error = false) { notice.textContent = message; notice.classList.toggle('is-error', error); notice.setAttribute('role', error ? 'alert' : 'status'); }
+    function clear() {
+      connection = undefined; dirty = false; form.reset(); toggleForm.reset();
+      el<HTMLFieldSetElement>('[data-connection-fields]').disabled = true; toggle.disabled = true;
+      el('[data-connection-title]').textContent = 'Collegamento WhatsApp'; el('[data-connection-state]').textContent = '';
+      root.querySelectorAll('[data-secret-note]').forEach(note => { note.textContent = ''; });
+      inform('Apri questa sezione per controllare il collegamento.');
+    }
+    function render(value: Connection) {
+      connection = value;
+      dirty = false;
+      for (const name of ['phoneNumberId', 'templateName', 'templateLanguage', 'graphVersion', 'webhookUrl']) field(name).value = String(value[name as keyof Connection] || '');
+      for (const name of ['accessToken', 'appSecret', 'verifyToken']) {
+        field(name).value = ''; field(name).required = !value.secrets[name];
+        el(`[data-secret-note="${name}"]`).textContent = value.secrets[name] ? 'Già salvato. Lascia vuoto per conservarlo.' : 'Da inserire.';
+      }
+      field('currentPassword').value = ''; (toggleForm.elements.namedItem('currentPassword') as HTMLInputElement).value = '';
+      el<HTMLFieldSetElement>('[data-connection-fields]').disabled = !value.storageAvailable;
+      toggle.disabled = !value.storageAvailable || (!value.enabled && (!value.configured || !value.webhookConfigured));
+      toggle.textContent = value.enabled ? 'Sospendi promemoria automatici' : 'Attiva promemoria automatici';
+      el('[data-connection-title]').textContent = value.enabled ? 'Invii automatici abilitati' : value.configured ? 'Collegamento salvato · invii sospesi' : 'WhatsApp da configurare';
+      el('[data-connection-state]').textContent = !value.storageAvailable ? 'Il collegamento richiede l’abilitazione dello storage protetto sul server.' : value.enabled ? 'I promemoria con consenso seguono l’orario e i limiti scelti. Lo stato di ogni invio è nella sezione Promemoria.' : value.configured && value.webhookConfigured ? 'Le credenziali sono salvate. Puoi attivare gli invii dopo aver completato la configurazione su Meta.' : 'Completa le credenziali e il webhook. Gli appuntamenti e le richieste funzionano anche con i promemoria sospesi.';
+    }
+    async function load() {
+      if (busy || !isSignedIn()) return;
+      if (dirty) { inform('Le modifiche non salvate sono conservate. Salva il collegamento per applicarle.'); return; }
+      busy = true; inform('Controlliamo il collegamento…');
+      try { const value = await api<Connection>('/api/admin/whatsapp'); if (isSignedIn()) { render(value); inform('Stato del collegamento aggiornato.'); } }
+      catch (error) { if (isSignedIn() && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Non è stato possibile caricare il collegamento.', true); }
+      finally { busy = false; }
+    }
+    on(el('[data-generate-verify]'), 'click', () => {
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      field('verifyToken').value = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      dirty = true;
+      inform('Token preparato. Copialo, salva il collegamento qui e poi configura la verifica su Meta.');
+    });
+    on(el('[data-copy-verify]'), 'click', () => { void (async () => {
+      if (!field('verifyToken').value) { inform('Genera o inserisci prima un nuovo token. Il token già salvato non viene mostrato.', true); return; }
+      try { await navigator.clipboard.writeText(field('verifyToken').value); inform('Token copiato. Salva qui il collegamento, poi incollalo nella verifica su Meta.'); }
+      catch { field('verifyToken').type = 'text'; field('verifyToken').focus(); field('verifyToken').select(); inform('Copia il token selezionato, poi salva il collegamento.'); }
+    })(); });
+    on(form, 'input', () => { dirty = true; });
+    async function save(body: Record<string, unknown>, message: string) {
+      if (busy || !isSignedIn()) return;
+      busy = true; root.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = true; });
+      inform('Salvataggio in corso…');
+      try { const value = await api<Connection>('/api/admin/whatsapp', 'PATCH', body); if (isSignedIn()) { render(value); inform(message); document.dispatchEvent(new CustomEvent('agenda:configuration-changed')); } }
+      catch (error) { if (isSignedIn() && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Salvataggio non riuscito.', true); }
+      finally {
+        busy = false; field('currentPassword').value = ''; (toggleForm.elements.namedItem('currentPassword') as HTMLInputElement).value = ''; field('verifyToken').type = 'password';
+        root.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = false; });
+        toggle.disabled = !isSignedIn() || !connection?.storageAvailable || (!connection.enabled && (!connection.configured || !connection.webhookConfigured));
+      }
+    }
+    on(form, 'submit', event => { event.preventDefault(); const body: Record<string, unknown> = { enabled: false }; for (const name of ['phoneNumberId', 'templateName', 'templateLanguage', 'graphVersion', 'accessToken', 'appSecret', 'verifyToken', 'currentPassword']) body[name] = field(name).value; void save(body, 'Collegamento salvato. Gli invii restano sospesi finché li attivi.'); });
+    on(toggleForm, 'submit', event => { event.preventDefault(); if (!connection || toggle.disabled) return; const enabling = !connection.enabled; if (dirty && enabling) { inform('Salva prima le modifiche al collegamento. Poi potrai attivare i promemoria.', true); return; } void save({ currentPassword: (toggleForm.elements.namedItem('currentPassword') as HTMLInputElement).value, enabled: enabling }, enabling ? 'Promemoria automatici abilitati.' : 'Promemoria automatici sospesi.'); });
+    return { load, clear };
+  });
+</script>
+
+<style>
+  [data-whatsapp-settings] { display: grid; gap: 1rem; }
+  fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 1.2rem; min-width: 0; }
+  summary { cursor: pointer; font-weight: 650; min-height: 44px; }
+  .connection-help p, .connection-help blockquote { margin-block: 1rem; font-size: .9rem; line-height: 1.7; }
+  blockquote { border-left: 3px solid #2e6be6; padding-left: 1rem; }
+</style>

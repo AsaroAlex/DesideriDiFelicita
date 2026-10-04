@@ -39,6 +39,7 @@ export function createConfig(env = process.env) {
     business: site,
     bootstrapToken,
     bootstrapExpiresAt,
+    whatsappConfigKey: env.WHATSAPP_CONFIG_KEY || '',
     whatsapp: {
       accessToken: env.WHATSAPP_ACCESS_TOKEN || '',
       phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID || '',

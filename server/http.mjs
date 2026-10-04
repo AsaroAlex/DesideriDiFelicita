@@ -1,12 +1,17 @@
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, createReadStream } from 'node:fs';
+import { mkdtemp, chmod, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { pipeline } from 'node:stream/promises';
+import { DatabaseSync, backup as sqliteBackup } from 'node:sqlite';
 import { isIP } from 'node:net';
 import serveHandler from 'serve-handler';
 import { createStore } from './db.mjs';
 import { DomainError } from './domain.mjs';
 import { createAuth } from './auth.mjs';
 import { createReminderRunner } from './reminders.mjs';
+import { createWhatsappSettings } from './whatsapp-settings.mjs';
 
 const BODY_LIMIT = 32 * 1024;
 const JSON_TYPE = 'application/json; charset=utf-8';
@@ -138,10 +143,12 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
   if (!config || !config.origin) throw new Error('Application origin is required.');
   const origin = new URL(config.origin).origin;
   const store = suppliedStore || createStore({ dataDir: config.dataDir, business: config.business, now });
-  const reminderRunner = suppliedRunner || createReminderRunner({ store, config, now });
+  const whatsappSettings = createWhatsappSettings({ store, config, now });
+  const reminderRunner = suppliedRunner || createReminderRunner({ store, config, getWhatsappConfig: whatsappSettings.getWhatsappConfig, now });
   const auth = createAuth({ store, config: { ...config, origin }, now });
   const limit = createRateLimiter({ now });
   const dist = resolve(config.staticDir || config.distDir || 'dist');
+  let backupInProgress = false;
   let servingConfig = { directoryListing: false };
   try { servingConfig = { ...JSON.parse(readFileSync(resolve('serve.json'), 'utf8')), directoryListing: false }; }
   catch { /* Safe default if a custom static configuration is absent. */ }
@@ -151,6 +158,8 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
     // Select only the documented public-to-owner status fields.
     return {
       configured: status.configured === true,
+      enabled: status.enabled === true,
+      webhookConfigured: status.webhookConfigured === true,
       missing: Array.isArray(status.missing) ? status.missing.filter((name) => /^WHATSAPP_[A-Z_]+$/.test(name)) : [],
       dailyLimit: status.dailyLimit,
       monthlyLimit: status.monthlyLimit,
@@ -223,6 +232,48 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
         response.setHeader('Set-Cookie', result.cookie);
         return json(response, 200, sessionResult(result.session));
       }
+      if (method === 'PATCH' && path === '/api/admin/account') {
+        limit(`account:${ip}`, 5, 900_000);
+        const result = await auth.changeAccount(request, await jsonBody(request));
+        response.setHeader('Set-Cookie', result.cookie);
+        return json(response, 200, sessionResult(result.session));
+      }
+      if (method === 'GET' && path === '/api/admin/whatsapp') return json(response, 200, whatsappSettings.getStatus());
+      if (method === 'PATCH' && path === '/api/admin/whatsapp') {
+        limit(`whatsapp-settings:${ip}`, 5, 900_000);
+        const body = await jsonBody(request);
+        await auth.requireCurrentPassword(request, body.currentPassword);
+        return json(response, 200, whatsappSettings.update(body));
+      }
+      if (method === 'POST' && path === '/api/admin/backup') {
+        limit(`backup:${ip}`, 3, 900_000);
+        const body = await jsonBody(request);
+        await auth.requireCurrentPassword(request, body.currentPassword);
+        if (backupInProgress) throw new DomainError(409, 'backup_in_progress', 'Un backup è già in preparazione. Attendi e riprova.');
+        backupInProgress = true;
+        let temporary;
+        try {
+          temporary = await mkdtemp(resolve(tmpdir(), 'desideri-owner-backup-'));
+          await chmod(temporary, 0o700);
+          const destination = resolve(temporary, 'agenda.sqlite');
+          await sqliteBackup(store.db, destination);
+          // The downloaded file must open independently without WAL sidecars.
+          const snapshot = new DatabaseSync(destination);
+          try { snapshot.exec('PRAGMA journal_mode=DELETE'); }
+          finally { snapshot.close(); }
+          await chmod(destination, 0o600);
+          // Password or logout changes during the snapshot revoke this download.
+          auth.requireSession(request);
+          response.statusCode = 200;
+          response.setHeader('Content-Type', 'application/vnd.sqlite3');
+          response.setHeader('Content-Disposition', 'attachment; filename="agenda-desideri-di-felicita.sqlite"');
+          await pipeline(createReadStream(destination), response);
+        } finally {
+          if (temporary) await rm(temporary, { recursive: true, force: true });
+          backupInProgress = false;
+        }
+        return;
+      }
       if (method === 'GET' && path === '/api/admin/appointments') return json(response, 200, { items: store.listAppointments({ from: url.searchParams.get('from') || undefined, to: url.searchParams.get('to') || undefined }, now()) });
       if (method === 'POST' && path === '/api/admin/appointments') return json(response, 201, store.createAdminAppointment(await jsonBody(request), now()));
       const appointmentMatch = path.match(/^\/api\/admin\/appointments\/([^/]+)$/);
@@ -242,6 +293,7 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
         return json(response, 200, store.declineRequest(id, now()));
       }
       if (method === 'GET' && path === '/api/admin/services') return json(response, 200, { items: store.listServices() });
+      if (method === 'POST' && path === '/api/admin/services') return json(response, 201, store.createService(await jsonBody(request), now()));
       const serviceMatch = path.match(/^\/api\/admin\/services\/([^/]+)$/);
       if (method === 'PATCH' && serviceMatch) return json(response, 200, store.updateService(resourceId(serviceMatch[1]), await jsonBody(request), now()));
       if (method === 'GET' && path === '/api/admin/settings') return json(response, 200, store.getSettings());
@@ -253,6 +305,18 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       }
       if (method === 'GET' && path === '/api/admin/stats') return json(response, 200, store.getStats(now()));
       if (method === 'GET' && path === '/api/admin/automation') return json(response, 200, automationStatus());
+      if (method === 'GET' && path === '/api/admin/customers/history') {
+        const count = url.searchParams.get('limit') || '30';
+        if (!/^\d+$/.test(count) || Number(count) < 1 || Number(count) > 100) throw new DomainError(400, 'invalid_limit', 'Il numero di elementi dello storico non è valido.');
+        return json(response, 200, store.getCustomerHistory(url.searchParams.get('phone'), { limit: Number(count) }));
+      }
+      if (method === 'GET' && path === '/api/admin/customers') {
+        const count = url.searchParams.get('limit') || '100';
+        const query = url.searchParams.get('q') || '';
+        if (!/^\d+$/.test(count) || Number(count) < 1 || Number(count) > 200) throw new DomainError(400, 'invalid_limit', 'Il numero di clienti visualizzati non è valido.');
+        if (query.length > 100) throw new DomainError(400, 'invalid_query', 'Usa una ricerca di massimo 100 caratteri.');
+        return json(response, 200, { items: store.listCustomers({ query, limit: Number(count) }, now()) });
+      }
       if (method === 'GET' && path === '/api/admin/export.csv') {
         const items = store.listAppointments({ from: url.searchParams.get('from') || undefined, to: url.searchParams.get('to') || undefined }, now());
         response.statusCode = 200;
@@ -271,7 +335,7 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       const api = url.pathname === '/api' || url.pathname.startsWith('/api/');
       let normalizedPath = url.pathname;
       try { normalizedPath = decodeURIComponent(normalizedPath).replace(/\/+/g, '/'); } catch { /* Leave malformed escapes for the static handler to reject. */ }
-      const privatePage = api || /^\/agenda(?:\/|\.html|$)/.test(normalizedPath);
+      const privatePage = api || /^\/(?:agenda|admin)(?:\/|\.html|$)/.test(normalizedPath);
       securityHeaders(response, { privatePage, https: origin.startsWith('https:') });
       if (api) return await routeApi(request, response, url);
       if (request.method !== 'GET' && request.method !== 'HEAD') throw new DomainError(405, 'method_not_allowed', 'Metodo non consentito.');

@@ -7,7 +7,7 @@ import { TIMEZONE, DAY_NAMES, parseDate, parseTime, toLocalParts, localDateTimeT
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS services (id TEXT PRIMARY KEY, name TEXT NOT NULL, duration_minutes INTEGER, enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)), sort_order INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS services (id TEXT PRIMARY KEY, name TEXT NOT NULL, duration_minutes INTEGER, enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)), sort_order INTEGER NOT NULL DEFAULT 0, listed INTEGER NOT NULL DEFAULT 1 CHECK(listed IN (0,1)));
 CREATE TABLE IF NOT EXISTS appointments (
  id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE, service_id TEXT REFERENCES services(id), title TEXT NOT NULL,
  name TEXT NOT NULL, phone TEXT NOT NULL, start_at INTEGER NOT NULL, end_at INTEGER NOT NULL CHECK(end_at > start_at),
@@ -99,6 +99,12 @@ export function createStore({ dataDir, business, now = Date.now }) {
     openingHours: validateHours(business.openingHours, business.openingHours), closedDates: [], dailyReminderLimit: 20, monthlyReminderLimit: 200,
   };
   transaction(() => {
+    // Existing calendars keep their catalog and history. Run the additive
+    // migration under the same write lock as seeding so parallel starts do not
+    // race to add the column or reset a service archived by its owner.
+    if (!db.prepare('PRAGMA table_info(services)').all().some((column) => column.name === 'listed')) {
+      db.exec('ALTER TABLE services ADD COLUMN listed INTEGER NOT NULL DEFAULT 1 CHECK(listed IN (0,1))');
+    }
     for (const [key, value] of Object.entries(defaults)) db.prepare('INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)').run(key, JSON.stringify(value));
     business.services.forEach((service, index) => db.prepare('INSERT OR IGNORE INTO services(id,name,duration_minutes,enabled,sort_order) VALUES(?,?,NULL,0,?)').run(serviceId(service, index), service.name, index));
   });
@@ -107,23 +113,23 @@ export function createStore({ dataDir, business, now = Date.now }) {
     for (const row of db.prepare('SELECT key,value FROM settings').all()) if (Object.hasOwn(defaults, row.key)) result[row.key] = JSON.parse(row.value);
     return result;
   }
-  function mapService(row) { return { id: row.id, name: row.name, durationMinutes: row.duration_minutes, enabled: Boolean(row.enabled), sortOrder: row.sort_order }; }
+  function mapService(row) { return { id: row.id, name: row.name, durationMinutes: row.duration_minutes, enabled: Boolean(row.enabled), listed: Boolean(row.listed), sortOrder: row.sort_order }; }
   function listServices() { return db.prepare('SELECT * FROM services ORDER BY sort_order,id').all().map(mapService); }
-  function activeServices() { return listServices().filter((service) => service.enabled && service.durationMinutes !== null); }
+  function activeServices() { return listServices().filter((service) => service.listed && service.enabled && service.durationMinutes !== null); }
   function getPublicConfig(at = clock()) {
     const settings = getSettings();
     return {
       businessName: business.businessName, timezone: TIMEZONE, bookingEnabled: Boolean(settings.bookingEnabled && activeServices().length),
       requestEnabled: settings.requestEnabled, today: toLocalParts(at).date, bookingDays: settings.bookingDays,
       services: activeServices().map(({ id, name, durationMinutes }) => ({ id, name, durationMinutes })),
-      requestServices: settings.requestEnabled ? listServices().map(({ id, name, durationMinutes, enabled }) => ({ id, name, durationMinutes, instantBooking: Boolean(settings.bookingEnabled && enabled && durationMinutes !== null) })) : [],
+      requestServices: settings.requestEnabled ? listServices().filter((service) => service.listed).map(({ id, name, durationMinutes, enabled }) => ({ id, name, durationMinutes, instantBooking: Boolean(settings.bookingEnabled && enabled && durationMinutes !== null) })) : [],
       openingHours: settings.openingHours, closedDates: settings.closedDates,
     };
   }
-  function getService(id, { publicOnly = false } = {}) {
+  function getService(id, { publicOnly = false, listedOnly = false } = {}) {
     if (typeof id !== 'string') fail('invalid_service', 'Scegli un servizio.');
     const row = db.prepare('SELECT * FROM services WHERE id=?').get(id);
-    if (!row || (publicOnly && (!row.enabled || row.duration_minutes === null))) fail('invalid_service', 'Questo servizio non è disponibile.', 404);
+    if (!row || ((publicOnly || listedOnly) && !row.listed) || (publicOnly && (!row.enabled || row.duration_minutes === null))) fail('invalid_service', 'Questo servizio non è disponibile.', 404);
     return row;
   }
   function publicDate(date, at, settings) {
@@ -167,7 +173,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
   function getRequestAvailability({ serviceId: id, date }, at = clock()) {
     const settings = getSettings();
     if (!settings.requestEnabled) fail('request_disabled', 'Le richieste dal calendario sono momentaneamente sospese.', 409);
-    getService(id);
+    getService(id, { listedOnly: true });
     publicDate(date, at, settings);
     const slots = [];
     if (settings.closedDates.includes(date)) return { mode: 'request', date, serviceId: id, slots };
@@ -342,6 +348,66 @@ export function createStore({ dataDir, business, now = Date.now }) {
     });
   }
   function createAdminAppointment(input, at = clock()) { return transaction(() => mapAppointment(insertAppointment(input, at, false))); }
+  function listCustomers({ query = '', limit = 100 } = {}, at = clock()) {
+    query = cleanText(query, 'Ricerca clienti', { min: 0, max: 100 });
+    integer(limit, 'Numero clienti', 1, 200);
+    const customers = new Map();
+    const rows = db.prepare(`
+      SELECT name,phone,start_at,status,updated_at,created_at,'appointment' AS kind FROM appointments
+      UNION ALL
+      SELECT name,phone,requested_start_at AS start_at,status,updated_at,created_at,'request' AS kind FROM booking_requests
+      ORDER BY updated_at,created_at,kind
+    `).all();
+    for (const row of rows) {
+      let phone;
+      try { phone = normalizePhone(row.phone); }
+      // Invalid legacy contacts cannot be turned into a guessed phone number.
+      // They do not prevent valid contacts from being shown in the directory.
+      catch (error) { if (error instanceof DomainError && error.code === 'invalid_phone') continue; throw error; }
+      let customer = customers.get(phone);
+      if (!customer) {
+        customer = { phone, name: row.name, appointmentCount: 0, requestCount: 0, lastAt: null, nextAt: null, updatedAt: row.updated_at };
+        customers.set(phone, customer);
+      }
+      if (row.updated_at >= customer.updatedAt) {
+        customer.name = row.name;
+        customer.updatedAt = row.updated_at;
+      }
+      if (row.kind === 'request') customer.requestCount++;
+      else {
+        customer.appointmentCount++;
+        if (row.status === 'confirmed') {
+          if (row.start_at <= at && (customer.lastAt === null || row.start_at > customer.lastAt)) customer.lastAt = row.start_at;
+          if (row.start_at > at && (customer.nextAt === null || row.start_at < customer.nextAt)) customer.nextAt = row.start_at;
+        }
+      }
+    }
+    const searchText = (value) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT');
+    const needle = searchText(query);
+    const phoneNeedle = query.replace(/[ ()\-.]/g, '').replace(/^00/, '+');
+    return [...customers.values()]
+      .filter((customer) => !query || searchText(customer.name).includes(needle) || (phoneNeedle && customer.phone.includes(phoneNeedle)))
+      .sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name, 'it-IT') || a.phone.localeCompare(b.phone))
+      .slice(0, limit)
+      .map(({ phone, name, appointmentCount, requestCount, lastAt, nextAt }) => ({
+        phone, name, appointmentCount, requestCount,
+        lastDate: lastAt === null ? null : toLocalParts(lastAt).date,
+        nextDate: nextAt === null ? null : toLocalParts(nextAt).date,
+      }));
+  }
+  function getCustomerHistory(inputPhone, { limit = 30 } = {}) {
+    const phone = normalizePhone(inputPhone);
+    integer(limit, 'Numero elementi nello storico', 1, 100);
+    const belongsToCustomer = (row) => {
+      try { return normalizePhone(row.phone) === phone; }
+      catch (error) { if (error instanceof DomainError && error.code === 'invalid_phone') return false; throw error; }
+    };
+    const appointments = db.prepare('SELECT * FROM appointments ORDER BY start_at DESC,created_at DESC,id').all()
+      .filter(belongsToCustomer).slice(0, limit).map((row) => ({ ...mapAppointment(row), phone }));
+    const requests = db.prepare('SELECT * FROM booking_requests ORDER BY requested_start_at DESC,created_at DESC,id').all()
+      .filter(belongsToCustomer).slice(0, limit).map((row) => ({ ...mapRequest(row), phone }));
+    return { appointments, requests };
+  }
   function listAppointments({ from, to } = {}, at = clock()) {
     const today = toLocalParts(at).date;
     from ??= addDays(today, -7);
@@ -381,15 +447,40 @@ export function createStore({ dataDir, business, now = Date.now }) {
       return mapAppointment(changed);
     });
   }
+  function uniqueServiceName(name, exceptId = '') {
+    const normalized = name.toLocaleLowerCase('it-IT');
+    if (listServices().some((service) => service.id !== exceptId && service.name.toLocaleLowerCase('it-IT') === normalized)) {
+      fail('duplicate_service', 'Esiste già un servizio con questo nome. Modifica o ripristina quello esistente.', 409);
+    }
+  }
+  function createService(input, at = clock()) {
+    requireObject(input);
+    return transaction(() => {
+      if (db.prepare('SELECT COUNT(*) AS total FROM services').get().total >= 200) fail('service_limit', 'Puoi gestire fino a 200 servizi.', 409);
+      const name = cleanText(input.name, 'Servizio', { max: 100 });
+      uniqueServiceName(name);
+      const length = input.durationMinutes === undefined || input.durationMinutes === null ? null : duration(input.durationMinutes);
+      const listed = Object.hasOwn(input, 'listed') ? boolean(input.listed, 'Visibile nel calendario') : true;
+      const enabled = Object.hasOwn(input, 'enabled') ? boolean(input.enabled, 'Conferma immediata') : false;
+      if (listed && enabled && length === null) fail('duration_required', 'Imposta una durata prima di attivare il servizio.');
+      const id = randomUUID();
+      const sortOrder = (db.prepare('SELECT MAX(sort_order) AS last FROM services').get().last ?? -1) + 1;
+      db.prepare('INSERT INTO services(id,name,duration_minutes,enabled,sort_order,listed) VALUES(?,?,?,?,?,?)').run(id, name, length, Number(listed && enabled), sortOrder, Number(listed));
+      audit('service_created', id, at);
+      return mapService(getService(id));
+    });
+  }
   function updateService(id, patch, at = clock()) {
     requireObject(patch);
     return transaction(() => {
       const service = getService(id);
       const name = Object.hasOwn(patch, 'name') ? cleanText(patch.name, 'Servizio', { max: 100 }) : service.name;
+      uniqueServiceName(name, id);
       const length = Object.hasOwn(patch, 'durationMinutes') ? (patch.durationMinutes === null ? null : duration(patch.durationMinutes)) : service.duration_minutes;
       const enabled = Object.hasOwn(patch, 'enabled') ? boolean(patch.enabled, 'Servizio attivo') : Boolean(service.enabled);
-      if (patch.enabled === true && length === null) fail('duration_required', 'Imposta una durata prima di attivare il servizio.');
-      db.prepare('UPDATE services SET name=?,duration_minutes=?,enabled=? WHERE id=?').run(name, length, Number(enabled && length !== null), id);
+      const listed = Object.hasOwn(patch, 'listed') ? boolean(patch.listed, 'Visibile nel calendario') : Boolean(service.listed);
+      if (listed && patch.enabled === true && length === null) fail('duration_required', 'Imposta una durata prima di attivare il servizio.');
+      db.prepare('UPDATE services SET name=?,duration_minutes=?,enabled=?,listed=? WHERE id=?').run(name, length, Number(listed && enabled && length !== null), Number(listed), id);
       if (!activeServices().length) setting('bookingEnabled', false);
       audit('service_updated', id, at);
       return mapService(db.prepare('SELECT * FROM services WHERE id=?').get(id));
@@ -471,5 +562,5 @@ export function createStore({ dataDir, business, now = Date.now }) {
     await Promise.all(copies.slice(7).map((file) => unlink(resolve(backupDirectory, file))));
     return destination;
   }
-  return { db, transaction, close: () => db.close(), getPublicConfig, getAvailability, getRequestAvailability, createPublicBooking, createPublicRequest, listRequests, confirmRequest, declineRequest, listAppointments, createAdminAppointment, updateAppointment, listServices, updateService, getSettings, updateSettings, listReminders, getStats, backup };
+  return { db, transaction, close: () => db.close(), getPublicConfig, getAvailability, getRequestAvailability, createPublicBooking, createPublicRequest, listRequests, confirmRequest, declineRequest, listAppointments, createAdminAppointment, updateAppointment, listCustomers, getCustomerHistory, listServices, createService, updateService, getSettings, updateSettings, listReminders, getStats, backup };
 }

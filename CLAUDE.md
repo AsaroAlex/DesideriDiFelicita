@@ -254,3 +254,23 @@ la mappa è attiva, niente badge "da confermare".
 - Mappa prima dei dettagli contatto nella pagina Contatti, anche su mobile.
 - L’utente ha autorizzato esplicitamente questo popup cookie. Non ripristinare il
   vecchio pulsante «Carica la mappa» come passaggio aggiuntivo dopo il consenso.
+
+
+## 17. Portale amministratore — 2026-10-04
+
+- L’utente vuole che Jessica configuri e gestisca il salone autonomamente dal portale.
+- `/admin` è l’accesso principale; `/agenda` resta un alias compatibile. Layout privato,
+  noindex/no-store, senza navigazione promozionale o banner Google/cookie.
+- Panoramica con riepilogo, guida alla configurazione e azioni; servizi creabili,
+  rinominabili e nascondibili con `listed` indipendente dalla conferma `enabled`.
+- Orari modificabili con timepicker e chiusure con datepicker; sincronizzati sui
+  contenuti pubblici tramite API, con dati statici confermati come fallback.
+- Rubrica da dati già raccolti, ricerca per nome/numero, storico e nuovo appuntamento.
+- Collegamento WhatsApp dal portale: credenziali cifrate AES-256-GCM in SQLite,
+  chiave `WHATSAPP_CONFIG_KEY` solo sul server. Mai restituire credenziali nei GET.
+- Salvataggio e attivazione degli invii sono azioni distinte, protette dalla password.
+  Le impostazioni sono dinamiche e persistenti; chiave errata/mancante sospende gli invii.
+- Cambio email/password revoca gli altri accessi. Backup SQLite scaricabile solo
+  da sessione autenticata con nuova verifica password, Origin e CSRF.
+- Non creare credenziali/password per Jessica né attivare l’account al posto suo.
+  Il link monouso privato è nel file locale ignorato `.agenda-attivazione.md`.

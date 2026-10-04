@@ -1,0 +1,42 @@
+---
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/manrope';
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import { site } from '../data/site';
+import { withBase } from '../lib/href';
+
+interface Props { title?: string; }
+const { title = 'Area Jessica' } = Astro.props;
+---
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#2459c8" />
+    <title>{title} · {site.businessName}</title>
+    <link rel="icon" href={withBase('favicon.svg')} type="image/svg+xml" />
+    <ClientRouter />
+  </head>
+  <body class="admin-shell">
+    <a class="skip-link" href="#main">Salta al contenuto</a>
+    <header class="admin-topbar"><div class="container"><a class="admin-brand" href={withBase('/admin')}>{site.businessName}<span>Area Jessica</span></a><a class="admin-back" href={withBase('/')}>Vai al sito del salone ↗</a></div></header>
+    <main id="main"><slot /></main>
+    <footer class="admin-footer"><div class="container">Area privata di Jessica · Gli orari sono quelli del salone, in Italia.</div></footer>
+  </body>
+</html>
+<style is:global>
+  .admin-shell { background: #f4f7fc; }
+  .admin-shell::before { display: none; }
+  .admin-topbar { background: #fff; border-bottom: 1px solid #dbe3f1; }
+  .admin-topbar > .container { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1rem; }
+  .admin-brand { color: #173a79; text-decoration: none; font-weight: 700; font-size: 1rem; line-height: 1.4; }
+  .admin-brand span { display: block; color: #5c687e; font-weight: 500; font-size: .75rem; }
+  .admin-back { color: #2459a9; font-size: .85rem; text-underline-offset: .2rem; min-height: 44px; display: inline-flex; align-items: center; text-align: right; }
+  .admin-footer { padding-block: 1.5rem; color: #59657c; font-size: .8rem; }
+  .admin-shell h1, .admin-shell h2, .admin-shell h3, .admin-shell h4 { font-family: var(--font-body); font-weight: 650; letter-spacing: -.02em; }
+  @media (max-width: 360px) { .admin-brand { max-width: 11rem; } .admin-back { max-width: 8rem; } }
+</style>

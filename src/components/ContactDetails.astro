@@ -22,12 +22,12 @@ const c = site.confirmed;
 
   <div>
     <Heading class="contact__h">Orari</Heading>
-    <ul class="contact__hours" role="list">
+    <ul class="contact__hours" role="list" data-public-hours>
       {
         site.openingHours.map((o) => (
-          <li class={o.ranges.length === 0 ? 'is-closed' : ''}>
+          <li class={o.ranges.length === 0 ? 'is-closed' : ''} data-hour-day={o.day}>
             <span class="contact__day">{o.label}</span>
-            <span>
+            <span data-hour-value>
               {o.ranges.length
                 ? o.ranges.map((r) => `${r.opens}–${r.closes}`).join(' · ')
                 : 'Chiuso'}

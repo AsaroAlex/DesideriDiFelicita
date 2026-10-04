@@ -6,7 +6,7 @@ e l’eventuale costo dei messaggi stabilito da Meta.
 
 ## Prima apertura
 
-1. Aprire il collegamento privato `/agenda?attiva=…` fornito alla titolare.
+1. Aprire il collegamento privato `/admin#attiva=…` fornito alla titolare.
    Il token è forte, ha una scadenza e può creare un solo account; viene rimosso
    subito dalla barra dell’indirizzo. Non condividerlo né inserirlo nel repository.
 2. Scegliere email e password di almeno 12 caratteri. I dati clienti sono visibili
@@ -21,6 +21,9 @@ e l’eventuale costo dei messaggi stabilito da Meta.
    richieste. «Ricevi richieste dal calendario» permette di sospenderle separatamente.
 5. Inserire nell’agenda gli appuntamenti già presenti sulla carta: devono occupare
    gli orari prima di aprire il calendario alle clienti.
+
+Il portale è disponibile su `/admin`, con `/agenda` mantenuto come collegamento compatibile.
+La panoramica mostra le richieste da confermare, gli appuntamenti e una guida alla configurazione.
 
 L’agenda permette inserimento, modifica, spostamento, cancellazione, vista giornaliera
 e settimanale ed esportazione CSV. Le clienti non creano un account; la conferma
@@ -59,6 +62,23 @@ e un template **utility approvato**. La logica proprietaria usa esclusivamente l
 Le credenziali non sono disponibili in questa sessione: il software è predisposto,
 ma non dichiara attivo l’invio finché mancano.
 
+Jessica può configurare il collegamento dalla sezione **Collega WhatsApp** del portale,
+confermando con la propria password. I segreti non vengono mai restituiti dal server: un
+campo vuoto mantiene il valore salvato. Il token di verifica si genera e si copia prima
+del salvataggio, per usarlo anche nel pannello Meta. Salvare le credenziali mantiene
+gli invii sospesi; il comando **Attiva promemoria automatici** è separato e protetto
+dalla password. Il salvataggio non verifica l’approvazione del modello e non invia test.
+
+I dati vengono cifrati con AES-256-GCM nel database persistente; `WHATSAPP_CONFIG_KEY`,
+chiave casuale di 32 byte in base64, resta nelle variabili server Railway, fuori dal
+database e dal repository. Per un ripristino su un altro server serve conservare anche
+questa chiave in modo privato. Una chiave assente o diversa sospende gli invii e impedisce
+modifiche alle credenziali cifrate, senza ricadere su vecchie credenziali dell’ambiente.
+
+Le variabili seguenti restano supportate per installazioni configurate dall’infrastruttura,
+finché non viene salvato un collegamento nel portale. Le impostazioni del portale prevalgono
+poi sulle variabili e si applicano subito, anche dopo un riavvio:
+
 Variabili server Railway (mai nel frontend o nel repository):
 
 | Variabile | Contenuto |
@@ -89,6 +109,30 @@ semplicemente copiando un token. Potrebbero servire onboarding compatibile,
 migrazione o un numero dedicato. Nessuna automazione WhatsApp Web o sessione QR.
 Le [tariffe Meta](https://business.whatsapp.com/products/platform-pricing) dipendono
 da paese, categoria e regole applicabili; non è stato fissato un prezzo italiano.
+
+## Servizi, clienti e disponibilità
+
+In **Servizi**, Jessica può aggiungere e rinominare i servizi, impostare le durate
+reali, abilitarne la conferma automatica e scegliere se mostrarli nel calendario.
+Nascondere un servizio non cancella appuntamenti o richieste preesistenti; può essere
+ripristinato. Le durate non vengono precompilate senza una decisione della titolare.
+
+**Orari e impostazioni** usa campi ora per ogni giorno e un calendario per aggiungere
+le chiusure straordinarie. Le fasce aggiornano il calendario clienti e, con JavaScript,
+gli orari pubblici in Contatti e nel footer; il contenuto statico confermato resta come
+fallback su Pages e quando non si raggiunge l’API. Le modifiche non annullano appuntamenti
+già confermati. Il calendario e il server usano Europe/Rome.
+
+**Clienti** permette ricerca per nome o telefono e consultazione dello storico. La
+rubrica deriva soltanto dai dati già raccolti per appuntamenti e richieste. I conteggi
+includono i record annullati/rifiutati, mentre ultima e prossima data riguardano
+appuntamenti confermati. Non vengono memorizzati profili sanitari o dati aggiuntivi.
+
+**Accesso e backup** consente di modificare email e password; gli altri accessi vengono
+revocati. Il CSV esporta gli appuntamenti nell’intervallo scelto, fino a un anno per file. Il backup completo scarica uno snapshot
+SQLite coerente dopo verifica della password, senza pubblicare file accessibili sul sito.
+Contiene dati clienti, hash password, sessioni e configurazione: va conservato privatamente.
+Il ripristino resta un’operazione tecnica e non carica o sostituisce dati dal browser.
 
 ## Runtime, backup e manutenzione
 

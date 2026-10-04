@@ -49,9 +49,8 @@ function matchesSecret(value, secret) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-export function createReminderRunner({ store, config, fetchImpl = fetch, now = Date.now }) {
+export function createReminderRunner({ store, config, getWhatsappConfig = () => config.whatsapp || {}, fetchImpl = fetch, now = Date.now }) {
   const db = store.db;
-  const whatsapp = config.whatsapp || {};
   let interval;
   let activeTick;
   let stopped = false;
@@ -66,10 +65,12 @@ export function createReminderRunner({ store, config, fetchImpl = fetch, now = D
   `).get(from, to, ...SEND_STATUSES).count);
 
   function getStatus() {
+    const whatsapp = getWhatsappConfig();
     const settings = store.getSettings();
     const period = quotaPeriod(now());
     return {
       ...whatsappConfiguration(whatsapp),
+      enabled: whatsapp.enabled !== false && whatsappConfiguration(whatsapp).configured,
       webhookConfigured: Boolean(whatsapp.appSecret && whatsapp.verifyToken),
       dailyLimit: settings.dailyReminderLimit ?? 20,
       monthlyLimit: settings.monthlyReminderLimit ?? 200,
@@ -88,6 +89,7 @@ export function createReminderRunner({ store, config, fetchImpl = fetch, now = D
   }
 
   function claim() {
+    const whatsapp = getWhatsappConfig();
     const instant = now();
     return store.transaction(() => {
       // A lease is never returned to pending: after a crash its result is unknown.
@@ -98,7 +100,7 @@ export function createReminderRunner({ store, config, fetchImpl = fetch, now = D
       db.prepare(`UPDATE reminders SET status='needs_review', error_code='EXISTING_PROVIDER_ID',
         error_text=?,updated_at=? WHERE status='pending' AND provider_message_id IS NOT NULL`)
         .run('Invio già registrato da Meta: verificare il promemoria.', instant);
-      if (!whatsappConfiguration(whatsapp).configured) return null;
+      if (whatsapp.enabled === false || !whatsappConfiguration(whatsapp).configured) return null;
       const rows = db.prepare(`
         SELECT r.id AS reminder_id, r.appointment_revision, r.attempt_count,
           a.* FROM reminders r JOIN appointments a ON a.id=r.appointment_id
@@ -126,7 +128,7 @@ export function createReminderRunner({ store, config, fetchImpl = fetch, now = D
           .run(instant + LEASE_MS, instant, row.reminder_id);
         if (result.changes !== 1) continue;
         audit('whatsapp_send_claimed', row.reminder_id, instant);
-        return { ...row, attempt_count: row.attempt_count + 1 };
+        return { row: { ...row, attempt_count: row.attempt_count + 1 }, whatsapp };
       }
       return null;
     });
@@ -187,8 +189,9 @@ export function createReminderRunner({ store, config, fetchImpl = fetch, now = D
   async function processTick() {
     let processed = 0;
     for (; processed < 100 && !stopped; processed += 1) {
-      const row = claim();
-      if (!row) break;
+      const claimed = claim();
+      if (!claimed) break;
+      const { row, whatsapp } = claimed;
       const result = await sendAppointmentReminder({ whatsapp, appointment: row, fetchImpl, now: now() });
       finish(row, result);
     }
@@ -202,6 +205,7 @@ export function createReminderRunner({ store, config, fetchImpl = fetch, now = D
   }
 
   function handleWebhook({ method, query, rawBody, signature }) {
+    const whatsapp = getWhatsappConfig();
     const failure = (status, code, message) => ({ status, body: { error: { code, message } } });
     if (method === 'GET') {
       const challenge = queryValue(query, 'hub.challenge');

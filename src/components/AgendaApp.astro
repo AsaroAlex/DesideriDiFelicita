@@ -1,5 +1,7 @@
 ---
 import { site } from '../data/site';
+import WhatsAppSettings from './WhatsAppSettings.astro';
+import CustomerDirectory from './CustomerDirectory.astro';
 ---
 
 <script is:inline data-astro-rerun>
@@ -25,10 +27,10 @@ import { site } from '../data/site';
 <section class="agenda section" data-agenda data-business={site.businessName} data-owner-email={site.email}>
   <div class="container">
     <header class="agenda-heading">
-      <div><p class="eyebrow">Il tuo salone, organizzato</p><h1>Agenda di Jessica</h1><p class="lead">Richieste, appuntamenti e promemoria, in un unico posto.</p></div>
+      <div><p class="eyebrow">Il tuo salone, organizzato</p><h1>Benvenuta, Jessica</h1><p class="lead">Gestisci le clienti e configura il salone da qui.</p></div>
       <div data-owner-controls hidden><span data-owner-email-label></span><button type="button" class="agenda-button secondary" data-logout>Esci</button></div>
     </header>
-    <p class="agenda-notice" role="status" aria-live="polite" data-notice>Caricamento dell’agenda…</p>
+    <p class="agenda-notice" role="status" aria-live="polite" data-notice>Caricamento dell’area privata…</p>
     <noscript><p class="agenda-notice">Per accedere all’agenda occorre attivare JavaScript nel browser.</p></noscript>
 
     <section class="agenda-card auth-card" data-auth hidden aria-labelledby="access-title">
@@ -49,16 +51,28 @@ import { site } from '../data/site';
     </section>
 
     <div data-workspace hidden>
-      <section class="agenda-stats" aria-label="Riepilogo dell’agenda" data-stats></section>
       <nav class="agenda-tabs" aria-label="Sezioni dell’agenda">
-        <button type="button" class="agenda-button" data-tab="calendar" aria-pressed="true">Appuntamenti</button>
+        <button type="button" class="agenda-button" data-tab="overview" aria-pressed="true">Panoramica</button>
+        <button type="button" class="agenda-button secondary" data-tab="calendar" aria-pressed="false">Appuntamenti</button>
         <button type="button" class="agenda-button secondary" data-tab="requests" aria-pressed="false">Richieste <span class="request-count" data-request-count aria-label="Richieste da confermare">0</span></button>
         <button type="button" class="agenda-button secondary" data-tab="services" aria-pressed="false">Servizi</button>
-        <button type="button" class="agenda-button secondary" data-tab="settings" aria-pressed="false">Impostazioni</button>
+        <button type="button" class="agenda-button secondary" data-tab="customers" aria-pressed="false">Clienti</button>
+        <button type="button" class="agenda-button secondary" data-tab="settings" aria-pressed="false">Orari e impostazioni</button>
+        <button type="button" class="agenda-button secondary" data-tab="connection" aria-pressed="false">Collega WhatsApp</button>
         <button type="button" class="agenda-button secondary" data-tab="reminders" aria-pressed="false">Promemoria</button>
+        <button type="button" class="agenda-button secondary" data-tab="account" aria-pressed="false">Accesso e backup</button>
       </nav>
 
-      <section data-panel="calendar" aria-labelledby="calendar-title">
+      <section data-panel="overview" aria-labelledby="overview-title">
+        <div class="agenda-section-head"><h2 id="overview-title" tabindex="-1">Il salone, oggi</h2><div class="button-group"><button class="agenda-button" type="button" data-open-panel="requests">Controlla le richieste</button><button class="agenda-button secondary" type="button" data-open-calendar>Inserisci un appuntamento</button></div></div>
+        <section class="agenda-stats" aria-label="Riepilogo dell’agenda" data-stats></section>
+        <div class="overview-grid">
+          <section class="agenda-card"><h3>Configura il tuo salone</h3><p class="agenda-note">Le richieste delle clienti sono già disponibili. Scegli tu se confermarle dopo aver controllato l’agenda oppure attivare la conferma automatica per i servizi con durata impostata.</p><ul class="setup-checklist" data-checklist></ul></section>
+          <section class="agenda-card"><h3>Come lavorare ogni giorno</h3><ol class="daily-guide"><li>Apri <strong>Richieste</strong>, controlla la durata e conferma l’orario.</li><li>Aggiungi in <strong>Appuntamenti</strong> anche le prenotazioni ricevute per telefono o in salone.</li><li>Usa <strong>Clienti</strong> per ritrovare rapidamente contatti e appuntamenti.</li><li>Collega WhatsApp e imposta orario e limiti dei promemoria quando sei pronta.</li></ol></section>
+        </div>
+      </section>
+
+      <section data-panel="calendar" hidden aria-labelledby="calendar-title">
         <div class="agenda-section-head"><h2 id="calendar-title" tabindex="-1">I tuoi appuntamenti</h2><button type="button" class="agenda-button" data-new>Nuovo appuntamento</button></div>
         <div class="agenda-card calendar-toolbar">
           <div class="button-group"><button type="button" class="agenda-button secondary" data-date-prev aria-label="Periodo precedente">←</button><button type="button" class="agenda-button secondary" data-today>Oggi</button><button type="button" class="agenda-button secondary" data-date-next aria-label="Periodo successivo">→</button></div>
@@ -98,10 +112,19 @@ import { site } from '../data/site';
       </section>
 
       <section data-panel="services" hidden aria-labelledby="services-title">
-        <h2 id="services-title" tabindex="-1">Servizi e durate</h2>
-        <p class="agenda-note">Tutti i servizi possono ricevere richieste dal calendario. Per confermare un servizio automaticamente, imposta la durata, abilitalo qui e attiva la conferma automatica nelle Impostazioni. Le modifiche non cambiano gli appuntamenti già inseriti.</p>
+        <h2 id="services-title" tabindex="-1">I servizi del salone</h2>
+        <p class="agenda-note">Scegli quali servizi mostrare nel calendario, imposta i nomi e le durate reali. Nascondere un servizio conserva gli appuntamenti e le richieste già ricevute.</p>
+        <form class="agenda-card service-create-form" data-service-create>
+          <h3>Aggiungi un servizio</h3><div class="form-grid"><label>Nome<input name="name" maxlength="100" minlength="2" required placeholder="Nome del servizio" /></label><label>Durata, in minuti<input name="durationMinutes" type="number" min="5" max="480" step="1" placeholder="Puoi impostarla in seguito" /></label></div>
+          <label class="checkbox-label"><input name="listed" type="checkbox" checked />Mostra il servizio nel calendario delle clienti</label>
+          <label class="checkbox-label"><input name="enabled" type="checkbox" />Abilita la conferma automatica per questo servizio</label>
+          <button class="agenda-button" type="submit">Aggiungi servizio</button>
+        </form>
         <div class="service-settings" data-services></div>
       </section>
+
+      <section data-panel="customers" hidden aria-labelledby="customers-title"><h2 id="customers-title" tabindex="-1">Le tue clienti</h2><CustomerDirectory /></section>
+      <section data-panel="connection" hidden aria-labelledby="connection-title"><h2 id="connection-title" tabindex="-1">Collegamento WhatsApp</h2><WhatsAppSettings /></section>
 
       <section data-panel="settings" hidden aria-labelledby="settings-title">
         <h2 id="settings-title" tabindex="-1">Impostazioni del salone</h2>
@@ -113,10 +136,11 @@ import { site } from '../data/site';
           <p class="agenda-note" data-booking-help>Per la conferma automatica servono almeno un servizio abilitato e la sua durata.</p>
           <label>Giorni prenotabili in anticipo<input type="number" name="bookingDays" min="1" max="365" required /></label>
           <h3>Orari di disponibilità</h3>
-          <p class="agenda-note">Usa fasce come 09:00-13:00, 17:00-19:00. Lascia vuoto un giorno di chiusura.</p>
+          <p class="agenda-note">Indica quando il salone è aperto. Puoi aggiungere più fasce nello stesso giorno, per esempio mattina e pomeriggio.</p>
           <div class="hours-grid" data-hours></div>
-          <label>Chiusure straordinarie<textarea name="closedDates" rows="3" placeholder="2026-12-25&#10;2026-12-26" aria-describedby="closed-dates-help"></textarea></label>
-          <small id="closed-dates-help">Una data per riga, nel formato anno-mese-giorno. Non annulla gli appuntamenti già confermati.</small>
+          <h3>Chiusure straordinarie</h3><div class="closure-add"><label>Giorno di chiusura<input type="date" data-closure-date /></label><button type="button" class="agenda-button secondary" data-closure-add>Aggiungi giorno</button></div>
+          <ul class="closed-date-list" data-closed-dates></ul>
+          <small>Le chiusure impediscono nuove prenotazioni e richieste. Non annullano gli appuntamenti già confermati.</small>
           <h3>Promemoria del giorno prima</h3>
           <div class="form-grid">
             <label>Ora di invio<input type="time" name="reminderTime" required /></label>
@@ -126,6 +150,11 @@ import { site } from '../data/site';
           <p class="agenda-note">I limiti contengono gli invii automatici. Un valore pari a 0 li sospende. Si invia un solo promemoria per appuntamento, senza messaggi promozionali.</p>
           <button type="submit" class="agenda-button">Salva impostazioni</button>
         </form>
+      </section>
+
+      <section data-panel="account" hidden aria-labelledby="account-title">
+        <h2 id="account-title" tabindex="-1">Accesso e backup</h2>
+        <section class="agenda-card security-card" aria-labelledby="email-title"><h3 id="email-title">Email per l’accesso</h3><form data-account-form><label>Email<input type="email" name="email" autocomplete="username" required /></label><label>Password attuale<input type="password" name="currentPassword" autocomplete="current-password" required /></label><button class="agenda-button secondary" type="submit">Aggiorna email</button></form><p class="agenda-note">La nuova email verrà usata per accedere. Gli altri accessi verranno chiusi.</p></section>
         <section class="agenda-card security-card" aria-labelledby="security-title">
           <h3 id="security-title">Il tuo accesso</h3>
           <form data-password-form>
@@ -135,8 +164,9 @@ import { site } from '../data/site';
             <button type="submit" class="agenda-button secondary">Cambia password</button>
           </form>
           <p class="agenda-note">Almeno 12 caratteri. Gli altri accessi verranno chiusi.</p>
-          <a class="agenda-button secondary" href="/api/admin/export.csv" download>Scarica gli appuntamenti in CSV</a>
         </section>
+        <section class="agenda-card security-card" aria-labelledby="export-title"><h3 id="export-title">Esporta gli appuntamenti</h3><p class="agenda-note">Scegli il periodo da esportare, fino a un anno. Il file CSV si apre con Excel e contiene anche gli appuntamenti annullati.</p><form data-export-form><div class="form-grid"><label>Dal<input type="date" name="from" required /></label><label>Al<input type="date" name="to" required /></label></div><button class="agenda-button secondary" type="submit">Scarica appuntamenti in CSV</button></form></section>
+        <section class="agenda-card security-card" aria-labelledby="backup-title"><h3 id="backup-title">Backup completo</h3><p class="agenda-note">Il backup conserva appuntamenti, richieste, impostazioni e collegamento WhatsApp ed è destinato al ripristino tecnico: tienilo in un posto sicuro.</p><form data-backup-form><label>Password attuale<input type="password" name="currentPassword" autocomplete="current-password" required /></label><button class="agenda-button secondary" type="submit">Scarica backup completo</button></form></section>
       </section>
 
       <section data-panel="reminders" hidden aria-labelledby="reminders-title">
@@ -154,12 +184,13 @@ import { site } from '../data/site';
 
   type Appointment = { id: string; reference: string; serviceId?: string | null; title: string; name: string; phone: string; date: string; time: string; durationMinutes: number; status: string; reminderConsent: boolean };
   type BookingRequest = { id: string; reference: string; serviceId: string; serviceName: string; name: string; phone: string; date: string; time: string; reminderConsent: boolean; status: 'pending' | 'confirmed' | 'declined'; appointmentId?: string | null; createdAt: number; appointment?: Pick<Appointment, 'id' | 'date' | 'time' | 'durationMinutes' | 'status' | 'title'> | null };
-  type Service = { id: string; name: string; durationMinutes: number | null; enabled: boolean };
+  type Service = { id: string; name: string; durationMinutes: number | null; enabled: boolean; listed: boolean };
   type OpeningHour = { day: string; label: string; ranges: { opens: string; closes: string }[] };
   type Settings = { requestEnabled: boolean; bookingEnabled: boolean; bookingDays: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; dailyReminderLimit: number; monthlyReminderLimit: number };
   type Reminder = { id: string; appointmentId: string; name: string; phone: string; date: string; time: string; status: string; dueAt: number; attemptCount: number; errorCode?: string; errorText?: string };
   type Session = { authenticated: boolean; setupRequired?: boolean; email?: string; csrfToken?: string; whatsappConfigured?: boolean };
-  type Automation = { configured: boolean; missing: string[]; dailyLimit: number; monthlyLimit: number; sentThisMonth: number };
+  type Automation = { configured: boolean; enabled?: boolean; webhookConfigured?: boolean; missing: string[]; dailyLimit: number; monthlyLimit: number; sentThisMonth: number };
+  type ServiceDraft = { name: string; duration: string; listed: boolean; enabled: boolean };
   const reminderLabels: Record<string, string> = { pending: 'In attesa', sending: 'Invio in corso', accepted: 'Accettato da WhatsApp', delivered: 'Consegnato', read: 'Letto', failed: 'Invio non riuscito', skipped: 'Non inviato', needs_review: 'Da controllare' };
   let activeRoot: HTMLElement | null = null;
   let dispose: (() => void) | undefined;
@@ -181,6 +212,11 @@ import { site } from '../data/site';
     let requestStatus = 'pending';
     let reminders: Reminder[] = [];
     let settings: Settings | undefined;
+    let automation: Automation | undefined;
+    let closedDatesDraft: string[] = [];
+    let activePanel = 'overview';
+    let settingsDirty = false;
+    const serviceDrafts = new Map<string, ServiceDraft>();
     let editingId = '';
     let editorOpener: HTMLElement | null = null;
     let view = 'day';
@@ -195,6 +231,10 @@ import { site } from '../data/site';
     const appointmentForm = el<HTMLFormElement>('[data-appointment-form]');
     const settingsForm = el<HTMLFormElement>('[data-settings-form]');
     const passwordForm = el<HTMLFormElement>('[data-password-form]');
+    const accountForm = el<HTMLFormElement>('[data-account-form]');
+    const backupForm = el<HTMLFormElement>('[data-backup-form]');
+    const exportForm = el<HTMLFormElement>('[data-export-form]');
+    const createServiceForm = el<HTMLFormElement>('[data-service-create]');
     const input = <T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement = HTMLInputElement>(form: HTMLFormElement, name: string) => form.elements.namedItem(name) as T;
     const on = (target: EventTarget, event: string, handler: EventListener) => target.addEventListener(event, handler, { signal: lifetime.signal });
     const textNode = (tag: string, text: string, className = '') => { const node = document.createElement(tag); node.textContent = text; if (className) node.className = className; return node; };
@@ -208,8 +248,11 @@ import { site } from '../data/site';
     function period() { const from = view === 'week' ? weekStart(selectedDate) : selectedDate; return { from, to: view === 'week' ? addDays(from, 6) : from }; }
 
     async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+      const requestSession = session;
       const response = await fetch(path, { method, credentials: 'same-origin', signal: lifetime.signal, headers: { Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(method !== 'GET' && csrfToken ? { 'x-csrf-token': csrfToken } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
       const data = await response.json().catch(() => null);
+      // Una risposta del vecchio accesso non deve chiudere quello appena aggiornato.
+      if (requestSession.authenticated && session !== requestSession) throw new DOMException('Accesso aggiornato durante la richiesta.', 'AbortError');
       if (!response.ok) {
         if (response.status === 401 && session.authenticated) { showAccess({ authenticated: false, setupRequired: false }); inform('L’accesso è scaduto. Accedi di nuovo per continuare.', true); input(loginForm, 'email').focus(); }
         throw new Error(data?.error?.message || 'Non è stato possibile completare l’operazione. Riprova tra poco.');
@@ -225,7 +268,7 @@ import { site } from '../data/site';
       const previous = buttons.map(button => button.disabled);
       buttons.forEach(button => { button.disabled = true; });
       form?.setAttribute('aria-busy', 'true');
-      try { await task(); } catch (error) { if (!lifetime.signal.aborted) inform(error instanceof Error ? error.message : 'Si è verificato un problema. Riprova.', true); }
+      try { await task(); } catch (error) { if (!lifetime.signal.aborted && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Si è verificato un problema. Riprova.', true); }
       finally { busy = false; buttons.forEach((button, index) => { button.disabled = previous[index]; }); form?.removeAttribute('aria-busy'); }
     }
 
@@ -235,11 +278,13 @@ import { site } from '../data/site';
       el('[data-workspace]').hidden = !next.authenticated;
       el('[data-owner-controls]').hidden = !next.authenticated;
       el('[data-auth]').hidden = next.authenticated;
-      if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; return; }
+      if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; input(accountForm, 'email').value = next.email || ''; document.dispatchEvent(new CustomEvent('agenda:authenticated', { detail: { email: next.email, csrfToken } })); return; }
+      document.dispatchEvent(new CustomEvent('agenda:logout'));
+      automation = undefined; closedDatesDraft = []; settingsDirty = false; serviceDrafts.clear(); showPanel('overview', false);
       services = []; appointments = []; requests = []; reminders = []; settings = undefined; requestStatus = 'pending'; el<HTMLSelectElement>('[data-request-status]').value = requestStatus;
       el('[data-calendar]').replaceChildren(); el('[data-services]').replaceChildren(); el('[data-reminders]').replaceChildren(); el('[data-stats]').replaceChildren(); el('[data-automation]').replaceChildren();
       el('[data-requests]').replaceChildren(); el('[data-request-result]').replaceChildren(); el('[data-request-result]').hidden = true; el('[data-request-count]').textContent = '0';
-      appointmentForm.reset(); passwordForm.reset(); el('[data-editor]').hidden = true;
+      appointmentForm.reset(); passwordForm.reset(); accountForm.reset(); backupForm.reset(); settingsForm.reset(); createServiceForm.reset(); el('[data-hours]').replaceChildren(); el('[data-closed-dates]').replaceChildren(); el('[data-checklist]').replaceChildren(); el('[data-editor]').hidden = true;
       const setup = Boolean(next.setupRequired);
       el('[data-auth-title]').textContent = setup ? 'Benvenuta nella tua agenda' : 'Accedi alla tua agenda';
       el('[data-auth-intro]').textContent = setup ? (activationToken ? 'Imposta il tuo accesso privato per iniziare.' : 'Per il primo accesso serve il link di attivazione riservato a Jessica.') : 'Un accesso privato, riservato a Jessica.';
@@ -261,14 +306,14 @@ import { site } from '../data/site';
     }
 
     async function loadAll() {
-      const [serviceData, settingsData, reminderData, stats, automation, requestData] = await Promise.all([
+      const [serviceData, settingsData, reminderData, stats, automationData, requestData] = await Promise.all([
         api<{ items: Service[] }>('/api/admin/services'), api<Settings>('/api/admin/settings'), api<{ items: Reminder[] }>('/api/admin/reminders'),
         api<Record<string, number>>('/api/admin/stats'), api<Automation>('/api/admin/automation'),
         api<{ items: BookingRequest[] }>(`/api/admin/requests?status=${encodeURIComponent(requestStatus)}&limit=100`),
       ]);
       if (!session.authenticated || lifetime.signal.aborted) return;
-      services = serviceData.items; settings = settingsData; reminders = reminderData.items; requests = requestData.items;
-      renderServices(); renderSettings(); renderReminders(); renderStats(stats); renderAutomation(automation); renderRequests(); populateServiceSelect();
+      services = serviceData.items; settings = settingsData; automation = automationData; reminders = reminderData.items; requests = requestData.items;
+      renderServices(); renderSettings(); renderReminders(); renderStats(stats); renderAutomation(automationData); renderOverview(); renderRequests(); populateServiceSelect();
       await loadCalendar();
     }
 
@@ -408,7 +453,7 @@ import { site } from '../data/site';
 
     function populateServiceSelect() {
       const select = input<HTMLSelectElement>(appointmentForm, 'serviceId'); const current = select.value;
-      select.replaceChildren(new Option('Altro appuntamento', ''), ...services.map(service => new Option(service.name + (service.durationMinutes ? ` · ${service.durationMinutes} min` : ' · durata da impostare'), service.id)));
+      select.replaceChildren(new Option('Altro appuntamento', ''), ...services.filter(service => service.listed !== false || service.id === current).map(service => new Option(service.name + (service.durationMinutes ? ` · ${service.durationMinutes} min` : ' · durata da impostare'), service.id)));
       select.value = current;
     }
 
@@ -427,36 +472,100 @@ import { site } from '../data/site';
 
     function closeEditor() { el('[data-editor]').hidden = true; editingId = ''; appointmentForm.reset(); editorOpener?.focus({ preventScroll: true }); }
 
+    function showPanel(panel: string, moveFocus = true) {
+      activePanel = panel;
+      root.querySelectorAll<HTMLElement>('[data-panel]').forEach(item => { item.hidden = item.dataset.panel !== panel; });
+      root.querySelectorAll<HTMLElement>('[data-tab]').forEach(button => { const selected = button.dataset.tab === panel; button.setAttribute('aria-pressed', String(selected)); button.classList.toggle('secondary', !selected); });
+      document.dispatchEvent(new CustomEvent('agenda:panel', { detail: { panel } }));
+      if (moveFocus) focus(`#${panel}-title`);
+      if (panel === 'requests') void refreshIncomingRequests();
+    }
+
+    function renderOverview() {
+      if (!settings) return;
+      const listed = services.filter(service => service.listed !== false);
+      const durations = listed.filter(service => service.durationMinutes).length;
+      const automaticReady = listed.some(service => service.enabled && service.durationMinutes);
+      const whatsappActive = Boolean(automation?.configured && automation?.enabled !== false && automation?.webhookConfigured !== false);
+      const items = [
+        { title: 'Calendario delle clienti', copy: settings.requestEnabled ? 'Le richieste arrivano nella tua agenda.' : 'Le richieste dal sito sono sospese.', ready: settings.requestEnabled, panel: 'settings' },
+        { title: 'Servizi e durate', copy: `${listed.length} servizi visibili · ${durations} con durata impostata.`, ready: listed.length > 0 && durations === listed.length, panel: 'services' },
+        { title: 'Orari del salone', copy: settings.openingHours.some(day => day.ranges.length) ? 'Controlla gli orari e aggiungi le chiusure straordinarie.' : 'Imposta i giorni e gli orari di apertura.', ready: settings.openingHours.some(day => day.ranges.length), panel: 'settings' },
+        { title: 'Conferma automatica', copy: settings.bookingEnabled && automaticReady ? 'Attiva per i servizi abilitati, negli orari liberi.' : 'Decidi tu quando attivarla. Puoi già confermare le richieste a mano.', ready: settings.bookingEnabled && automaticReady, panel: 'settings' },
+        { title: 'Promemoria WhatsApp', copy: whatsappActive ? (automation?.dailyLimit === 0 || automation?.monthlyLimit === 0 ? 'Collegato. Gli invii sono sospesi dai limiti impostati.' : 'Invii abilitati, secondo consenso e limiti. Verifica l’approvazione del modello su Meta.') : 'Completa il collegamento per abilitare gli invii automatici.', ready: whatsappActive && (automation?.dailyLimit || 0) > 0 && (automation?.monthlyLimit || 0) > 0, panel: 'connection' },
+      ];
+      el('[data-checklist]').replaceChildren(...items.map(item => {
+        const li = textNode('li', '', 'checklist-item');
+        const heading = textNode('div', '', 'appointment-top'); heading.append(textNode('strong', item.title), textNode('span', item.ready ? 'Pronto' : 'Da configurare', `status-badge${item.ready ? ' is-ready' : ''}`));
+        const button = textNode('button', 'Apri', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; button.setAttribute('aria-label', `Configura ${item.title.toLowerCase()}`); on(button, 'click', () => showPanel(item.panel));
+        li.append(heading, textNode('p', item.copy, 'agenda-note'), button); return li;
+      }));
+    }
+
     function renderServices() {
       el('[data-services]').replaceChildren(...services.map(service => {
-        const form = document.createElement('form'); form.className = 'agenda-card service-form';
-        const title = textNode('h3', service.name); form.append(title);
-        const durationLabel = textNode('label', 'Durata, in minuti'); const duration = document.createElement('input'); duration.type = 'number'; duration.min = '5'; duration.max = '480'; duration.step = '1'; duration.name = 'durationMinutes'; duration.value = service.durationMinutes ? String(service.durationMinutes) : ''; durationLabel.append(duration);
-        const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = Boolean(service.enabled); enabledLabel.append(enabled, document.createTextNode('Abilita la conferma automatica per questo servizio'));
-        const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit'; form.append(durationLabel, enabledLabel, save);
+        const draft = serviceDrafts.get(service.id);
+        const form = document.createElement('form'); form.className = 'agenda-card service-form'; form.dataset.serviceId = service.id;
+        const top = textNode('div', '', 'appointment-top'); top.append(textNode('h3', service.name), textNode('span', service.listed !== false ? 'Visibile alle clienti' : 'Nascosto', 'status-badge')); form.append(top);
+        const nameLabel = textNode('label', 'Nome del servizio'); const name = document.createElement('input'); name.name = 'name'; name.required = true; name.minLength = 2; name.maxLength = 100; name.value = draft?.name ?? service.name; nameLabel.append(name);
+        const durationLabel = textNode('label', 'Durata, in minuti'); const duration = document.createElement('input'); duration.type = 'number'; duration.min = '5'; duration.max = '480'; duration.step = '1'; duration.name = 'durationMinutes'; duration.value = draft?.duration ?? (service.durationMinutes ? String(service.durationMinutes) : ''); duration.placeholder = 'Durata reale del servizio'; durationLabel.append(duration);
+        const listedLabel = textNode('label', '', 'checkbox-label'); const listed = document.createElement('input'); listed.type = 'checkbox'; listed.name = 'listed'; listed.checked = draft?.listed ?? (service.listed !== false); listedLabel.append(listed, document.createTextNode('Mostra nel calendario delle clienti'));
+        const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = draft?.enabled ?? Boolean(service.enabled); enabled.disabled = !listed.checked; enabledLabel.append(enabled, document.createTextNode('Abilita la conferma automatica per questo servizio'));
+        on(listed, 'change', () => { enabled.disabled = !listed.checked; if (!listed.checked) enabled.checked = false; });
+        const rememberDraft = () => { serviceDrafts.set(service.id, { name: name.value, duration: duration.value, listed: listed.checked, enabled: listed.checked && enabled.checked }); };
+        on(form, 'input', rememberDraft); on(form, 'change', rememberDraft);
+        const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit'; form.append(nameLabel, durationLabel, listedLabel, enabledLabel, textNode('small', 'Senza durata impostata, Jessica controlla e conferma le richieste. La conferma automatica richiede anche l’attivazione nelle impostazioni.'), save);
         on(form, 'submit', event => { event.preventDefault(); void act(form, async () => {
-          if (enabled.checked && !duration.value) { duration.focus(); throw new Error('Imposta la durata prima di abilitare questo servizio.'); }
-          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', { durationMinutes: duration.value ? Number(duration.value) : null, enabled: enabled.checked }); await loadAll(); inform(`Impostazioni di ${service.name} salvate.`); focus('#services-title');
+          if (enabled.checked && !duration.value) { duration.focus(); throw new Error('Imposta la durata prima di abilitare la conferma automatica.'); }
+          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', { name: name.value.trim(), durationMinutes: duration.value ? Number(duration.value) : null, listed: listed.checked, enabled: listed.checked && enabled.checked }); serviceDrafts.delete(service.id); await loadAll(); inform(`Servizio ${name.value.trim()} salvato.`); focus('#services-title');
         }); }); return form;
       }));
     }
 
+    function renderClosedDates() {
+      const list = el('[data-closed-dates]');
+      if (!closedDatesDraft.length) { list.replaceChildren(textNode('li', 'Non ci sono chiusure straordinarie.', 'agenda-note')); return; }
+      list.replaceChildren(...closedDatesDraft.map(date => {
+        const item = textNode('li', '', 'closure-item'); const button = textNode('button', 'Rimuovi', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; button.setAttribute('aria-label', `Rimuovi la chiusura del ${prettyDate(date, false)}`);
+        on(button, 'click', () => { settingsDirty = true; closedDatesDraft = closedDatesDraft.filter(value => value !== date); renderClosedDates(); inform('Chiusura rimossa dal modulo. Salva le impostazioni per applicare la modifica.'); });
+        item.append(textNode('span', prettyDate(date)), button); return item;
+      }));
+    }
+
     function renderSettings() {
-      if (!settings) return;
+      if (!settings || settingsDirty) return;
       input(settingsForm, 'requestEnabled').checked = settings.requestEnabled !== false;
       input(settingsForm, 'bookingEnabled').checked = settings.bookingEnabled;
       input(settingsForm, 'bookingDays').value = String(settings.bookingDays); input(settingsForm, 'reminderTime').value = settings.reminderTime;
       input(settingsForm, 'dailyReminderLimit').value = String(settings.dailyReminderLimit); input(settingsForm, 'monthlyReminderLimit').value = String(settings.monthlyReminderLimit);
-      input<HTMLTextAreaElement>(settingsForm, 'closedDates').value = settings.closedDates.join('\n');
-      el('[data-booking-help]').textContent = services.some(service => service.enabled && service.durationMinutes) ? 'I servizi abilitati vengono confermati solo negli orari effettivamente liberi. Gli altri servizi continuano a ricevere richieste, se abilitate.' : 'Prima di attivare la conferma automatica, abilita almeno un servizio e imposta la sua durata nella sezione Servizi. Puoi già ricevere richieste dal calendario.';
-      el('[data-hours]').replaceChildren(...settings.openingHours.map(day => { const label = textNode('label', day.label); const rangeInput = document.createElement('input'); rangeInput.name = `hours-${day.day}`; rangeInput.value = day.ranges.map(range => `${range.opens}-${range.closes}`).join(', '); rangeInput.placeholder = 'Chiuso'; rangeInput.setAttribute('aria-label', `Fasce orarie di ${day.label}`); label.append(rangeInput); return label; }));
+      closedDatesDraft = [...settings.closedDates]; renderClosedDates();
+      el<HTMLInputElement>('[data-closure-date]').value = '';
+      el('[data-booking-help]').textContent = services.some(service => service.listed !== false && service.enabled && service.durationMinutes) ? 'I servizi abilitati vengono confermati solo negli orari effettivamente liberi. Gli altri servizi ricevono richieste, se abilitate.' : 'Prima di attivare la conferma automatica, abilita almeno un servizio e imposta la sua durata nella sezione Servizi. Puoi già ricevere richieste dal calendario.';
+      el('[data-hours]').replaceChildren(...settings.openingHours.map(day => {
+        const card = textNode('fieldset', '', 'hours-day'); card.dataset.hoursDay = day.day; const legend = textNode('legend', day.label); card.append(legend);
+        const openLabel = textNode('label', '', 'checkbox-label'); const open = document.createElement('input'); open.type = 'checkbox'; open.name = `open-${day.day}`; open.checked = day.ranges.length > 0; openLabel.append(open, document.createTextNode('Aperto'));
+        const ranges = textNode('div', '', 'hours-ranges'); ranges.hidden = !open.checked;
+        const add = textNode('button', 'Aggiungi fascia', 'agenda-button secondary') as HTMLButtonElement; add.type = 'button'; add.hidden = !open.checked;
+        const addRange = (range?: { opens: string; closes: string }) => {
+          if (ranges.children.length >= 4) return;
+          const row = textNode('div', '', 'hours-range');
+          for (const [key, label] of [['opens', 'Dalle'], ['closes', 'Alle']]) { const wrapper = textNode('label', label); const control = document.createElement('input'); control.type = 'time'; control.dataset.rangeField = key; control.required = open.checked; control.disabled = !open.checked; control.value = range?.[key as 'opens' | 'closes'] || ''; control.setAttribute('aria-label', `${day.label}: ${label.toLowerCase()}`); wrapper.append(control); row.append(wrapper); }
+          const remove = textNode('button', 'Rimuovi', 'agenda-button secondary range-remove') as HTMLButtonElement; remove.type = 'button'; remove.setAttribute('aria-label', `Rimuovi fascia di ${day.label}`); on(remove, 'click', () => { settingsDirty = true; row.remove(); if (!ranges.children.length) addRange(); add.disabled = ranges.children.length >= 4; }); row.append(remove); ranges.append(row); add.disabled = ranges.children.length >= 4;
+        };
+        day.ranges.forEach(range => addRange(range));
+        on(open, 'change', () => { ranges.hidden = !open.checked; add.hidden = !open.checked; if (open.checked && !ranges.children.length) addRange(); ranges.querySelectorAll<HTMLInputElement>('input').forEach(control => { control.disabled = !open.checked; control.required = open.checked; }); });
+        on(add, 'click', () => { settingsDirty = true; addRange(); ranges.lastElementChild?.querySelector<HTMLInputElement>('input')?.focus(); });
+        card.append(openLabel, ranges, add); return card;
+      }));
     }
 
-    function renderAutomation(automation: Automation) {
-      const card = el('[data-automation]'); const title = textNode('h3', automation.configured ? 'Invio automatico collegato' : 'Invio automatico da collegare');
-      const copy = textNode('p', automation.configured ? 'I promemoria con consenso vengono inviati il giorno prima, all’orario scelto e nei limiti impostati.' : 'L’agenda e le prenotazioni funzionano. Per inviare promemoria automatici occorre completare il collegamento WhatsApp Business; al momento non partono invii automatici. Puoi usare i pulsanti manuali.');
-      card.replaceChildren(title, copy, textNode('p', `Limiti: ${automation.dailyLimit} invii al giorno, ${automation.monthlyLimit} al mese. Invii di questo mese: ${automation.sentThisMonth}.`, 'agenda-note'));
-      if (automation.configured && (automation.dailyLimit === 0 || automation.monthlyLimit === 0)) card.append(textNode('p', 'Gli invii sono sospesi perché un limite è impostato a 0.', 'agenda-note'));
+    function renderAutomation(next: Automation) {
+      const active = next.configured && next.enabled !== false && next.webhookConfigured !== false;
+      const card = el('[data-automation]'); const title = textNode('h3', active ? 'Invii automatici abilitati' : next.configured ? 'Collegamento salvato, invii sospesi' : 'Invio automatico da collegare');
+      const copy = textNode('p', active ? 'I promemoria con consenso vengono inviati la sera prima, secondo orario e limiti. Il modello deve essere approvato da Meta e il collegamento deve avere credenziali valide.' : 'L’agenda e le richieste funzionano. Completa il collegamento WhatsApp Business e abilita gli invii quando sei pronta. Al momento non partono promemoria automatici.');
+      const button = textNode('button', 'Gestisci collegamento WhatsApp', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; on(button, 'click', () => showPanel('connection'));
+      card.replaceChildren(title, copy, textNode('p', `Limiti: ${next.dailyLimit} invii al giorno, ${next.monthlyLimit} al mese. Invii di questo mese: ${next.sentThisMonth}.`, 'agenda-note'), button);
+      if (active && (next.dailyLimit === 0 || next.monthlyLimit === 0)) card.append(textNode('p', 'Gli invii sono sospesi perché un limite è impostato a 0.', 'agenda-note'));
     }
 
     function renderReminders() {
@@ -475,8 +584,8 @@ import { site } from '../data/site';
       }));
     }
 
-    on(loginForm, 'submit', event => { event.preventDefault(); void act(loginForm, async () => { showAccess(await api<Session>('/api/auth/login', 'POST', { email: input(loginForm, 'email').value.trim(), password: input(loginForm, 'password').value })); input(loginForm, 'password').value = ''; await loadAll(); inform('Accesso riuscito. La tua agenda è pronta.'); focus('#calendar-title'); }); });
-    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim() })); activationToken = ''; setupForm.reset(); await loadAll(); inform('Agenda attivata. Le richieste ricevute dal calendario sono nella sezione Richieste.'); focus('#calendar-title'); }); });
+    on(loginForm, 'submit', event => { event.preventDefault(); void act(loginForm, async () => { showAccess(await api<Session>('/api/auth/login', 'POST', { email: input(loginForm, 'email').value.trim(), password: input(loginForm, 'password').value })); input(loginForm, 'password').value = ''; await loadAll(); showPanel('overview'); inform('Accesso riuscito. La tua area privata è pronta.'); }); });
+    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim() })); activationToken = ''; setupForm.reset(); await loadAll(); showPanel('overview'); inform('Area privata attivata. Le richieste del calendario sono nella sezione Richieste.'); }); });
     on(el('[data-logout]'), 'click', () => { void act(null, async () => { await api('/api/auth/logout', 'POST', {}); activationToken = ''; showAccess({ authenticated: false, setupRequired: false }); loginForm.reset(); input(loginForm, 'email').value = root.dataset.ownerEmail || ''; inform('Sei uscita dall’agenda.'); input(loginForm, 'email').focus(); }); });
     on(el('[data-new]'), 'click', () => openEditor(undefined, el('[data-new]')));
     root.querySelectorAll<HTMLElement>('[data-editor-close]').forEach(button => on(button, 'click', closeEditor));
@@ -487,15 +596,55 @@ import { site } from '../data/site';
     }); });
     on(settingsForm, 'submit', event => { event.preventDefault(); void act(settingsForm, async () => {
       if (!settings) return;
-      const openingHours = settings.openingHours.map(day => { const value = input(settingsForm, `hours-${day.day}`).value.trim(); const ranges = value ? value.split(',').map(part => { const match = part.trim().match(/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/); if (!match) { input(settingsForm, `hours-${day.day}`).focus(); throw new Error(`Controlla gli orari di ${day.label}: usa il formato 09:00-13:00.`); } return { opens: match[1], closes: match[2] }; }) : []; return { day: day.day, label: day.label, ranges }; });
-      const closedDates = input<HTMLTextAreaElement>(settingsForm, 'closedDates').value.split(/[\s,]+/).filter(Boolean);
-      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); await loadAll(); inform('Impostazioni salvate.');
+      const openingHours = settings.openingHours.map(day => {
+        const card = el(`[data-hours-day="${day.day}"]`); const open = input(settingsForm, `open-${day.day}`).checked;
+        const ranges = open ? Array.from(card.querySelectorAll<HTMLElement>('.hours-range')).map(row => {
+          const start = row.querySelector<HTMLInputElement>('[data-range-field=opens]')!; const end = row.querySelector<HTMLInputElement>('[data-range-field=closes]')!;
+          if (!start.value || !end.value || start.value >= end.value) { start.focus(); throw new Error(`Controlla gli orari di ${day.label}: l’apertura deve precedere la chiusura.`); }
+          return { opens: start.value, closes: end.value };
+        }) : []; return { day: day.day, label: day.label, ranges };
+      });
+      const closedDates = [...closedDatesDraft];
+      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); settingsDirty = false; await loadAll(); inform('Impostazioni salvate.');
     }); });
-    on(passwordForm, 'submit', event => { event.preventDefault(); void act(passwordForm, async () => { const password = input(passwordForm, 'password').value; if (password !== input(passwordForm, 'confirmation').value) { input(passwordForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const result = await api<Session>('/api/admin/password', 'POST', { currentPassword: input(passwordForm, 'currentPassword').value, password }); if (result.csrfToken) { session = result; csrfToken = result.csrfToken; } else { const refreshed = await api<Session>('/api/auth/session'); session = refreshed; csrfToken = refreshed.csrfToken || ''; } passwordForm.reset(); inform('Password aggiornata. Gli altri accessi sono stati chiusi.'); }); });
+    on(passwordForm, 'submit', event => { event.preventDefault(); void act(passwordForm, async () => { const password = input(passwordForm, 'password').value; if (password !== input(passwordForm, 'confirmation').value) { input(passwordForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const result = await api<Session>('/api/admin/password', 'POST', { currentPassword: input(passwordForm, 'currentPassword').value, password }); if (result.csrfToken) showAccess(result); else showAccess(await api<Session>('/api/auth/session')); passwordForm.reset(); inform('Password aggiornata. Gli altri accessi sono stati chiusi.'); }); });
 
-    root.querySelectorAll<HTMLElement>('[data-tab]').forEach(button => on(button, 'click', () => { const tab = button.dataset.tab!; root.querySelectorAll<HTMLElement>('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== tab; }); root.querySelectorAll<HTMLElement>('[data-tab]').forEach(candidate => { const selected = candidate === button; candidate.setAttribute('aria-pressed', String(selected)); candidate.classList.toggle('secondary', !selected); }); focus(`#${tab === 'calendar' ? 'calendar' : tab}-title`); if (tab === 'requests') void refreshIncomingRequests(); }));
+    root.querySelectorAll<HTMLElement>('[data-tab]').forEach(button => on(button, 'click', () => showPanel(button.dataset.tab!)));
+    root.querySelectorAll<HTMLElement>('[data-open-panel]').forEach(button => on(button, 'click', () => showPanel(button.dataset.openPanel!)));
+    on(el('[data-open-calendar]'), 'click', () => { showPanel('calendar', false); openEditor(undefined, el('[data-open-calendar]')); });
+    on(document, 'agenda:authentication-expired', () => { if (!session.authenticated) return; showAccess({ authenticated: false, setupRequired: false }); inform('L’accesso è scaduto. Accedi di nuovo per continuare.', true); input(loginForm, 'email').focus(); });
+    on(document, 'agenda:configuration-changed', () => { if (!session.authenticated) return; void api<Automation>('/api/admin/automation').then(next => { if (!session.authenticated || lifetime.signal.aborted) return; automation = next; renderAutomation(next); renderOverview(); }).catch(() => {}); });
+    on(document, 'agenda:new-appointment', event => { if (!session.authenticated || busy) return; const detail = (event as CustomEvent<{ name: string; phone: string }>).detail; if (!detail || typeof detail.name !== 'string' || typeof detail.phone !== 'string') return; showPanel('calendar', false); openEditor(); input(appointmentForm, 'name').value = detail.name; input(appointmentForm, 'phone').value = detail.phone; input(appointmentForm, 'date').focus(); });
+    on(settingsForm, 'input', () => { settingsDirty = true; }); on(settingsForm, 'change', () => { settingsDirty = true; });
+    on(accountForm, 'submit', event => { event.preventDefault(); void act(accountForm, async () => { const next = await api<Session>('/api/admin/account', 'PATCH', { email: input(accountForm, 'email').value.trim(), currentPassword: input(accountForm, 'currentPassword').value }); accountForm.reset(); showAccess(next); document.dispatchEvent(new CustomEvent('agenda:panel', { detail: { panel: activePanel } })); inform('Email aggiornata. Gli altri accessi sono stati chiusi.'); }); });
+    on(createServiceForm, 'submit', event => { event.preventDefault(); void act(createServiceForm, async () => {
+      const duration = input(createServiceForm, 'durationMinutes'); const enabled = input(createServiceForm, 'enabled').checked; const listed = input(createServiceForm, 'listed').checked;
+      if (enabled && (!listed || !duration.value)) { duration.focus(); throw new Error('Per la conferma automatica, mostra il servizio e indica la durata reale.'); }
+      await api('/api/admin/services', 'POST', { name: input(createServiceForm, 'name').value.trim(), durationMinutes: duration.value ? Number(duration.value) : null, enabled, listed }); createServiceForm.reset(); await loadAll(); inform('Nuovo servizio aggiunto.'); focus('#services-title');
+    }); });
+    on(el('[data-closure-add]'), 'click', () => {
+      const control = el<HTMLInputElement>('[data-closure-date]'); if (!control.value || !/^\d{4}-\d{2}-\d{2}$/.test(control.value)) { control.focus(); inform('Scegli il giorno di chiusura.', true); return; }
+      if (closedDatesDraft.includes(control.value)) { inform('Questo giorno è già tra le chiusure.'); return; }
+      settingsDirty = true; closedDatesDraft = [...closedDatesDraft, control.value].sort(); control.value = ''; renderClosedDates(); inform('Giorno aggiunto al modulo. Salva le impostazioni per applicare la chiusura.');
+    });
+    on(backupForm, 'submit', event => { event.preventDefault(); void act(backupForm, async () => {
+      const response = await fetch('/api/admin/backup', { method: 'POST', credentials: 'same-origin', signal: lifetime.signal, headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ currentPassword: input(backupForm, 'currentPassword').value }) });
+      if (!response.ok) { const data = await response.json().catch(() => null); if (response.status === 401) { showAccess({ authenticated: false, setupRequired: false }); } throw new Error(data?.error?.message || 'Non è stato possibile scaricare il backup. Riprova.'); }
+      const type = response.headers.get('Content-Type') || ''; if (!type.includes('octet-stream') && !type.includes('sqlite')) throw new Error('Il backup ricevuto non è valido. Riprova.');
+      const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `agenda-salone-${today()}.sqlite`; document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 10_000); backupForm.reset(); inform('Backup scaricato. Conservalo in un posto sicuro.');
+    }); });
+    on(exportForm, 'submit', event => { event.preventDefault(); void act(exportForm, async () => {
+      const from = input(exportForm, 'from').value; const to = input(exportForm, 'to').value;
+      const difference = (Date.parse(to + 'T12:00:00Z') - Date.parse(from + 'T12:00:00Z')) / 86_400_000;
+      if (!Number.isFinite(difference) || difference < 0 || difference > 365) { input(exportForm, 'to').focus(); throw new Error('Scegli un periodo valido di massimo un anno.'); }
+      const response = await fetch(`/api/admin/export.csv?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { credentials: 'same-origin', signal: lifetime.signal });
+      if (!response.ok) { const data = await response.json().catch(() => null); if (response.status === 401) showAccess({ authenticated: false, setupRequired: false }); throw new Error(data?.error?.message || 'Non è stato possibile esportare gli appuntamenti.'); }
+      if (!response.headers.get('Content-Type')?.includes('text/csv')) throw new Error('Il file ricevuto non è un’esportazione valida. Riprova.');
+      const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a'); link.href = url; link.download = `appuntamenti-${from}-${to}.csv`; document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 10_000); inform('Appuntamenti esportati per il periodo scelto.');
+    }); });
     async function moveDate(date: string) { selectedDate = date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; await loadCalendar(); inform('Agenda aggiornata.'); }
     el<HTMLInputElement>('[data-calendar-date]').value = selectedDate;
+    input(exportForm, 'from').value = addDays(selectedDate, -7); input(exportForm, 'to').value = addDays(selectedDate, 7);
     on(el('[data-date-prev]'), 'click', () => { void act(null, () => moveDate(addDays(selectedDate, view === 'week' ? -7 : -1))); });
     on(el('[data-date-next]'), 'click', () => { void act(null, () => moveDate(addDays(selectedDate, view === 'week' ? 7 : 1))); });
     on(el('[data-today]'), 'click', () => { void act(null, () => moveDate(today())); });
@@ -508,7 +657,7 @@ import { site } from '../data/site';
     const incomingInterval = window.setInterval(() => { void refreshIncomingRequests(); }, 60_000);
     on(document, 'visibilitychange', () => { if (!document.hidden) void refreshIncomingRequests(); });
     dispose = () => { window.clearInterval(incomingInterval); lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; requests = []; reminders = []; settings = undefined; activeRoot = null; };
-    void act(null, async () => { showAccess(await api<Session>('/api/auth/session')); if (session.authenticated) { await loadAll(); inform('La tua agenda è pronta.'); } else inform(session.setupRequired ? 'Il primo accesso è riservato a Jessica.' : 'Accedi per vedere e gestire gli appuntamenti.'); });
+    void act(null, async () => { showAccess(await api<Session>('/api/auth/session')); if (session.authenticated) { await loadAll(); showPanel('overview', false); inform('La tua area privata è pronta.'); } else inform(session.setupRequired ? 'Il primo accesso è riservato a Jessica.' : 'Accedi per vedere e gestire gli appuntamenti.'); });
   }
 
   document.addEventListener('astro:before-swap', () => { dispose?.(); dispose = undefined; });
@@ -582,6 +731,28 @@ import { site } from '../data/site';
   .agenda [data-panel=settings] h3 { margin-top: .7rem; }
   .agenda [data-automation] { margin-top: 1.5rem; }
   .agenda [data-automation] h3 { margin-bottom: .8rem; }
+  .overview-grid { display: grid; gap: 1rem; }
+  .setup-checklist { list-style: none; padding: 0; margin-top: 1rem; }
+  .checklist-item { padding-block: 1rem; border-top: 1px solid #e0e6ef; }
+  .checklist-item .agenda-note { margin-block: .4rem .7rem; }
+  .status-badge.is-ready { background: #e5f4ec; color: #23613c; }
+  .daily-guide { padding-left: 1.3rem; margin-top: 1rem; color: #44516a; }
+  .daily-guide li + li { margin-top: 1rem; }
+  .service-create-form { margin-top: 1.2rem; }
+  .hours-day { min-width: 0; border: 1px solid #d4deef; border-radius: .8rem; padding: 1rem; background: #f8faff; }
+  .hours-day legend { font-size: .9rem; font-weight: 650; padding-inline: .4rem; }
+  .hours-ranges { display: grid; gap: .75rem; margin-block: .9rem; }
+  .hours-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: .5rem; }
+  .hours-range .range-remove { grid-column: 1 / -1; justify-self: start; font-size: .75rem; padding: .4rem .7rem; min-height: 40px; }
+  .hours-day > .agenda-button { font-size: .75rem; }
+  .closure-add { display: flex; align-items: end; gap: .75rem; flex-wrap: wrap; }
+  .closure-add label { flex: 1 1 12rem; }
+  .closed-date-list { list-style: none; padding: 0; display: grid; gap: .6rem; }
+  .closure-item { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; padding: .5rem .7rem; background: #f3f6fb; border-radius: .6rem; font-size: .85rem; }
+  .closure-item .agenda-button { font-size: .75rem; padding: .4rem .6rem; }
+  .agenda [data-panel=account] .agenda-card { margin-top: 1.2rem; }
+  .agenda [data-panel=account] .security-card form { margin-top: 1rem; }
+  @media (min-width: 960px) { .overview-grid { grid-template-columns: 1.3fr 1fr; } }
   @media (min-width: 640px) { .agenda .form-grid, .agenda .hours-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .service-settings, .reminder-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (min-width: 960px) { .agenda-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); } .calendar-days, .request-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .calendar-day:only-child { grid-column: 1 / -1; } }
   @media (max-width: 360px) { .agenda-button { padding-inline: .7rem; } .agenda-tabs .agenda-button { flex: 1 1 calc(50% - .5rem); } .calendar-toolbar .button-group { gap: .35rem; } }

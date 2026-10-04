@@ -12,6 +12,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import ConsentBanner from '../components/ConsentBanner.astro';
+import RuntimeBusinessInfo from '../components/RuntimeBusinessInfo.astro';
 
 interface Props {
   title?: string;
@@ -53,6 +54,7 @@ const isPrivateAgenda = /\/agenda\/?$/.test(Astro.url.pathname);
     <Footer />
 
     {!isPrivateAgenda && <ConsentBanner />}
+    {!isPrivateAgenda && <RuntimeBusinessInfo />}
 
     <!-- Reveal leggero: rivela [data-reveal] al loro ingresso in viewport.
          Compatibile con le View Transitions (astro:page-load) e rispetta

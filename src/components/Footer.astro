@@ -35,10 +35,10 @@ const c = site.confirmed;
 
     <div>
       <h2 class="footer__title">Orari</h2>
-      <ul class="footer__list" role="list">
+      <ul class="footer__list" role="list" data-public-hours>
         {
           site.openingHours.map((o) => (
-            <li>
+            <li data-hour-day={o.day}>
               {o.label}:{' '}
               {o.ranges.length
                 ? o.ranges.map((r) => `${r.opens}–${r.closes}`).join(' · ')
@@ -60,7 +60,7 @@ const c = site.confirmed;
     <p class="footer__note">
       <a href={withBase('/')}>Home</a> · <a href={withBase('/contatti')}>Contatti</a> ·
       <a href={withBase('/privacy')}>Privacy e servizi esterni</a> ·
-      <a href={withBase('/agenda')}>Area Jessica</a>
+      <a href={withBase('/admin')}>Area Jessica</a>
       · <button type="button" class="footer__preferences" data-consent-settings hidden>Preferenze cookie</button>
     </p>
   </div>

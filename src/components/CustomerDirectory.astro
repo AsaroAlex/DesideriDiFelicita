@@ -1,0 +1,95 @@
+<div data-customer-directory>
+  <p class="agenda-note">I contatti delle richieste e degli appuntamenti sono raccolti qui, senza aggiungere dati personali superflui.</p>
+  <form class="agenda-card customer-search" data-customer-search role="search">
+    <label>Cerca una cliente<input type="search" name="query" maxlength="100" placeholder="Nome o numero di telefono" autocomplete="off" /></label>
+    <button type="submit" class="agenda-button secondary">Cerca</button>
+  </form>
+  <p class="agenda-notice" role="status" aria-live="polite" data-customer-notice>Apri questa sezione per vedere la rubrica.</p>
+  <div class="customer-list" data-customer-list></div>
+</div>
+
+<script>
+  import { mountAdminPanel } from '../lib/admin-panel';
+  import { whatsappHref, telHref } from '../lib/contact';
+  type Customer = { phone: string; name: string; appointmentCount: number; requestCount: number; lastDate: string | null; nextDate: string | null };
+  type History = { appointments: { id: string; title: string; date: string; time: string; durationMinutes: number; status: string }[]; requests: { id: string; serviceName: string; date: string; time: string; status: string }[] };
+  mountAdminPanel('[data-customer-directory]', 'customers', ({ root, api, on, isSignedIn }) => {
+    const el = <T extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const form = el<HTMLFormElement>('[data-customer-search]');
+    const search = form.elements.namedItem('query') as HTMLInputElement;
+    const notice = el('[data-customer-notice]');
+    const list = el('[data-customer-list]');
+    let revision = 0;
+    let timer: number | undefined;
+    const node = (tag: string, text: string, className = '') => { const item = document.createElement(tag); item.textContent = text; item.className = className; return item; };
+    const date = (value: string) => new Intl.DateTimeFormat('it-IT', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value + 'T12:00:00Z'));
+    function inform(text: string, error = false) { notice.textContent = text; notice.classList.toggle('is-error', error); notice.setAttribute('role', error ? 'alert' : 'status'); }
+    function clear() { revision++; window.clearTimeout(timer); search.value = ''; list.replaceChildren(); inform('Apri questa sezione per vedere la rubrica.'); }
+    function render(customers: Customer[]) {
+      list.replaceChildren(...customers.map(customer => {
+        const card = node('article', '', 'agenda-card customer-card');
+        card.append(node('h3', customer.name), node('p', customer.phone), node('p', `Appuntamenti registrati: ${customer.appointmentCount} · Richieste ricevute: ${customer.requestCount}`, 'agenda-note'));
+        if (customer.lastDate) card.append(node('p', `Ultimo appuntamento: ${date(customer.lastDate)}`, 'agenda-note'));
+        if (customer.nextDate) card.append(node('p', `Prossimo appuntamento: ${date(customer.nextDate)}`, 'agenda-note'));
+        const actions = node('div', '', 'button-group');
+        const call = node('a', 'Chiama', 'agenda-button secondary') as HTMLAnchorElement; call.href = telHref(customer.phone);
+        const message = node('a', 'Apri chat WhatsApp', 'agenda-button secondary') as HTMLAnchorElement;
+        message.href = whatsappHref(customer.phone); message.target = '_blank'; message.rel = 'noopener noreferrer';
+        const appointment = node('button', 'Nuovo appuntamento', 'agenda-button secondary') as HTMLButtonElement; appointment.type = 'button';
+        on(appointment, 'click', () => { document.dispatchEvent(new CustomEvent('agenda:new-appointment', { detail: { name: customer.name, phone: customer.phone } })); });
+        actions.append(call, message, appointment); card.append(actions);
+        const details = document.createElement('details'); details.className = 'customer-history';
+        details.append(node('summary', 'Appuntamenti e richieste'));
+        const content = node('div', '', 'customer-history-content'); details.append(content); card.append(details);
+        let loaded = false; let loading = false;
+        on(details, 'toggle', () => { if (!details.open || loaded || loading) return; void (async () => {
+          loading = true; content.replaceChildren(node('p', 'Caricamento dello storico…', 'agenda-note'));
+          try {
+            const history = await api<History>(`/api/admin/customers/history?phone=${encodeURIComponent(customer.phone)}&limit=30`);
+            if (!isSignedIn() || !card.isConnected) return;
+            content.replaceChildren(node('h4', 'Appuntamenti'));
+            if (!history.appointments.length) content.append(node('p', 'Nessun appuntamento registrato.', 'agenda-note'));
+            for (const item of history.appointments) content.append(node('p', `${date(item.date)} · ${item.time} · ${item.title} · ${item.durationMinutes} minuti · ${item.status === 'cancelled' ? 'Annullato' : 'Confermato'}`));
+            content.append(node('h4', 'Richieste ricevute'));
+            if (!history.requests.length) content.append(node('p', 'Nessuna richiesta ricevuta.', 'agenda-note'));
+            const labels: Record<string, string> = { pending: 'Da confermare', confirmed: 'Confermata', declined: 'Non accettata' };
+            for (const item of history.requests) content.append(node('p', `${date(item.date)} · ${item.time} · ${item.serviceName} · ${labels[item.status] || item.status}`));
+            if (history.appointments.length === 30 || history.requests.length === 30) content.append(node('p', 'Sono mostrati gli ultimi 30 record per sezione. Per consultare gli altri usa l’agenda o l’esportazione.', 'agenda-note'));
+            loaded = true;
+          } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') return;
+            if (!isSignedIn() || !card.isConnected) return;
+            const retry = node('button', 'Riprova', 'agenda-button secondary') as HTMLButtonElement; retry.type = 'button';
+            on(retry, 'click', () => { details.open = false; queueMicrotask(() => { details.open = true; }); });
+            content.replaceChildren(node('p', error instanceof Error ? error.message : 'Storico non disponibile.', 'agenda-note'), retry);
+          } finally { loading = false; }
+        })(); });
+        return card;
+      }));
+    }
+    async function load() {
+      if (!isSignedIn()) return;
+      const request = ++revision; const query = search.value.trim();
+      inform('Carichiamo i contatti…');
+      try {
+        const result = await api<{items: Customer[]}>(`/api/admin/customers?q=${encodeURIComponent(query)}&limit=100`);
+        if (!isSignedIn() || request !== revision) return;
+        render(result.items); inform(result.items.length ? `${result.items.length} ${result.items.length === 1 ? 'contatto' : 'contatti'}${result.items.length === 100 ? ' · Affina la ricerca per trovare altri contatti.' : ''}` : query ? 'Nessuna cliente trovata. Prova un altro nome o numero.' : 'La rubrica si popola con le richieste e gli appuntamenti ricevuti.');
+      } catch (error) { if (isSignedIn() && request === revision && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Rubrica non disponibile.', true); }
+    }
+    on(form, 'submit', event => { event.preventDefault(); window.clearTimeout(timer); void load(); });
+    on(search, 'input', () => { window.clearTimeout(timer); timer = window.setTimeout(() => { void load(); }, 350); });
+    return { load, clear };
+  });
+</script>
+
+<style>
+  [data-customer-directory], .customer-list { display: grid; gap: 1rem; }
+  .customer-card { display: grid; gap: .65rem; }
+  .customer-card p { overflow-wrap: anywhere; }
+  .customer-search { align-items: end; }
+  .customer-history { border-top: 1px solid #dbe1ed; padding-top: .75rem; }
+  summary { cursor: pointer; min-height: 44px; font-weight: 650; }
+  .customer-history-content { display: grid; gap: .65rem; font-size: .85rem; }
+  @media (min-width: 600px) { .customer-search { grid-template-columns: minmax(0, 1fr) auto; } }
+</style>
