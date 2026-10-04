@@ -124,6 +124,8 @@ le variabili `NODE_ENV=production`, `DATA_DIR=/data`, `APP_ORIGIN` uguale all’
 HTTPS pubblica. Healthcheck: `/api/health`. Tenere il servizio sempre attivo per
 eseguire i promemoria; lo sleep sospenderebbe il timer. Il build rimuove le
 dipendenze di sviluppo con `npm prune --omit=dev` dopo aver generato il sito.
+I flag `--include=prod --production=true` neutralizzano le impostazioni di
+installazione del builder Railway, che altrimenti manterrebbero le librerie di build.
 
 Per attivazione iniziale, configurazione Meta, limiti di costo, backup e recupero,
 leggere [la guida dell’agenda](docs/agenda-proprietaria.md). Le durate dei servizi
