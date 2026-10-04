@@ -58,7 +58,8 @@ const c = site.confirmed;
       Galliera (BO).
     </p>
     <p class="footer__note">
-      <a href={withBase('/')}>Home</a> · <a href={withBase('/contatti')}>Contatti</a>
+      <a href={withBase('/')}>Home</a> · <a href={withBase('/contatti')}>Contatti</a> ·
+      <a href={withBase('/privacy')}>Privacy e servizi esterni</a>
     </p>
   </div>
 </footer>
@@ -82,8 +83,19 @@ const c = site.confirmed;
   }
   @media (min-width: 720px) {
     .footer__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1100px) {
+    .footer__grid {
       grid-template-columns: 1.5fr 1fr 1fr 1fr;
     }
+  }
+  .footer__grid > div {
+    min-width: 0;
+  }
+  .footer__list a {
+    overflow-wrap: anywhere;
   }
   .footer :global(.footer__logo) {
     margin-bottom: var(--space-sm);

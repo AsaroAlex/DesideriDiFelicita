@@ -1,0 +1,47 @@
+{
+  "folder": "https://drive.google.com/drive/folders/1j-x6ktD0Pwf7lszvTbrecCykGlO8rM0f",
+  "selectedOn": "2026-10-04",
+  "processing": "Conversione HEIC in JPEG dove necessaria; ottimizzazione responsive tramite Astro. Nessuna rimozione di watermark.",
+  "photos": [
+    {
+      "sourceName": "IMG_8866.HEIC",
+      "sourceId": "1ktSpO0UWRp1iU7gDHb6sQ7WO-EmT0LAr",
+      "sourceUrl": "https://drive.google.com/file/d/1ktSpO0UWRp1iU7gDHb6sQ7WO-EmT0LAr/view?usp=drivesdk",
+      "asset": "src/assets/images/gallery/onde-riflessi-caramello-01.jpg",
+      "use": "Foto di apertura in home e galleria lavori",
+      "description": "Onde morbide con riflessi caramello"
+    },
+    {
+      "sourceName": "IMG_7465.JPG",
+      "sourceId": "1kXE9WkwvL2nq0U9XW_DdR2AgJiYn9F3C",
+      "sourceUrl": "https://drive.google.com/file/d/1kXE9WkwvL2nq0U9XW_DdR2AgJiYn9F3C/view?usp=drivesdk",
+      "asset": "src/assets/images/gallery/taglio-bob-miele-01.jpg",
+      "use": "Galleria lavori",
+      "description": "Taglio bob liscio color miele visto di lato"
+    },
+    {
+      "sourceName": "IMG_8732.HEIC",
+      "sourceId": "1_Ks34KiC0Y3ohu6G4rsivBX_Nn4KQWmU",
+      "sourceUrl": "https://drive.google.com/file/d/1_Ks34KiC0Y3ohu6G4rsivBX_Nn4KQWmU/view?usp=drivesdk",
+      "asset": "src/assets/images/gallery/taglio-corto-grigio-01.jpg",
+      "use": "Galleria lavori",
+      "description": "Taglio corto su capelli grigi visto da dietro"
+    },
+    {
+      "sourceName": "IMG_8718.HEIC",
+      "sourceId": "1p5yuJq8vPSP579t_ppZfCBaLYnkgALJi",
+      "sourceUrl": "https://drive.google.com/file/d/1p5yuJq8vPSP579t_ppZfCBaLYnkgALJi/view?usp=drivesdk",
+      "asset": "src/assets/images/gallery/onde-lunghe-castane-01.jpg",
+      "use": "Galleria lavori",
+      "description": "Onde lunghe su capelli castani viste di lato"
+    },
+    {
+      "sourceName": "IMG_20260922_125857.jpg",
+      "sourceId": "16LXDPAB7Laqm7icqF7hCgD_tDeVNkDJM",
+      "sourceUrl": "https://drive.google.com/file/d/16LXDPAB7Laqm7icqF7hCgD_tDeVNkDJM/view?usp=drivesdk",
+      "asset": "src/assets/images/gallery/piega-mossa-salone-01.jpg",
+      "use": "Galleria lavori",
+      "description": "Capelli castani di media lunghezza con piega mossa"
+    }
+  ]
+}

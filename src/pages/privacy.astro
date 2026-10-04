@@ -1,0 +1,118 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { site } from '../data/site';
+import { telHref, whatsappHref } from '../lib/contact';
+import { withBase } from '../lib/href';
+
+const title = 'Privacy e servizi esterni';
+const description =
+  `Informazioni sulla navigazione, sui contatti e sui servizi esterni del sito di ${site.businessName}.`;
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: title, href: '/privacy' },
+];
+---
+
+<BaseLayout title={title} description={description} breadcrumbs={breadcrumbs}>
+  <section class="section">
+    <div class="container container--narrow privacy">
+      <p class="eyebrow">Informazioni per chi visita il sito</p>
+      <h1>Privacy e servizi esterni</h1>
+      <p class="lead">
+        Qui trovi come funziona la navigazione sul sito di {site.businessName},
+        quali servizi esterni puoi scegliere di usare e come contattarci.
+      </p>
+
+      <section class="privacy__section" aria-labelledby="privacy-contact">
+        <h2 id="privacy-contact">Il salone e i contatti</h2>
+        <p>
+          {site.businessName} è il salone di {site.ownerName}, in
+          {site.address.street}, {site.address.postalCode} {site.address.city}
+          ({site.address.province}).
+          {site.legal.vatNumber && <> P. IVA {site.legal.vatNumber}.</>}
+          Per informazioni sulla privacy o sui dati condivisi con il salone,
+          puoi scrivere a <a href={`mailto:${site.email}`}>{site.email}</a>.
+        </p>
+      </section>
+
+      <section class="privacy__section" aria-labelledby="privacy-navigation">
+        <h2 id="privacy-navigation">Quando navighi</h2>
+        <p>
+          Il sito presenta il salone, i servizi e i lavori: non contiene account,
+          moduli di contatto, pagamenti o un sistema di prenotazione online.
+          Il sito non integra strumenti di analisi del traffico o pubblicità e
+          non salva cookie o preferenze nel tuo browser. I font sono ospitati
+          insieme alle pagine.
+        </p>
+        <p>
+          Le pagine sono ospitate su Railway. Per consegnarle al tuo browser,
+          l’infrastruttura riceve informazioni tecniche come l’indirizzo IP e i
+          dati della richiesta. Possono essere presenti log tecnici per il
+          funzionamento e la sicurezza del servizio. Le modalità di trattamento
+          del fornitore sono descritte nella
+          <a href="https://railway.com/legal/privacy" target="_blank" rel="noopener noreferrer">privacy di Railway</a>.
+        </p>
+      </section>
+
+      <section class="privacy__section" aria-labelledby="privacy-maps">
+        <h2 id="privacy-maps">Google Maps: decidi tu</h2>
+        <p>
+          Nella pagina <a href={withBase('/contatti')}>Contatti</a> la mappa di
+          Google non viene caricata automaticamente. Se scegli «Carica la mappa»,
+          il browser si collega a Google, che può ricevere dati tecnici della
+          navigazione e utilizzare cookie secondo le proprie impostazioni e
+          informative. La scelta vale solo per la pagina aperta e non viene salvata.
+        </p>
+        <p>
+          «Apri indicazioni» apre direttamente Google Maps in una nuova scheda,
+          anche se JavaScript è disattivato. Puoi consultare la
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">privacy di Google</a>
+          prima di usare questi servizi.
+        </p>
+      </section>
+
+      <section class="privacy__section" aria-labelledby="privacy-messages">
+        <h2 id="privacy-messages">Quando ci contatti</h2>
+        <p>
+          I collegamenti a
+          <a href={telHref(site.phone)}>telefono</a>,
+          <a href={`mailto:${site.email}`}>email</a>,
+          <a href={whatsappHref(site.whatsapp)} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          e <a href={site.instagramUrl} target="_blank" rel="noopener noreferrer">Instagram</a>
+          aprono il servizio scelto. I messaggi non passano attraverso un modulo
+          su questo sito: arrivano al salone tramite quel servizio e vengono
+          utilizzati per rispondere alle tue richieste e organizzare gli appuntamenti.
+        </p>
+        <p>
+          Condividi soltanto le informazioni utili alla tua richiesta. I servizi
+          esterni gestiscono i dati anche secondo le proprie informative:
+          <a href="https://www.whatsapp.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">WhatsApp</a>,
+          <a href="https://privacycenter.instagram.com/policy/" target="_blank" rel="noopener noreferrer">Instagram</a>
+          e <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google, per l’indirizzo Gmail del salone</a>.
+        </p>
+        <p>
+          Per domande o richieste relative ai dati che hai condiviso con il salone,
+          scrivi a <a href={`mailto:${site.email}`}>{site.email}</a>.
+        </p>
+      </section>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .privacy > .lead {
+    margin-top: var(--space-lg);
+  }
+  .privacy__section {
+    display: grid;
+    gap: var(--space-md);
+    margin-top: var(--space-2xl);
+  }
+  .privacy__section h2 {
+    font-size: var(--fs-500);
+    line-height: var(--lh-snug);
+  }
+  .privacy a {
+    overflow-wrap: anywhere;
+  }
+</style>

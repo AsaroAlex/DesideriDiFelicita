@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
-import { heroImage } from '../data/images';
+import { heroImage, heroImageAlt } from '../data/images';
 import WhatsappButton from './WhatsappButton.astro';
 ---
 
@@ -18,8 +18,7 @@ import WhatsappButton from './WhatsappButton.astro';
         lo rende <em class="italic-accent">reale</em>.
       </h1>
       <p class="lead hero__desc hero__a3">
-        {site.tagline} Salone di parrucchiera a Galliera (BO): taglio, colore,
-        balayage e cura del riccio, su misura per te.
+        Taglio, colore, balayage e cura del riccio a Galliera, su misura per te.
       </p>
       <div class="hero__actions hero__a4">
         <a class="btn btn--primary" href={withBase('/galleria')}>Guarda i lavori</a>
@@ -32,10 +31,10 @@ import WhatsappButton from './WhatsappButton.astro';
         heroImage ? (
           <Image
             src={heroImage}
-            alt={`${site.ownerName}, hair stylist del salone ${site.businessName}`}
+            alt={heroImageAlt}
             class="hero__img"
-            widths={[480, 768, 1100]}
-            sizes="(min-width: 960px) 45vw, 90vw"
+            widths={[400, 640, 800, 1100]}
+            sizes="(min-width: 1288px) 516px, (min-width: 960px) 42vw, (min-width: 600px) 480px, calc(100vw - clamp(2.2rem, 1rem + 5.6vw, 5.5rem))"
             loading="eager"
             fetchpriority="high"
           />
@@ -58,11 +57,11 @@ import WhatsappButton from './WhatsappButton.astro';
     overflow: hidden;
     display: grid;
     align-items: center;
-    min-height: min(94svh, 900px);
+    min-height: 0;
     background:
       radial-gradient(70% 90% at 88% 4%, var(--color-blush-soft) 0%, transparent 55%),
       linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
-    padding-block: clamp(2.8rem, 1rem + 6vw, 5.8rem);
+    padding-block: clamp(1.8rem, 1rem + 3vw, 3rem);
   }
   .hero > .container {
     width: 100%;
@@ -93,33 +92,38 @@ import WhatsappButton from './WhatsappButton.astro';
   .hero__inner {
     position: relative;
     display: grid;
-    gap: var(--space-2xl);
+    gap: 1.8rem;
     align-items: center;
   }
   @media (min-width: 960px) {
+    .hero {
+      min-height: min(94svh, 900px);
+      padding-block: clamp(2.8rem, 1rem + 6vw, 5.8rem);
+    }
     .hero__inner {
       grid-template-columns: 1.08fr 0.92fr;
+      gap: var(--space-2xl);
     }
   }
 
   .hero__title {
     margin-top: var(--space-sm);
-    font-size: clamp(2.9rem, 1.2rem + 7vw, 6.1rem);
-    line-height: 0.95;
+    font-size: clamp(2.3rem, 1rem + 6vw, 4.3rem);
+    line-height: 1.02;
     letter-spacing: -0.025em;
-    max-width: 14ch;
+    max-width: 22ch;
   }
   .hero__title em {
     color: var(--color-primary);
   }
   .hero__desc {
-    margin-top: var(--space-lg);
+    margin-top: var(--space-md);
   }
   .hero__actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-md);
-    margin-top: var(--space-xl);
+    margin-top: var(--space-lg);
   }
   .hero__actions :global(.hero__wa) {
     --btn-bg: transparent;
@@ -135,6 +139,7 @@ import WhatsappButton from './WhatsappButton.astro';
     position: relative;
     justify-self: center;
     width: 100%;
+    max-width: 30rem;
     isolation: isolate;
   }
   /* Blocco blu-nero offset dietro la foto (gesto editoriale bold) */
@@ -153,7 +158,21 @@ import WhatsappButton from './WhatsappButton.astro';
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     object-fit: cover;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 3 / 2;
+    object-position: center 26%;
+  }
+  @media (min-width: 960px) {
+    .hero__title {
+      font-size: clamp(3.5rem, 1.2rem + 7vw, 6.1rem);
+      line-height: 0.95;
+      max-width: 14ch;
+    }
+    .hero__media {
+      max-width: none;
+    }
+    .hero__img {
+      aspect-ratio: 4 / 5;
+    }
   }
   .hero__placeholder {
     aspect-ratio: 4 / 5;

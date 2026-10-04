@@ -165,6 +165,10 @@ const isActive = (href: string) => norm(withBase(href)) === current;
     background: var(--color-ink);
     transition: transform var(--transition), opacity var(--transition);
   }
+  .nav-toggle:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 4px;
+  }
   .nav-toggle[aria-expanded='true'] .nav-toggle__bar:nth-child(1) {
     transform: translateY(7px) rotate(45deg);
   }
@@ -176,15 +180,34 @@ const isActive = (href: string) => norm(withBase(href)) === current;
   }
 
   @media (max-width: 880px) {
-    .nav-toggle {
+    .header:not([data-nav-ready]) {
+      position: relative;
+    }
+    .header__inner {
+      flex-wrap: wrap;
+      padding-block: var(--space-sm);
+    }
+    .header[data-nav-ready] .header__inner {
+      flex-wrap: nowrap;
+      padding-block: 0;
+    }
+    .header[data-nav-ready] .nav-toggle {
       display: flex;
     }
     .nav {
-      position: absolute;
-      inset: var(--header-h) 0 auto 0;
+      width: 100%;
       flex-direction: column;
       align-items: stretch;
       gap: var(--space-md);
+      padding-block: var(--space-sm) var(--space-lg);
+    }
+    .header[data-nav-ready] .nav {
+      position: absolute;
+      inset: 100% 0 auto 0;
+      width: auto;
+      max-height: var(--nav-max-height, calc(100dvh - var(--header-h)));
+      overflow-y: auto;
+      overscroll-behavior: contain;
       padding: var(--space-lg) var(--gutter) var(--space-xl);
       background: var(--color-bg);
       border-bottom: 1px solid var(--color-line);
@@ -195,7 +218,7 @@ const isActive = (href: string) => norm(withBase(href)) === current;
       transition: opacity var(--transition), transform var(--transition),
         visibility var(--transition);
     }
-    .nav.is-open {
+    .header[data-nav-ready] .nav.is-open {
       transform: none;
       opacity: 1;
       visibility: visible;
@@ -206,6 +229,7 @@ const isActive = (href: string) => norm(withBase(href)) === current;
       gap: var(--space-sm);
     }
     .nav__link {
+      display: block;
       padding: 0.6rem 0;
       border-bottom: 1px solid var(--color-line);
     }
@@ -217,31 +241,61 @@ const isActive = (href: string) => norm(withBase(href)) === current;
 </style>
 
 <script>
-  function closeNav() {
+  const initializedHeaders = new WeakSet<HTMLElement>();
+  let observedHeader: HTMLElement | null = null;
+  const headerObserver = new ResizeObserver(updateNavSize);
+
+  function closeNav(returnFocus = false) {
     const toggle = document.querySelector<HTMLButtonElement>('.nav-toggle');
     const nav = document.getElementById('site-nav');
-    if (toggle && nav) {
+    if (toggle && nav?.classList.contains('is-open')) {
       toggle.setAttribute('aria-expanded', 'false');
       toggle.setAttribute('aria-label', 'Apri il menu');
       nav.classList.remove('is-open');
+      if (returnFocus) toggle.focus();
     }
   }
 
+  function updateNavSize() {
+    const header = document.querySelector<HTMLElement>('.header');
+    if (!header) return;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const availableHeight = Math.max(0, viewportHeight - header.getBoundingClientRect().bottom);
+    header.style.setProperty('--nav-max-height', `${availableHeight}px`);
+    if (!window.matchMedia('(max-width: 880px)').matches) closeNav();
+  }
+
   function initNav() {
+    const header = document.querySelector<HTMLElement>('.header');
     const toggle = document.querySelector<HTMLButtonElement>('.nav-toggle');
     const nav = document.getElementById('site-nav');
-    if (!toggle || !nav) return;
+    if (!header || !toggle || !nav || initializedHeaders.has(header)) return;
+    initializedHeaders.add(header);
 
     toggle.addEventListener('click', () => {
       const open = toggle.getAttribute('aria-expanded') !== 'true';
+      updateNavSize();
       toggle.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', open ? 'Chiudi il menu' : 'Apri il menu');
       nav.classList.toggle('is-open', open);
     });
 
     nav.querySelectorAll('a').forEach((link) =>
-      link.addEventListener('click', closeNav)
+      link.addEventListener('click', () => closeNav())
     );
+
+    header.addEventListener('focusout', () => {
+      queueMicrotask(() => {
+        const focus = document.activeElement;
+        if (focus !== toggle && !nav.contains(focus)) closeNav();
+      });
+    });
+
+    header.dataset.navReady = 'true';
+    if (observedHeader) headerObserver.unobserve(observedHeader);
+    observedHeader = header;
+    headerObserver.observe(header);
+    updateNavSize();
   }
 
   function onScroll() {
@@ -249,12 +303,21 @@ const isActive = (href: string) => norm(withBase(href)) === current;
     if (header) header.classList.toggle('is-scrolled', window.scrollY > 8);
   }
 
-  document.addEventListener('astro:page-load', () => {
+  function initHeader() {
     initNav();
     onScroll();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHeader, { once: true });
+  } else {
+    initHeader();
+  }
+  document.addEventListener('astro:page-load', initHeader);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeNav();
+    if (e.key === 'Escape') closeNav(true);
   });
   window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', updateNavSize, { passive: true });
+  window.visualViewport?.addEventListener('resize', updateNavSize, { passive: true });
 </script>

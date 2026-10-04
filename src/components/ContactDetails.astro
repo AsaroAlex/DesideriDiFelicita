@@ -3,12 +3,16 @@ import { site } from '../data/site';
 import { telHref } from '../lib/contact';
 import WhatsappButton from './WhatsappButton.astro';
 
+interface Props {
+  headingLevel?: 'h2' | 'h3';
+}
+const { headingLevel: Heading = 'h3' } = Astro.props;
 const c = site.confirmed;
 ---
 
 <div class="contact stack">
   <div>
-    <h3 class="contact__h">Indirizzo</h3>
+    <Heading class="contact__h">Indirizzo</Heading>
     <address class="contact__addr">
       {site.address.street}<br />
       {site.address.postalCode} {site.address.city} ({site.address.province})
@@ -17,7 +21,7 @@ const c = site.confirmed;
   </div>
 
   <div>
-    <h3 class="contact__h">Orari</h3>
+    <Heading class="contact__h">Orari</Heading>
     <ul class="contact__hours" role="list">
       {
         site.openingHours.map((o) => (
@@ -36,17 +40,17 @@ const c = site.confirmed;
   </div>
 
   <div>
-    <h3 class="contact__h">Telefono</h3>
+    <Heading class="contact__h">Telefono</Heading>
     <p><a class="link-underline" href={telHref(site.phone)}>{site.phone}</a></p>
   </div>
 
   <div>
-    <h3 class="contact__h">Email</h3>
+    <Heading class="contact__h">Email</Heading>
     <p><a class="link-underline" href={`mailto:${site.email}`}>{site.email}</a></p>
   </div>
 
   <div>
-    <h3 class="contact__h">Prenotazioni</h3>
+    <Heading class="contact__h">Prenotazioni</Heading>
     <p class="note">
       Scrivici su WhatsApp, chiamaci o mandaci un messaggio su Instagram: ti
       rispondiamo il prima possibile.

@@ -5,6 +5,7 @@ interface Props {
   index?: number;
   price?: string;
   variant?: 'card' | 'line';
+  headingLevel?: 'h2' | 'h3';
   showPrice?: boolean;
   /** Se true mostra il prezzo; altrimenti "su richiesta" (prezzi non confermati) */
   priceConfirmed?: boolean;
@@ -15,6 +16,7 @@ const {
   index,
   price,
   variant = 'card',
+  headingLevel: Heading = 'h3',
   showPrice = true,
   priceConfirmed = false,
 } = Astro.props;
@@ -23,7 +25,7 @@ const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
 
 <article class:list={[variant === 'card' && 'card', 'service', `service--${variant}`]}>
   {num && <span class="index-num service__num">{num}</span>}
-  <h3 class="service__name">{name}</h3>
+  <Heading class="service__name">{name}</Heading>
   <p class="service__desc">{description}</p>
   {
     showPrice && (

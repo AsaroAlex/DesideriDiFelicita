@@ -17,8 +17,7 @@ Online su GitHub Pages: <https://asaroalex.github.io/DesideriDiFelicita/>
 
 - **Astro 5** (output statico) + **TypeScript** (config `astro/tsconfigs/strict`).
 - CSS moderno con custom properties (nessun framework CSS).
-- Font self-hosted via `@fontsource`: **Fraunces** (display), **Manrope** (testo),
-  **Quicksand** (wordmark del logo).
+- Font self-hosted via `@fontsource`: **Fraunces** (display), **Manrope** (testo).
 - `@astrojs/sitemap` per `sitemap-index.xml`.
 - Motion leggero: View Transitions native (`ClientRouter`), reveal via IntersectionObserver,
   barra di scroll in CSS — tutto gated da `prefers-reduced-motion`.
@@ -44,7 +43,7 @@ src/
   components/*.astro     Header, Hero, Gallery, ServiceCard, Testimonials, Faq, Footer,
                         WhatsappButton, MapEmbed, Breadcrumbs, Logo, Seo, StructuredData.
   layouts/BaseLayout.astro
-  pages/*.astro          index, chi-siamo, servizi, galleria, contatti, 404, robots.txt.ts
+  pages/*.astro          index, chi-siamo, servizi, galleria, contatti, privacy, 404, robots.txt.ts
   styles/tokens.css      Design token (palette, tipografia, spaziature) — punto unico per il look.
   styles/global.css      Stili base, bottoni, card, accessibilità, reveal.
 public/                  favicon, manifest, immagini OG.
@@ -69,6 +68,18 @@ docs/                    Materiali di brand e brief (non parte del build).
   il base predefinito è `/`; `BASE_PATH` consente un prefisso esplicito.
 - **Accessibilità.** HTML semantico, focus visibili, `alt` descrittivi, reveal con fallback no-JS.
 
+## Immagini e servizi esterni
+
+Le foto selezionate dalla cartella Drive sono registrate in `docs/foto-drive.json`,
+con file di origine e asset del sito. I JPEG (compresi gli HEIC convertiti) vengono
+ottimizzati da Astro in varianti responsive; i provini con watermark restano esclusi
+dalle pagine. La selezione in home usa il flag `featured` nel manifest immagini.
+
+La mappa Google viene caricata solo dopo il clic su «Carica la mappa»; il collegamento
+alle indicazioni resta disponibile anche senza JavaScript. La pagina `/privacy`
+descrive navigazione, hosting e collegamenti esterni. Non vengono salvate preferenze
+per la mappa nel browser.
+
 ## Deploy
 
 ### Railway
@@ -79,6 +90,8 @@ Il ramo dedicato è `codex/railway-deploy`. Collegare il repository al servizio
 Railway e selezionare questo ramo, oppure pubblicare il checkout con `railway up`.
 `railway.json` definisce build con Railpack, avvio tramite `npm start` e healthcheck `/`.
 Il sito viene compilato una volta e servito come file statici da `dist/`.
+`serve.json` disabilita gli elenchi delle cartelle e distingue la cache degli asset
+con hash (`/_astro/`, un anno) dalla rivalidazione delle pagine e degli altri file.
 
 ```bash
 npm ci

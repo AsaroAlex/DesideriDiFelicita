@@ -1,56 +1,142 @@
 ---
+import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import WhatsappButton from '../components/WhatsappButton.astro';
 import { site } from '../data/site';
+import { salonImages, teamImages } from '../data/images';
+import { withBase } from '../lib/href';
 
 const title = 'Chi siamo';
 const description =
-  'La storia e la filosofia di Desideri di Felicità, il salone di Jessica Asaro a Galliera (BO): cura del riccio, ascolto e benessere.';
+  'Conosci Jessica Asaro e Desideri di Felicità, il suo salone a Galliera (BO): ascolto, cura del riccio e trattamenti con prodotti Vitality’s.';
 const breadcrumbs = [
   { name: 'Home', href: '/' },
   { name: 'Chi siamo', href: '/chi-siamo' },
 ];
+const jessicaImage = teamImages[1];
+const salonImage = salonImages[0];
 ---
 
 <BaseLayout title={title} description={description} breadcrumbs={breadcrumbs}>
   <section class="section">
-    <div class="container container--narrow stack">
-      <p class="eyebrow">Chi siamo</p>
-      <h1>{site.slogan}</h1>
+    <div class="container about-intro">
+      <div class="about-intro__copy stack">
+        <p class="eyebrow">Chi siamo</p>
+        <h1>Il salone di Jessica</h1>
+        <p class="lead">{site.slogan}</p>
+        <p>
+          Dietro <strong>Desideri di Felicità</strong> c’è
+          <strong>{site.ownerName}</strong>, hair stylist e titolare del salone a
+          Galliera. Il suo approccio parte dall’ascolto: capire il tuo desiderio,
+          prima di scegliere insieme un taglio, un colore o un trattamento.
+        </p>
+        <p>
+          Prendersi cura dei capelli è anche dedicarsi un momento. Accoglienza e
+          attenzione accompagnano ogni scelta, con una particolare passione per la
+          <strong>cura del capello riccio</strong>.
+        </p>
+        <p>
+          <a class="link-underline" href={withBase('/servizi')}>Scopri i servizi del salone →</a>
+        </p>
+      </div>
+      <figure class="about-intro__portrait">
+        <Image
+          src={jessicaImage.src}
+          alt={jessicaImage.alt}
+          class="about-intro__img"
+          widths={[400, 640, 800, 1000]}
+          sizes="(min-width: 1200px) 450px, (min-width: 900px) 40vw, calc(100vw - clamp(2.2rem, 1rem + 5.6vw, 5.5rem))"
+          loading="eager"
+        />
+        <figcaption>{site.ownerName} · Hair stylist</figcaption>
+      </figure>
+    </div>
+  </section>
 
-      <p class="lead">{site.tagline}</p>
-
-      <p>
-        <strong>Desideri di Felicità</strong> è il salone di
-        <strong>{site.ownerName}</strong>, hair stylist a Galliera (BO). Un luogo nato
-        dal desiderio di unire competenza tecnica e accoglienza, dove ogni persona si
-        sente ascoltata.
-      </p>
-
-      <p>
-        Crediamo che prendersi cura dei propri capelli sia molto più di un gesto
-        estetico: è un momento di benessere e fiducia. Per questo dedichiamo attenzione
-        a ogni dettaglio, dalla consulenza iniziale fino al risultato finale, con una
-        particolare passione per la <strong>cura del capello riccio</strong> e l’uso di
-        prodotti professionali.
-      </p>
-
-      <hr class="rule-gold" />
-
-      <p>
-        Taglio, colore, balayage, trattamenti e styling per donna, uomo e bambino: ti
-        aspettiamo per creare insieme il tuo momento felice.
-      </p>
-
-      <div class="about-cta">
-        <WhatsappButton label="Scrivici su WhatsApp" />
+  <section class="section section--alt">
+    <div class="container about-salon">
+      <figure class="about-salon__media">
+        <Image
+          src={salonImage.src}
+          alt={salonImage.alt}
+          class="about-salon__img"
+          widths={[480, 768, 1000, 1280]}
+          sizes="(min-width: 1200px) 580px, (min-width: 900px) 48vw, calc(100vw - clamp(2.2rem, 1rem + 5.6vw, 5.5rem))"
+          loading="lazy"
+        />
+        <figcaption>Desideri di Felicità, a Galliera</figcaption>
+      </figure>
+      <div class="about-salon__copy stack">
+        <p class="eyebrow">Il nostro spazio</p>
+        <h2>Un momento tutto per te</h2>
+        <p class="lead">
+          Un salone dove parlare del tuo look e trovare il tempo per prenderti cura
+          dei tuoi capelli.
+        </p>
+        <p>
+          Dal taglio al colore, dal balayage alla piega, i servizi sono dedicati a
+          donna, uomo e bambino. Per i trattamenti utilizziamo prodotti professionali
+          <strong>Vitality’s</strong>.
+        </p>
+        <p>
+          Hai un’idea, una domanda sul riccio o vuoi prenotare? Scrivici: il primo
+          passo è parlarne insieme.
+        </p>
+        <div class="about-cta">
+          <WhatsappButton label="Scrivici su WhatsApp" />
+        </div>
       </div>
     </div>
   </section>
 </BaseLayout>
 
 <style>
+  .about-intro,
+  .about-salon {
+    display: grid;
+    align-items: center;
+    gap: var(--space-2xl);
+  }
+  .about-intro__copy,
+  .about-salon__copy {
+    min-width: 0;
+  }
+  .about-intro__copy h1 {
+    max-width: 10ch;
+  }
+  .about-intro__portrait,
+  .about-salon__media {
+    min-width: 0;
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .about-intro__img,
+  .about-salon__img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border-radius: var(--radius-xl);
+  }
+  .about-intro__img {
+    aspect-ratio: 4 / 5;
+    object-position: center 25%;
+  }
+  .about-salon__img {
+    aspect-ratio: 4 / 3;
+  }
+  figcaption {
+    color: var(--color-muted);
+    font-size: var(--fs-100);
+  }
   .about-cta {
     margin-top: var(--space-lg);
+  }
+  @media (min-width: 900px) {
+    .about-intro {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+    .about-salon {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    }
   }
 </style>

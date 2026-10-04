@@ -84,7 +84,7 @@ la mappa è attiva, niente badge "da confermare".
 |------|------|
 | Coordinate GPS esatte | mappa usa l'indirizzo; per il pin preciso servono lat/lng |
 | Prezzi servizi | mostrati come "su richiesta" |
-| Foto reali, logo, immagine OG | da caricare |
+| Logo definitivo | da fornire; foto reali e OG già presenti |
 | Ragione sociale completa, eventuale Facebook | da fornire (P. IVA già fornita: IT04315221202) |
 
 ## 8. Convenzioni tecniche
@@ -115,9 +115,9 @@ la mappa è attiva, niente badge "da confermare".
 - **Fase 2** (elevazione Awwwards + SEO): in corso — palette brand, font editoriali,
   hero, sezioni editoriali, sezione scura, FAQ, breadcrumb, view transitions.
 - Sito **già online** su GitHub Pages: https://asaroalex.github.io/DesideriDiFelicita/
-  (deploy automatico dal branch di lavoro; non esiste ancora `main`).
-- Da fare: foto/logo reali, orari, prezzi; valutare dominio personalizzato + email
-  professionale (ricerca hosting in corso); eventuale upgrade Astro 6.
+  (workflow ora configurato su `main`; Railway segue `codex/railway-deploy`).
+- Da fare: logo definitivo, prezzi; valutare dominio personalizzato + email
+  professionale (ricerca hosting in corso); eventuale migrazione a una nuova major Astro.
 
 ## 11. Feedback visuale utente — 2026-06-23
 
@@ -167,3 +167,28 @@ la mappa è attiva, niente badge "da confermare".
 - Il futuro dominio personalizzato va aggiunto a Railway Networking e collegato
   tramite i record DNS indicati; impostare `SITE_URL` con il dominio reale e
   ripubblicare. Railway non richiede un file `public/CNAME`.
+
+## 14. Migliorie dopo la review — 2026-10-04
+
+- L’utente ha autorizzato correzioni e scelta/integrazione delle foto dalla cartella
+  Google Drive ufficiale. Il connettore Drive consente ora la lettura dei materiali.
+- Nuovi lavori selezionati per qualità, varietà e sfondi puliti; provenienza
+  registrata in `docs/foto-drive.json`. HEIC convertiti in JPEG e resi responsive
+  da Astro. Esclusi ospiti dell’inaugurazione, immagini personali e provini con watermark.
+- Home mobile più compatta, slogan conservato e un lavoro selezionato già nella foto
+  di apertura. Jessica resta nella presentazione personale della home.
+  Selezione home esplicita con `featured`, senza dipendere dagli indici del manifest.
+- Menu mobile con fallback senza JS; inizializzazione indipendente dal ClientRouter,
+  chiusura quando il focus esce, Escape ritorna al pulsante, scroll su schermi bassi.
+- Focus FAQ interno e visibile; titoli gerarchici nelle pagine Servizi/Contatti.
+  La fascia di prezzo JSON-LD viene omessa finché i prezzi non sono confermati.
+- Chi siamo usa contenuti specifici su Jessica, servizi e salone, senza inventare
+  qualifiche o anni di attività.
+- Google Maps viene caricato soltanto su scelta, con indicazioni disponibili senza JS.
+  Nuova pagina `privacy`: descrive il funzionamento effettivo e i servizi esterni.
+- Eliminato Quicksand inutilizzato; cache lunga solo per asset Astro con hash,
+  pagine rivalidate e directory listing disabilitato tramite `serve.json`.
+- Dipendenze mantenute su Astro 5.18.2 con aggiornamenti compatibili. L’audit npm
+  residuo segnala Astro, sharp ed esbuild; `npm start` usa solo il server statico
+  `serve`, non il runtime Astro. Per azzerare tutte le segnalazioni npm propone una
+  migrazione alla major 7, da verificare come manutenzione separata.

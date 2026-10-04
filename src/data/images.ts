@@ -4,10 +4,9 @@
  * Immagini "vere" del sito in `src/assets/images/...` (ottimizzate da Astro
  * con <Image>/<Picture>). Le immagini Open Graph statiche in `public/images/og/`.
  *
- * NOTA — foto con watermark: alcune foto del set professionale "Monica"
- * (fotografa Chiara Mascellani) sono provini con watermark, in attesa delle
- * versioni pulite. Sono segnalate con `// [WM → swap]`: quando arrivano i file
- * puliti basta sovrascrivere lo stesso file in `src/assets/images/...`.
+ * NOTA — i provini del set professionale "Monica" con watermark sono conservati
+ * tra gli asset ma esclusi dalla galleria pubblicata, in attesa dei file finali.
+ * Anche il ritratto al lavoro con watermark resta escluso dal manifest.
  */
 
 import type { ImageMetadata } from 'astro';
@@ -15,9 +14,7 @@ import type { ImageMetadata } from 'astro';
 // Galleria lavori
 import ondeLungheCoda from '../assets/images/gallery/onde-lunghe-coda-01.jpg';
 import curaRiccio from '../assets/images/gallery/cura-del-riccio-01.jpg';
-import risultatoMonica from '../assets/images/gallery/risultato-monica-01.jpg'; // [WM → swap]
 import acconciatura from '../assets/images/gallery/acconciatura-raccolto-01.jpg';
-import ritrattoMonica from '../assets/images/gallery/ritratto-onde-monica-01.jpg'; // [WM → swap]
 import balayageLob from '../assets/images/gallery/balayage-lob-01.jpg';
 import pixieRosa from '../assets/images/gallery/colore-creativo-pixie-rosa-01.jpg';
 import coloreLungo from '../assets/images/gallery/colore-lungo-riflessi-01.jpg';
@@ -25,6 +22,11 @@ import biondoBalayage from '../assets/images/gallery/biondo-balayage-lungo-01.jp
 import ricciStyling from '../assets/images/gallery/ricci-styling-01.jpg';
 import ondeLunghe from '../assets/images/gallery/onde-lunghe-01.jpg';
 import taglioUomo from '../assets/images/gallery/taglio-uomo-sfumato-01.jpg';
+import ondeCaramello from '../assets/images/gallery/onde-riflessi-caramello-01.jpg';
+import bobMiele from '../assets/images/gallery/taglio-bob-miele-01.jpg';
+import taglioCortoGrigio from '../assets/images/gallery/taglio-corto-grigio-01.jpg';
+import ondeCastane from '../assets/images/gallery/onde-lunghe-castane-01.jpg';
+import piegaMossaSalone from '../assets/images/gallery/piega-mossa-salone-01.jpg';
 
 // Salone (interni)
 import salonePostazione from '../assets/images/salon/salone-postazione-01.jpg';
@@ -33,7 +35,6 @@ import saloneSpecchi from '../assets/images/salon/salone-specchi-01.jpg';
 // Titolare (Jessica)
 import jessica01 from '../assets/images/team/team-jessica-01.jpg';
 import jessica02 from '../assets/images/team/team-jessica-02.jpg';
-import jessicaAtWork from '../assets/images/team/team-jessica-atwork-01.jpg'; // [WM → swap]
 
 export interface GalleryImage {
   src: ImageMetadata;
@@ -42,18 +43,24 @@ export interface GalleryImage {
   category?: string;
   /** Didascalia breve da mostrare sotto la foto. */
   treatment?: string;
+  /** Selezione esplicita per la home, indipendente dall'ordine della galleria. */
+  featured?: boolean;
 }
 
 /** Immagine principale dell'hero (verticale). */
-export const heroImage: ImageMetadata | null = jessica01;
+export const heroImage: ImageMetadata | null = ondeCaramello;
+export const heroImageAlt = 'Onde morbide e riflessi caramello realizzati in salone';
 
-/** Galleria lavori — le prime 6 compaiono in home, tutte nella pagina galleria. */
+/** Galleria lavori pubblicabili — una selezione in home, tutte nella galleria. */
 export const galleryImages: GalleryImage[] = [
+  { src: ondeCaramello, alt: 'Onde morbide su capelli castani con riflessi caramello', category: 'Colore', treatment: 'Schiariture e onde' },
+  { src: bobMiele, alt: 'Taglio bob liscio color miele visto di lato', category: 'Tagli', treatment: 'Taglio bob', featured: true },
+  { src: taglioCortoGrigio, alt: 'Taglio corto su capelli grigi visto da dietro', category: 'Tagli', treatment: 'Taglio corto' },
+  { src: ondeCastane, alt: 'Onde lunghe su capelli castani viste di lato', category: 'Pieghe', treatment: 'Piega onde lunghe', featured: true },
+  { src: piegaMossaSalone, alt: 'Capelli castani di media lunghezza con piega mossa in salone', category: 'Pieghe', treatment: 'Piega mossa' },
   { src: ondeLungheCoda, alt: 'Onde morbide su capelli lunghi raccolti in coda', category: 'Pieghe', treatment: 'Piega onde morbide' },
-  { src: curaRiccio, alt: 'Cura del capello riccio: ricci scuri definiti e luminosi', category: 'Ricci', treatment: 'Cura del riccio' },
-  { src: risultatoMonica, alt: 'Piega a onde su balayage luminoso, risultato finale', category: 'Pieghe', treatment: 'Onde su balayage' },
-  { src: acconciatura, alt: 'Acconciatura raccolta elegante con accessorio gioiello', category: 'Acconciature', treatment: 'Acconciatura raccolta' },
-  { src: ritrattoMonica, alt: 'Ritratto con onde morbide e colore naturale', category: 'Pieghe', treatment: 'Piega naturale' },
+  { src: curaRiccio, alt: 'Cura del capello riccio: ricci scuri definiti e luminosi', category: 'Ricci', treatment: 'Cura del riccio', featured: true },
+  { src: acconciatura, alt: 'Acconciatura raccolta elegante con accessorio gioiello', category: 'Acconciature', treatment: 'Acconciatura raccolta', featured: true },
   { src: balayageLob, alt: 'Balayage su taglio medio ondulato (lob)', category: 'Colore', treatment: 'Balayage luminoso' },
   { src: pixieRosa, alt: 'Colore creativo: taglio pixie rosa', category: 'Colore', treatment: 'Colore creativo' },
   { src: coloreLungo, alt: 'Colore su capelli lunghi con riflessi caldi', category: 'Colore', treatment: 'Riflessi caldi' },
@@ -73,7 +80,6 @@ export const salonImages: GalleryImage[] = [
 export const teamImages: GalleryImage[] = [
   { src: jessica01, alt: 'Jessica Asaro, hair stylist e titolare di Desideri di Felicità' },
   { src: jessica02, alt: 'Jessica Asaro nel suo salone a Galliera' },
-  { src: jessicaAtWork, alt: 'Jessica Asaro durante un servizio di colore' },
 ];
 
 /** Prima/dopo (da popolare in seguito con coppie curate). */

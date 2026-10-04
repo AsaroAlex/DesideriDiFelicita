@@ -32,6 +32,7 @@ const breadcrumbs = [
           site.services.map((s, i) => (
             <Reveal style={`--reveal-delay:${(i % 3) * 80}ms`}>
               <ServiceCard
+                headingLevel="h2"
                 index={i + 1}
                 name={s.name}
                 description={s.description}

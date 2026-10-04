@@ -13,16 +13,11 @@ import { site } from '../data/site';
 import { withBase } from '../lib/href';
 import { galleryImages, teamImages } from '../data/images';
 
-const featuredGallery = [
-  galleryImages[0],
-  galleryImages[1],
-  galleryImages[3],
-  galleryImages[5],
-].filter(Boolean);
+const featuredGallery = galleryImages.filter((image) => image.featured);
 const homeServices = site.services
   .filter((service) => service.name !== 'Cura del riccio')
   .slice(0, 6);
-const jessicaImage = teamImages[0];
+const jessicaImage = teamImages[1];
 const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? galleryImages[1];
 ---
 
@@ -97,8 +92,8 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
         <p class="eyebrow">La specialità</p>
         <h2>Cura del riccio, senza forzarlo</h2>
         <p class="lead">
-          Una sezione a parte perché il riccio non è un servizio qualunque: ha bisogno di
-          ascolto, taglio giusto, asciugatura paziente e consigli semplici da rifare a casa.
+          Taglio, asciugatura e consigli per la routine a casa: scegliamo insieme
+          come prenderci cura della forma e del volume dei tuoi ricci.
         </p>
         <p>
           L’obiettivo è lasciare forma, volume e morbidezza naturali, senza trasformare il

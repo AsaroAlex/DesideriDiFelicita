@@ -1,52 +1,108 @@
 ---
 import { site } from '../data/site';
+import { withBase } from '../lib/href';
 
-/**
- * Mostra la mappa SOLO se indirizzo o coordinate sono confermati.
- * Altrimenti mostra un riquadro placeholder chiaro: NON visualizziamo mai
- * un indirizzo inventato/non verificato su una mappa.
- */
 const c = site.confirmed;
 const showMap = c.address || c.coordinates;
-
 const query = c.coordinates && (site.coordinates.lat !== 0 || site.coordinates.lng !== 0)
   ? `${site.coordinates.lat},${site.coordinates.lng}`
   : `${site.address.street}, ${site.address.postalCode} ${site.address.city}`;
-
-const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
 ---
 
 {
   showMap ? (
-    <div class="map">
-      <iframe
-        title={`Mappa: dove si trova ${site.businessName}`}
-        src={mapSrc}
-        width="100%"
-        height="380"
-        style="border:0"
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade"
-        allowfullscreen
-      />
+    <div class="map" data-map data-map-query={query} data-map-title={`Mappa: dove si trova ${site.businessName}`}>
+      <div class="map__inner">
+        <svg class="map__pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+        <p class="map__title">Ti aspettiamo in salone</p>
+        <p class="map__address">
+          {site.address.street}<br />
+          {`${site.address.postalCode} ${site.address.city} (${site.address.province})`}
+        </p>
+        <p class="note map__notice">
+          La mappa si collega a Google solo quando scegli di caricarla.
+          Google può raccogliere dati di navigazione e usare cookie.
+          <a href={withBase('/privacy')}>Privacy e servizi esterni</a>.
+        </p>
+        <div class="map__actions">
+          <button
+            class="btn btn--primary"
+            type="button"
+            data-map-load
+            aria-controls="salon-map-canvas"
+            aria-expanded="false"
+            hidden
+          >Carica la mappa</button>
+          <a class="btn btn--outline" href={directionsHref} target="_blank" rel="noopener noreferrer">
+            Apri indicazioni
+            <span class="visually-hidden"> su Google Maps, in una nuova scheda</span>
+          </a>
+        </div>
+        <p class="visually-hidden" role="status" data-map-status></p>
+      </div>
+      <div class="map__canvas" id="salon-map-canvas" data-map-canvas></div>
     </div>
   ) : (
-    <div class="map map--placeholder">
+    <div class="map map--unconfirmed">
       <div class="map__inner">
         <p class="map__title">Mappa in arrivo</p>
         <p class="note">
-          L’indirizzo del salone è in fase di conferma: la mappa sarà attivata
-          appena i dati saranno verificati.
-        </p>
-        <p class="map__addr">
-          {site.address.street}, {site.address.postalCode} {site.address.city} (
-          {site.address.province})
-          <span class="badge-tbc">da confermare</span>
+          La mappa sarà disponibile appena l’indirizzo del salone sarà confermato.
         </p>
       </div>
     </div>
   )
 }
+
+<script>
+  function initMaps() {
+    document.querySelectorAll<HTMLElement>('[data-map]').forEach((map) => {
+      if (map.dataset.mapReady) return;
+      const button = map.querySelector<HTMLButtonElement>('[data-map-load]');
+      const canvas = map.querySelector<HTMLElement>('[data-map-canvas]');
+      const status = map.querySelector<HTMLElement>('[data-map-status]');
+      if (!button || !canvas || !status || !map.dataset.mapQuery) return;
+
+      map.dataset.mapReady = 'true';
+      button.hidden = false;
+      button.addEventListener('click', () => {
+        if (canvas.querySelector('iframe')) return;
+
+        status.textContent = 'Caricamento della mappa di Google.';
+        canvas.setAttribute('aria-busy', 'true');
+        const iframe = document.createElement('iframe');
+        iframe.title = map.dataset.mapTitle || 'Mappa del salone';
+        iframe.width = '100%';
+        iframe.height = '380';
+        iframe.referrerPolicy = 'no-referrer';
+        iframe.allowFullscreen = true;
+        iframe.addEventListener('load', () => {
+          canvas.removeAttribute('aria-busy');
+          status.textContent = 'Mappa attivata. Puoi esplorarla oppure aprire le indicazioni in una nuova scheda.';
+        }, { once: true });
+        // Nessun iframe o richiesta della mappa a Google prima di questa scelta.
+        iframe.src = `https://www.google.com/maps?q=${encodeURIComponent(map.dataset.mapQuery!)}&output=embed`;
+        canvas.append(iframe);
+        map.classList.add('map--loaded');
+        button.textContent = 'Mappa attivata';
+        button.setAttribute('aria-expanded', 'true');
+        // Il pulsante resta nel DOM e mantiene il focus dopo l'attivazione.
+        button.setAttribute('aria-disabled', 'true');
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initMaps);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMaps, { once: true });
+  } else {
+    initMaps();
+  }
+</script>
 
 <style>
   .map {
@@ -54,33 +110,74 @@ const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(query)}&outpu
     overflow: hidden;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--color-line);
-  }
-  .map iframe {
-    display: block;
-    width: 100%;
-    /* Altezza fluida: sovrascrive l'attributo height="380" dell'iframe.
-       Pavimento a 300px per non comprimere i controlli di Google Maps. */
-    height: clamp(300px, 45vh, 420px);
-  }
-  .map--placeholder {
-    background:
-      linear-gradient(135deg, var(--color-blush) 0%, var(--color-surface-alt) 100%);
-    min-height: 320px;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    padding: var(--space-xl);
+    background: linear-gradient(135deg, var(--color-blush-soft), var(--color-surface-alt));
   }
   .map__inner {
-    max-width: 38ch;
+    min-height: 380px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xl);
+    text-align: center;
+  }
+  .map__pin {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--color-primary-strong);
   }
   .map__title {
     font-family: var(--font-display);
     font-size: var(--fs-500);
-    margin-bottom: var(--space-sm);
+    line-height: var(--lh-snug);
   }
-  .map__addr {
-    margin-top: var(--space-md);
+  .map__address {
     font-weight: 500;
+  }
+  .map__notice {
+    max-width: 48ch;
+  }
+  .map__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm);
+  }
+  .map__actions [hidden] {
+    display: none;
+  }
+  .map__actions [aria-disabled='true'] {
+    background: var(--color-primary-strong);
+    cursor: default;
+    transform: none;
+  }
+  .map__canvas:empty {
+    display: none;
+  }
+  .map__canvas :global(iframe) {
+    display: block;
+    border: 0;
+    width: 100%;
+    height: clamp(300px, 45vh, 420px);
+  }
+  .map--loaded .map__inner {
+    min-height: 0;
+    padding: var(--space-lg);
+  }
+  .map--loaded .map__pin,
+  .map--loaded .map__title,
+  .map--loaded .map__address {
+    display: none;
+  }
+  @media (max-width: 420px) {
+    .map__inner {
+      padding: var(--space-lg);
+    }
+    .map__actions {
+      width: 100%;
+    }
+    .map__actions .btn {
+      width: 100%;
+    }
   }
 </style>

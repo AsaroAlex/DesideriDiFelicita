@@ -54,6 +54,11 @@ const { items } = Astro.props;
   .faq__q::-webkit-details-marker {
     display: none;
   }
+  .faq__q:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: -4px;
+    border-radius: var(--radius-md);
+  }
   .faq__icon {
     position: relative;
     flex: none;

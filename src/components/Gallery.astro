@@ -22,8 +22,8 @@ const hasImages = images.length > 0;
                 src={img.src}
                 alt={img.alt}
                 class="gallery__img"
-                widths={[320, 640, 960]}
-                sizes="(min-width: 900px) 30vw, (min-width: 600px) 45vw, 90vw"
+                widths={[320, 480, 576, 768, 960, 1200]}
+                sizes="(min-width: 1200px) calc((75rem - clamp(2.2rem, 1rem + 5.6vw, 5.5rem) - 3rem) / 4), (min-width: 900px) calc((100vw - clamp(2.2rem, 1rem + 5.6vw, 5.5rem) - 2rem) / 3), (min-width: 600px) calc((100vw - clamp(2.2rem, 1rem + 5.6vw, 5.5rem) - 1rem) / 2), calc(100vw - clamp(2.2rem, 1rem + 5.6vw, 5.5rem))"
                 loading="lazy"
               />
             </div>
@@ -55,8 +55,23 @@ const hasImages = images.length > 0;
   .gallery {
     display: grid;
     gap: var(--space-md);
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+    grid-template-columns: minmax(0, 1fr);
     margin: 0;
+  }
+  @media (min-width: 600px) {
+    .gallery {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 900px) {
+    .gallery {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1200px) {
+    .gallery {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
   .gallery__item {
     min-width: 0;
@@ -105,6 +120,7 @@ const hasImages = images.length > 0;
   }
   .gallery__caption {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-sm);
