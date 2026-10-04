@@ -65,11 +65,47 @@ docs/                    Materiali di brand e brief (non parte del build).
   > Nota: i nomi token `--color-gold*` / `--color-blush*` sono mantenuti per compatibilità
   > ma valgono toni **azzurri**.
 - **Base path.** Su GitHub Pages di progetto il base è `/DesideriDiFelicita`; i link interni
-  usano `withBase()` (`src/lib/href.ts`).
+  usano `withBase()` (`src/lib/href.ts`). Con `SITE_URL` o `RAILWAY_PUBLIC_DOMAIN`
+  il base predefinito è `/`; `BASE_PATH` consente un prefisso esplicito.
 - **Accessibilità.** HTML semantico, focus visibili, `alt` descrittivi, reveal con fallback no-JS.
 
 ## Deploy
 
-Pubblicazione automatica su **GitHub Pages** tramite GitHub Actions
-(`.github/workflows/deploy.yml`) a ogni push su `main` o sul branch di lavoro corrente.
-In *Settings → Pages* la sorgente deve essere impostata su **GitHub Actions**.
+### Railway
+
+URL pubblico: <https://desideri-di-felicita-production.up.railway.app/>
+
+Il ramo dedicato è `codex/railway-deploy`. Collegare il repository al servizio
+Railway e selezionare questo ramo, oppure pubblicare il checkout con `railway up`.
+`railway.json` definisce build con Railpack, avvio tramite `npm start` e healthcheck `/`.
+Il sito viene compilato una volta e servito come file statici da `dist/`.
+
+```bash
+npm ci
+npm run build
+PORT=3000 npm start
+```
+
+Il server ascolta su `0.0.0.0` usando `PORT`, assegnata da Railway; in locale il
+valore predefinito è `3000`. Generare un dominio pubblico nella sezione Networking
+del servizio prima della build definitiva: `RAILWAY_PUBLIC_DOMAIN` imposta
+automaticamente l’origine HTTPS del sito e `base: '/'`.
+
+Per scegliere esplicitamente l’origine, impostare `SITE_URL` nelle variabili
+Railway, per esempio `https://nome-servizio.up.railway.app`. Deve contenere solo
+un’origine HTTP/HTTPS, senza percorso, query o frammento. `SITE_URL` ha precedenza
+su `RAILWAY_PUBLIC_DOMAIN`; `BASE_PATH` può specificare un prefisso diverso da `/`.
+Queste variabili vengono lette al build: dopo una modifica occorre ricostruire
+il sito per aggiornare link, canonical, sitemap, robots e dati strutturati.
+
+Per un futuro dominio personalizzato, aggiungerlo in Networking, configurare i
+record DNS indicati da Railway e impostare `SITE_URL=https://dominio-reale` prima
+del nuovo deploy. Non è necessario `public/CNAME` su Railway.
+
+### GitHub Pages
+
+Senza `SITE_URL`, `RAILWAY_PUBLIC_DOMAIN` e `BASE_PATH`, la configurazione mantiene
+`https://asaroalex.github.io/DesideriDiFelicita/`. Il workflow
+`.github/workflows/deploy.yml` pubblica su **GitHub Pages** a ogni push su `main`
+o con avvio manuale. In *Settings → Pages* la sorgente deve essere impostata su
+**GitHub Actions**.

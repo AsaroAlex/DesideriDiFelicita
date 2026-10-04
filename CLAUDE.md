@@ -48,6 +48,8 @@ OG, performance); 3) design premium editoriale; 4) rifinitura "Awwwards-like".
   IntersectionObserver (`astro:page-load`, fallback `html.js`), barra scroll CSS,
   tutto con `prefers-reduced-motion`.
 - Deploy: **GitHub Pages** via GitHub Actions (workflow su branch corrente + `main`).
+  È disponibile anche il deploy **Railway** dal ramo `codex/railway-deploy`, con
+  build statico e server di produzione (`npm start`, `0.0.0.0:$PORT`).
 
 ## 5. Link ufficiali
 
@@ -92,7 +94,10 @@ la mappa è attiva, niente badge "da confermare".
 - **Tema:** `src/styles/tokens.css`. **SEO:** `Seo.astro` + `StructuredData.astro`
   + `structured-data.ts` (HairSalon/Breadcrumb/FAQ, omette i dati non confermati).
 - **Base path:** `astro.config.mjs` (`site`/`base`). Su Pages di progetto
-  `base = "/DesideriDiFelicita"`. Link interni con `withBase()` (`src/lib/href.ts`).
+  `base = "/DesideriDiFelicita"`. Con `SITE_URL` o `RAILWAY_PUBLIC_DOMAIN`,
+  `base = "/"`; `SITE_URL` prevale sul dominio Railway e deve essere un’origine
+  assoluta HTTP/HTTPS. `BASE_PATH` consente un prefisso esplicito. Le variabili
+  vengono lette al build. Link interni con `withBase()` (`src/lib/href.ts`).
 - Accessibilità WCAG AA, HTML semantico, focus visibili, `alt` descrittivi,
   reveal con fallback no-JS.
 
@@ -142,3 +147,23 @@ la mappa è attiva, niente badge "da confermare".
   3. **Galleria** con didascalia-trattamento + **hover azzurro** (velo + ring).
   4. **Micro-interazioni** sui pulsanti (lift, glow azzurro, focus ring, press).
 - Obiettivo dichiarato dall'utente: «il miglior sito al mondo di parrucchieri».
+
+## 13. Pubblicazione Railway — 2026-10-04
+
+- L'utente ha richiesto la pubblicazione del sito su **Railway**.
+- Progetto: `DesideriDiFelicita`; servizio: `desideri-di-felicita`; ambiente:
+  `production`; regione europea `europe-west4-drams3a`.
+- URL pubblico: https://desideri-di-felicita-production.up.railway.app/
+- Ramo dedicato: `codex/railway-deploy`; il workflow GitHub Pages rimane su `main`.
+- Installazione riproducibile: `npm ci`; build: `npm run build`; output: `dist/`.
+- `railway.json` usa Railpack, avvio `npm start` e healthcheck `/`. Il server
+  statico di produzione ascolta su `0.0.0.0` alla porta `PORT` assegnata da Railway
+  (predefinita `3000` in locale).
+- `astro.config.mjs` mantiene il default GitHub Pages, ma su Railway usa
+  `RAILWAY_PUBLIC_DOMAIN` come origine HTTPS e `/` come base. Impostare `SITE_URL`
+  per scegliere un'origine diversa; `BASE_PATH` può scegliere un prefisso.
+- Generare il dominio pubblico prima della build definitiva. Modifiche al dominio
+  richiedono un nuovo build per aggiornare canonical, sitemap, robots e JSON-LD.
+- Il futuro dominio personalizzato va aggiunto a Railway Networking e collegato
+  tramite i record DNS indicati; impostare `SITE_URL` con il dominio reale e
+  ripubblicare. Railway non richiede un file `public/CNAME`.
