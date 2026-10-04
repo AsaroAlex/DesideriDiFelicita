@@ -2,11 +2,11 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "RAILPACK",
-    "buildCommand": "npm run build"
+    "buildCommand": "npm run build && npm prune --omit=dev"
   },
   "deploy": {
     "startCommand": "npm start",
-    "healthcheckPath": "/",
+    "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3

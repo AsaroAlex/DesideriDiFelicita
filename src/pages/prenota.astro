@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BookingCalendar from '../components/BookingCalendar.astro';
+import { site } from '../data/site';
+
+const title = 'Prenota il tuo appuntamento';
+const description = `Scegli il servizio e un orario disponibile da ${site.businessName} a ${site.address.city}. Prenota online oppure scrivici su WhatsApp.`;
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Prenota', href: '/prenota' },
+];
+---
+
+<BaseLayout title={title} description={description} breadcrumbs={breadcrumbs}>
+  <section class="section booking-page">
+    <div class="container">
+      <header class="section__head">
+        <p class="eyebrow">Il tuo momento felice</p>
+        <h1>Prenota il tuo appuntamento</h1>
+        <p class="lead">
+          Scegli il servizio, il giorno e l’orario che preferisci. Per un consiglio
+          sul tuo prossimo look, siamo sempre a un messaggio di distanza.
+        </p>
+      </header>
+      <BookingCalendar />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .booking-page {
+    padding-top: var(--space-2xl);
+  }
+  .section__head {
+    margin-bottom: var(--space-xl);
+  }
+  .section__head .lead {
+    margin-top: var(--space-lg);
+  }
+</style>

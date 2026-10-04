@@ -38,11 +38,12 @@ const breadcrumbs = [
       <section class="privacy__section" aria-labelledby="privacy-navigation">
         <h2 id="privacy-navigation">Quando navighi</h2>
         <p>
-          Il sito presenta il salone, i servizi e i lavori: non contiene account,
-          moduli di contatto, pagamenti o un sistema di prenotazione online.
-          Il sito non integra strumenti di analisi del traffico o pubblicità e
-          non salva cookie o preferenze nel tuo browser. I font sono ospitati
-          insieme alle pagine.
+          Il sito presenta il salone e permette di prenotare un appuntamento
+          senza creare un account cliente. Non contiene pagamenti, strumenti
+          di analisi del traffico o pubblicità. I font sono ospitati insieme
+          alle pagine. Il calendario pubblico non usa cookie; l’area privata
+          del salone usa un cookie tecnico per mantenere l’accesso, con scadenza
+          dopo dodici ore.
         </p>
         <p>
           Le pagine sono ospitate su Railway. Per consegnarle al tuo browser,
@@ -51,6 +52,35 @@ const breadcrumbs = [
           funzionamento e la sicurezza del servizio. Le modalità di trattamento
           del fornitore sono descritte nella
           <a href="https://railway.com/legal/privacy" target="_blank" rel="noopener noreferrer">privacy di Railway</a>.
+        </p>
+      </section>
+
+      <section class="privacy__section" aria-labelledby="privacy-booking">
+        <h2 id="privacy-booking">Prenotazioni e agenda del salone</h2>
+        <p>
+          Quando prenoti raccogliamo nome, numero di telefono, servizio, data e
+          orario. Servono a organizzare l’appuntamento e contattarti per eventuali
+          modifiche, come richiesto da te prima della prestazione del servizio.
+          L’agenda è conservata nel database privato del salone su Railway,
+          accessibile dalla sua area riservata. Le copie di sicurezza sono
+          private; il sistema conserva le ultime sette copie giornaliere.
+          I dettagli delle altre clienti non sono visibili nel calendario pubblico.
+        </p>
+        <p>
+          Il promemoria WhatsApp è facoltativo: puoi scegliere di riceverlo
+          selezionando la casella nel modulo, oppure prenotare senza selezionarla.
+          Quando il servizio è attivo, numero, nome, data e orario vengono
+          trasmessi a WhatsApp/Meta per inviarti un promemoria dell’appuntamento.
+          Il consenso non autorizza messaggi pubblicitari. Per revocarlo,
+          correggere i tuoi dati o chiedere informazioni sulla loro conservazione,
+          contatta il salone a <a href={`mailto:${site.email}`}>{site.email}</a>.
+        </p>
+        <p>
+          Puoi richiedere accesso, rettifica o cancellazione dei tuoi dati e
+          presentare un reclamo al
+          <a href="https://www.garanteprivacy.it/" target="_blank" rel="noopener noreferrer">Garante per la protezione dei dati personali</a>.
+          La cancellazione resta soggetta agli eventuali obblighi di legge
+          applicabili al salone.
         </p>
       </section>
 
@@ -79,8 +109,8 @@ const breadcrumbs = [
           <a href={`mailto:${site.email}`}>email</a>,
           <a href={whatsappHref(site.whatsapp)} target="_blank" rel="noopener noreferrer">WhatsApp</a>
           e <a href={site.instagramUrl} target="_blank" rel="noopener noreferrer">Instagram</a>
-          aprono il servizio scelto. I messaggi non passano attraverso un modulo
-          su questo sito: arrivano al salone tramite quel servizio e vengono
+          aprono il servizio scelto. I messaggi inviati da questi collegamenti
+          arrivano al salone tramite quel servizio e vengono
           utilizzati per rispondere alle tue richieste e organizzare gli appuntamenti.
         </p>
         <p>

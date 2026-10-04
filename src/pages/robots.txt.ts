@@ -14,6 +14,8 @@ export const GET: APIRoute = ({ site }) => {
 
   const body = `User-agent: *
 Allow: /
+Disallow: ${base}agenda
+Disallow: ${base}api/
 
 Sitemap: ${sitemapUrl}
 `;

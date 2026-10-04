@@ -23,6 +23,7 @@ interface Props {
 }
 
 const { title, description, image, noindex, breadcrumbs, faq } = Astro.props;
+const showWhatsappFloat = !/\/(agenda|prenota)\/?$/.test(Astro.url.pathname);
 ---
 
 <!doctype html>
@@ -51,9 +52,9 @@ const { title, description, image, noindex, breadcrumbs, faq } = Astro.props;
     </main>
     <Footer />
 
-    <aside aria-label="Contatta il salone">
+    {showWhatsappFloat && <aside aria-label="Contatta il salone">
       <WhatsappButton variant="float" />
-    </aside>
+    </aside>}
 
     <!-- Reveal leggero: rivela [data-reveal] al loro ingresso in viewport.
          Compatibile con le View Transitions (astro:page-load) e rispetta

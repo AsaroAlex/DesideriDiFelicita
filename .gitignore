@@ -20,3 +20,11 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# private agenda data and local backups
+.data/
+.agenda-attivazione.md
+var/
+*.sqlite
+*.sqlite-*
+*.db

@@ -1,6 +1,5 @@
 ---
 import { withBase } from '../lib/href';
-import WhatsappButton from './WhatsappButton.astro';
 import Logo from './Logo.astro';
 
 const nav = [
@@ -50,7 +49,7 @@ const isActive = (href: string) => norm(withBase(href)) === current;
           ))
         }
       </ul>
-      <WhatsappButton class="nav__cta" label="WhatsApp" />
+      <a class="btn nav__cta" href={withBase('/prenota')} aria-current={isActive('/prenota') ? 'page' : undefined}>Prenota</a>
     </nav>
   </div>
 </header>

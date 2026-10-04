@@ -1,0 +1,448 @@
+---
+import { site } from '../data/site';
+---
+
+<script is:inline data-astro-rerun>
+  // Il link di prima attivazione non rimane nella cronologia né nei link successivi.
+  {
+    const url = new URL(window.location.href);
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    const token = fragment.get('attiva') || url.searchParams.get('attiva');
+    if (token) {
+      window.__agendaActivationToken = token;
+    }
+    if (url.searchParams.has('attiva') || fragment.has('attiva')) {
+      url.searchParams.delete('attiva');
+      if (fragment.has('attiva')) {
+        fragment.delete('attiva');
+        url.hash = fragment.toString();
+      }
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    }
+  }
+</script>
+
+<section class="agenda section" data-agenda data-business={site.businessName} data-owner-email={site.email}>
+  <div class="container">
+    <header class="agenda-heading">
+      <div><p class="eyebrow">Il tuo salone, organizzato</p><h1>Agenda di Jessica</h1><p class="lead">Appuntamenti e promemoria, in un unico posto.</p></div>
+      <div data-owner-controls hidden><span data-owner-email-label></span><button type="button" class="agenda-button secondary" data-logout>Esci</button></div>
+    </header>
+    <p class="agenda-notice" role="status" aria-live="polite" data-notice>Caricamento dell’agenda…</p>
+    <noscript><p class="agenda-notice">Per accedere all’agenda occorre attivare JavaScript nel browser.</p></noscript>
+
+    <section class="agenda-card auth-card" data-auth hidden aria-labelledby="access-title">
+      <h2 id="access-title" data-auth-title>Accedi alla tua agenda</h2>
+      <p data-auth-intro>Un accesso privato, riservato a Jessica.</p>
+      <form data-login-form hidden>
+        <label>Email<input type="email" name="email" autocomplete="username" value={site.email} required /></label>
+        <label>Password<input type="password" name="password" autocomplete="current-password" required /></label>
+        <button class="agenda-button" type="submit">Accedi</button>
+      </form>
+      <form data-setup-form hidden>
+        <label>Email per l’accesso<input type="email" name="email" autocomplete="username" value={site.email} required /></label>
+        <label>Scegli una password<input type="password" name="password" autocomplete="new-password" minlength="12" required aria-describedby="setup-password-help" /></label>
+        <small id="setup-password-help">Almeno 12 caratteri. Scegli una password che non utilizzi altrove.</small>
+        <label>Ripeti la password<input type="password" name="confirmation" autocomplete="new-password" minlength="12" required /></label>
+        <button class="agenda-button" type="submit">Attiva la tua agenda</button>
+      </form>
+    </section>
+
+    <div data-workspace hidden>
+      <section class="agenda-stats" aria-label="Riepilogo dell’agenda" data-stats></section>
+      <nav class="agenda-tabs" aria-label="Sezioni dell’agenda">
+        <button type="button" class="agenda-button" data-tab="calendar" aria-pressed="true">Appuntamenti</button>
+        <button type="button" class="agenda-button secondary" data-tab="services" aria-pressed="false">Servizi</button>
+        <button type="button" class="agenda-button secondary" data-tab="settings" aria-pressed="false">Impostazioni</button>
+        <button type="button" class="agenda-button secondary" data-tab="reminders" aria-pressed="false">Promemoria</button>
+      </nav>
+
+      <section data-panel="calendar" aria-labelledby="calendar-title">
+        <div class="agenda-section-head"><h2 id="calendar-title" tabindex="-1">I tuoi appuntamenti</h2><button type="button" class="agenda-button" data-new>Nuovo appuntamento</button></div>
+        <div class="agenda-card calendar-toolbar">
+          <div class="button-group"><button type="button" class="agenda-button secondary" data-date-prev aria-label="Periodo precedente">←</button><button type="button" class="agenda-button secondary" data-today>Oggi</button><button type="button" class="agenda-button secondary" data-date-next aria-label="Periodo successivo">→</button></div>
+          <label>Data<input type="date" data-calendar-date required /></label>
+          <div class="button-group" aria-label="Vista calendario"><button type="button" class="agenda-button" data-view="day" aria-pressed="true">Giorno</button><button type="button" class="agenda-button secondary" data-view="week" aria-pressed="false">Settimana</button></div>
+          <button type="button" class="agenda-button secondary" data-refresh>Aggiorna</button>
+        </div>
+        <p class="agenda-note">Gli orari sono quelli del salone, in Italia. Gli appuntamenti annullati restano visibili nello storico.</p>
+        <div class="calendar-days" data-calendar aria-live="polite"></div>
+
+        <section class="agenda-card appointment-editor" data-editor hidden aria-labelledby="editor-title">
+          <div class="agenda-section-head"><h2 id="editor-title" tabindex="-1">Nuovo appuntamento</h2><button type="button" class="agenda-button secondary" data-editor-close>Chiudi</button></div>
+          <form data-appointment-form>
+            <div class="form-grid">
+              <label>Servizio<select name="serviceId" data-appointment-services><option value="">Altro appuntamento</option></select></label>
+              <label>Descrizione<input name="title" maxlength="100" placeholder="Per esempio: consulenza" required /></label>
+              <label>Giorno<input type="date" name="date" required /></label>
+              <label>Ora<input type="time" name="time" required /></label>
+              <label>Durata, in minuti<input type="number" name="durationMinutes" min="5" max="480" step="1" required /></label>
+              <label>Nome della cliente<input name="name" autocomplete="name" minlength="2" maxlength="100" required /></label>
+              <label>Telefono con prefisso internazionale<input type="tel" name="phone" autocomplete="tel" placeholder="+39…" required /></label>
+              <label data-status-field hidden>Stato<select name="status"><option value="confirmed">Confermato</option><option value="cancelled">Annullato</option></select></label>
+            </div>
+            <label class="checkbox-label"><input type="checkbox" name="reminderConsent" />La cliente ha accettato il promemoria su WhatsApp.</label>
+            <p class="agenda-note">Indica la durata effettiva per occupare il tempo corretto. Il promemoria viene pianificato per la sera prima: gli appuntamenti inseriti dopo quell’orario non generano un invio tardivo.</p>
+            <div class="button-group"><button type="submit" class="agenda-button">Salva appuntamento</button><button type="button" class="agenda-button secondary" data-editor-close>Lascia senza salvare</button></div>
+          </form>
+        </section>
+      </section>
+
+      <section data-panel="services" hidden aria-labelledby="services-title">
+        <h2 id="services-title" tabindex="-1">Servizi e durate</h2>
+        <p class="agenda-note">Imposta tu la durata di ciascun servizio. Solo i servizi abilitati, con una durata definita, compaiono nella prenotazione online. Le modifiche non cambiano gli appuntamenti già inseriti.</p>
+        <div class="service-settings" data-services></div>
+      </section>
+
+      <section data-panel="settings" hidden aria-labelledby="settings-title">
+        <h2 id="settings-title" tabindex="-1">Impostazioni del salone</h2>
+        <form class="agenda-card" data-settings-form>
+          <h3>Prenotazioni online</h3>
+          <label class="checkbox-label"><input type="checkbox" name="bookingEnabled" />Permetti alle clienti di prenotare dal sito.</label>
+          <p class="agenda-note" data-booking-help>Prima di attivare le prenotazioni, imposta almeno un servizio con durata e disponibilità.</p>
+          <label>Giorni prenotabili in anticipo<input type="number" name="bookingDays" min="1" max="365" required /></label>
+          <h3>Orari di disponibilità</h3>
+          <p class="agenda-note">Usa fasce come 09:00-13:00, 17:00-19:00. Lascia vuoto un giorno di chiusura.</p>
+          <div class="hours-grid" data-hours></div>
+          <label>Chiusure straordinarie<textarea name="closedDates" rows="3" placeholder="2026-12-25&#10;2026-12-26" aria-describedby="closed-dates-help"></textarea></label>
+          <small id="closed-dates-help">Una data per riga, nel formato anno-mese-giorno. Non annulla gli appuntamenti già confermati.</small>
+          <h3>Promemoria del giorno prima</h3>
+          <div class="form-grid">
+            <label>Ora di invio<input type="time" name="reminderTime" required /></label>
+            <label>Massimo invii al giorno<input type="number" name="dailyReminderLimit" min="0" max="1000" required /></label>
+            <label>Massimo invii al mese<input type="number" name="monthlyReminderLimit" min="0" max="10000" required /></label>
+          </div>
+          <p class="agenda-note">I limiti contengono gli invii automatici. Un valore pari a 0 li sospende. Si invia un solo promemoria per appuntamento, senza messaggi promozionali.</p>
+          <button type="submit" class="agenda-button">Salva impostazioni</button>
+        </form>
+        <section class="agenda-card security-card" aria-labelledby="security-title">
+          <h3 id="security-title">Il tuo accesso</h3>
+          <form data-password-form>
+            <label>Password attuale<input type="password" name="currentPassword" autocomplete="current-password" required /></label>
+            <label>Nuova password<input type="password" name="password" autocomplete="new-password" minlength="12" required /></label>
+            <label>Ripeti la nuova password<input type="password" name="confirmation" autocomplete="new-password" minlength="12" required /></label>
+            <button type="submit" class="agenda-button secondary">Cambia password</button>
+          </form>
+          <p class="agenda-note">Almeno 12 caratteri. Gli altri accessi verranno chiusi.</p>
+          <a class="agenda-button secondary" href="/api/admin/export.csv" download>Scarica gli appuntamenti in CSV</a>
+        </section>
+      </section>
+
+      <section data-panel="reminders" hidden aria-labelledby="reminders-title">
+        <h2 id="reminders-title" tabindex="-1">Promemoria WhatsApp</h2>
+        <div class="agenda-card" data-automation></div>
+        <p class="agenda-note">“Apri WhatsApp” prepara un messaggio manuale: controllalo e premi Invia nell’app. Non parte alcun messaggio automatico da quel pulsante.</p>
+        <div class="reminder-list" data-reminders></div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { whatsappHref } from '../lib/contact';
+
+  type Appointment = { id: string; reference: string; serviceId?: string | null; title: string; name: string; phone: string; date: string; time: string; durationMinutes: number; status: string; reminderConsent: boolean };
+  type Service = { id: string; name: string; durationMinutes: number | null; enabled: boolean };
+  type OpeningHour = { day: string; label: string; ranges: { opens: string; closes: string }[] };
+  type Settings = { bookingEnabled: boolean; bookingDays: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; dailyReminderLimit: number; monthlyReminderLimit: number };
+  type Reminder = { id: string; appointmentId: string; name: string; phone: string; date: string; time: string; status: string; dueAt: number; attemptCount: number; errorCode?: string; errorText?: string };
+  type Session = { authenticated: boolean; setupRequired?: boolean; email?: string; csrfToken?: string; whatsappConfigured?: boolean };
+  type Automation = { configured: boolean; missing: string[]; dailyLimit: number; monthlyLimit: number; sentThisMonth: number };
+  const reminderLabels: Record<string, string> = { pending: 'In attesa', sending: 'Invio in corso', accepted: 'Accettato da WhatsApp', delivered: 'Consegnato', read: 'Letto', failed: 'Invio non riuscito', skipped: 'Non inviato', needs_review: 'Da controllare' };
+  let activeRoot: HTMLElement | null = null;
+  let dispose: (() => void) | undefined;
+
+  function initAgenda() {
+    const root = document.querySelector<HTMLElement>('[data-agenda]');
+    if (!root || root === activeRoot) return;
+    dispose?.();
+    activeRoot = root;
+    const lifetime = new AbortController();
+    const activationWindow = window as Window & { __agendaActivationToken?: string };
+    let activationToken = activationWindow.__agendaActivationToken || '';
+    delete activationWindow.__agendaActivationToken;
+    let csrfToken = '';
+    let session: Session = { authenticated: false };
+    let services: Service[] = [];
+    let appointments: Appointment[] = [];
+    let reminders: Reminder[] = [];
+    let settings: Settings | undefined;
+    let editingId = '';
+    let editorOpener: HTMLElement | null = null;
+    let view = 'day';
+    let selectedDate = today();
+    let busy = false;
+
+    const el = <T extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+    const notice = el('[data-notice]');
+    const loginForm = el<HTMLFormElement>('[data-login-form]');
+    const setupForm = el<HTMLFormElement>('[data-setup-form]');
+    const appointmentForm = el<HTMLFormElement>('[data-appointment-form]');
+    const settingsForm = el<HTMLFormElement>('[data-settings-form]');
+    const passwordForm = el<HTMLFormElement>('[data-password-form]');
+    const input = <T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement = HTMLInputElement>(form: HTMLFormElement, name: string) => form.elements.namedItem(name) as T;
+    const on = (target: EventTarget, event: string, handler: EventListener) => target.addEventListener(event, handler, { signal: lifetime.signal });
+    const textNode = (tag: string, text: string, className = '') => { const node = document.createElement(tag); node.textContent = text; if (className) node.className = className; return node; };
+    const inform = (message: string, error = false) => { notice.textContent = message; notice.classList.toggle('is-error', error); notice.setAttribute('role', error ? 'alert' : 'status'); };
+    const focus = (selector: string) => el(selector)?.focus({ preventScroll: true });
+
+    function today() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+    function addDays(date: string, count: number) { const parsed = new Date(date + 'T12:00:00Z'); parsed.setUTCDate(parsed.getUTCDate() + count); return parsed.toISOString().slice(0, 10); }
+    function prettyDate(date: string, weekday = true) { return new Intl.DateTimeFormat('it-IT', { timeZone: 'UTC', ...(weekday ? { weekday: 'long' as const } : {}), day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(date + 'T12:00:00Z')); }
+    function weekStart(date: string) { const day = new Date(date + 'T12:00:00Z').getUTCDay(); return addDays(date, -((day + 6) % 7)); }
+    function period() { const from = view === 'week' ? weekStart(selectedDate) : selectedDate; return { from, to: view === 'week' ? addDays(from, 6) : from }; }
+
+    async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+      const response = await fetch(path, { method, credentials: 'same-origin', signal: lifetime.signal, headers: { Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(method !== 'GET' && csrfToken ? { 'x-csrf-token': csrfToken } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (response.status === 401 && session.authenticated) { showAccess({ authenticated: false, setupRequired: false }); inform('L’accesso è scaduto. Accedi di nuovo per continuare.', true); input(loginForm, 'email').focus(); }
+        throw new Error(data?.error?.message || 'Non è stato possibile completare l’operazione. Riprova tra poco.');
+      }
+      return data as T;
+    }
+
+    async function act(form: HTMLFormElement | null, task: () => Promise<void>) {
+      if (busy) return;
+      busy = true;
+      inform('Operazione in corso…');
+      const buttons = form ? Array.from(form.querySelectorAll<HTMLButtonElement>('button')) : [];
+      const previous = buttons.map(button => button.disabled);
+      buttons.forEach(button => { button.disabled = true; });
+      form?.setAttribute('aria-busy', 'true');
+      try { await task(); } catch (error) { if (!lifetime.signal.aborted) inform(error instanceof Error ? error.message : 'Si è verificato un problema. Riprova.', true); }
+      finally { busy = false; buttons.forEach((button, index) => { button.disabled = previous[index]; }); form?.removeAttribute('aria-busy'); }
+    }
+
+    function showAccess(next: Session) {
+      session = next;
+      csrfToken = next.csrfToken || '';
+      el('[data-workspace]').hidden = !next.authenticated;
+      el('[data-owner-controls]').hidden = !next.authenticated;
+      el('[data-auth]').hidden = next.authenticated;
+      if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; return; }
+      services = []; appointments = []; reminders = []; settings = undefined;
+      el('[data-calendar]').replaceChildren(); el('[data-services]').replaceChildren(); el('[data-reminders]').replaceChildren(); el('[data-stats]').replaceChildren(); el('[data-automation]').replaceChildren();
+      appointmentForm.reset(); passwordForm.reset(); el('[data-editor]').hidden = true;
+      const setup = Boolean(next.setupRequired);
+      el('[data-auth-title]').textContent = setup ? 'Benvenuta nella tua agenda' : 'Accedi alla tua agenda';
+      el('[data-auth-intro]').textContent = setup ? (activationToken ? 'Imposta il tuo accesso privato per iniziare.' : 'Per il primo accesso serve il link di attivazione riservato a Jessica.') : 'Un accesso privato, riservato a Jessica.';
+      setupForm.hidden = !setup || !activationToken;
+      loginForm.hidden = setup;
+    }
+
+    async function loadCalendar() {
+      const { from, to } = period();
+      const result = await api<{ items: Appointment[] }>(`/api/admin/appointments?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      appointments = result.items; renderCalendar();
+    }
+
+    async function loadAll() {
+      const [serviceData, settingsData, reminderData, stats, automation] = await Promise.all([
+        api<{ items: Service[] }>('/api/admin/services'), api<Settings>('/api/admin/settings'), api<{ items: Reminder[] }>('/api/admin/reminders'),
+        api<Record<string, number>>('/api/admin/stats'), api<Automation>('/api/admin/automation'),
+      ]);
+      if (!session.authenticated || lifetime.signal.aborted) return;
+      services = serviceData.items; settings = settingsData; reminders = reminderData.items;
+      renderServices(); renderSettings(); renderReminders(); renderStats(stats); renderAutomation(automation); populateServiceSelect();
+      await loadCalendar();
+    }
+
+    function renderStats(stats: Record<string, number>) {
+      const labels = [['todayAppointments', 'Appuntamenti oggi'], ['upcomingAppointments', 'In programma'], ['pendingReminders', 'Promemoria in attesa'], ['sentThisMonth', 'Invii questo mese']];
+      el('[data-stats]').replaceChildren(...labels.map(([key, label]) => { const card = textNode('div', '', 'stat-card'); card.append(textNode('strong', String(stats[key] ?? 0)), textNode('span', label)); return card; }));
+    }
+
+    function manualLink(appointment: { name: string; phone: string; date: string; time: string }) {
+      const message = `Ciao ${appointment.name}, ti ricordiamo l’appuntamento da ${root.dataset.business} il ${prettyDate(appointment.date, false)} alle ${appointment.time}. Per modifiche o cancellazioni contatta il salone.`;
+      const link = textNode('a', 'Apri WhatsApp', 'agenda-button secondary') as HTMLAnchorElement;
+      link.href = whatsappHref(appointment.phone, message); link.target = '_blank'; link.rel = 'noopener noreferrer'; link.setAttribute('aria-label', `Prepara un promemoria WhatsApp per ${appointment.name}`); return link;
+    }
+
+    function renderCalendar() {
+      const { from, to } = period();
+      const days: HTMLElement[] = [];
+      for (let date = from; date <= to; date = addDays(date, 1)) {
+        const section = textNode('section', '', 'calendar-day');
+        const title = textNode('h3', prettyDate(date)); section.append(title);
+        const items = appointments.filter(item => item.date === date).sort((a, b) => a.time.localeCompare(b.time));
+        if (!items.length) section.append(textNode('p', 'Nessun appuntamento in questo giorno.', 'agenda-note empty-day'));
+        for (const item of items) {
+          const card = textNode('article', '', `appointment-card${item.status === 'cancelled' ? ' is-cancelled' : ''}`);
+          const top = textNode('div', '', 'appointment-top'); top.append(textNode('strong', `${item.time} · ${item.durationMinutes} min`), textNode('span', item.status === 'cancelled' ? 'Annullato' : 'Confermato', 'status-badge')); card.append(top);
+          card.append(textNode('h4', item.name), textNode('p', item.title || services.find(service => service.id === item.serviceId)?.name || 'Appuntamento'), textNode('p', item.phone, 'agenda-note'));
+          const reference = textNode('small', `Riferimento ${item.reference}`); card.append(reference);
+          const actions = textNode('div', '', 'button-group'); const edit = textNode('button', 'Modifica', 'agenda-button secondary') as HTMLButtonElement; edit.type = 'button'; on(edit, 'click', () => openEditor(item, edit)); actions.append(edit);
+          if (item.status !== 'cancelled') actions.append(manualLink(item)); card.append(actions); section.append(card);
+        }
+        days.push(section);
+      }
+      el('[data-calendar]').replaceChildren(...days);
+    }
+
+    function populateServiceSelect() {
+      const select = input<HTMLSelectElement>(appointmentForm, 'serviceId'); const current = select.value;
+      select.replaceChildren(new Option('Altro appuntamento', ''), ...services.map(service => new Option(service.name + (service.durationMinutes ? ` · ${service.durationMinutes} min` : ' · durata da impostare'), service.id)));
+      select.value = current;
+    }
+
+    function openEditor(item?: Appointment, opener?: HTMLElement) {
+      editingId = item?.id || ''; editorOpener = opener || null;
+      appointmentForm.reset(); populateServiceSelect();
+      el('#editor-title').textContent = item ? 'Modifica appuntamento' : 'Nuovo appuntamento';
+      input(appointmentForm, 'date').value = item?.date || selectedDate; input(appointmentForm, 'time').value = item?.time || '';
+      input<HTMLSelectElement>(appointmentForm, 'serviceId').value = item?.serviceId || '';
+      input(appointmentForm, 'title').value = item?.title || ''; input(appointmentForm, 'durationMinutes').value = item ? String(item.durationMinutes) : '';
+      input(appointmentForm, 'name').value = item?.name || ''; input(appointmentForm, 'phone').value = item?.phone || '';
+      input(appointmentForm, 'reminderConsent').checked = Boolean(item?.reminderConsent); input<HTMLSelectElement>(appointmentForm, 'status').value = item?.status || 'confirmed';
+      el('[data-status-field]').hidden = !item; el('[data-editor]').hidden = false;
+      el('[data-editor]').scrollIntoView({ behavior: 'auto', block: 'start' }); focus('#editor-title');
+    }
+
+    function closeEditor() { el('[data-editor]').hidden = true; editingId = ''; appointmentForm.reset(); editorOpener?.focus({ preventScroll: true }); }
+
+    function renderServices() {
+      el('[data-services]').replaceChildren(...services.map(service => {
+        const form = document.createElement('form'); form.className = 'agenda-card service-form';
+        const title = textNode('h3', service.name); form.append(title);
+        const durationLabel = textNode('label', 'Durata, in minuti'); const duration = document.createElement('input'); duration.type = 'number'; duration.min = '5'; duration.max = '480'; duration.step = '1'; duration.name = 'durationMinutes'; duration.value = service.durationMinutes ? String(service.durationMinutes) : ''; durationLabel.append(duration);
+        const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = Boolean(service.enabled); enabledLabel.append(enabled, document.createTextNode('Disponibile per la prenotazione online'));
+        const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit'; form.append(durationLabel, enabledLabel, save);
+        on(form, 'submit', event => { event.preventDefault(); void act(form, async () => {
+          if (enabled.checked && !duration.value) { duration.focus(); throw new Error('Imposta la durata prima di abilitare questo servizio.'); }
+          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', { durationMinutes: duration.value ? Number(duration.value) : null, enabled: enabled.checked }); await loadAll(); inform(`Impostazioni di ${service.name} salvate.`); focus('#services-title');
+        }); }); return form;
+      }));
+    }
+
+    function renderSettings() {
+      if (!settings) return;
+      input(settingsForm, 'bookingEnabled').checked = settings.bookingEnabled;
+      input(settingsForm, 'bookingDays').value = String(settings.bookingDays); input(settingsForm, 'reminderTime').value = settings.reminderTime;
+      input(settingsForm, 'dailyReminderLimit').value = String(settings.dailyReminderLimit); input(settingsForm, 'monthlyReminderLimit').value = String(settings.monthlyReminderLimit);
+      input<HTMLTextAreaElement>(settingsForm, 'closedDates').value = settings.closedDates.join('\n');
+      el('[data-booking-help]').textContent = services.some(service => service.enabled && service.durationMinutes) ? 'Le clienti vedranno solo gli orari liberi dei servizi abilitati.' : 'Prima di attivare le prenotazioni, abilita almeno un servizio e imposta la sua durata nella sezione Servizi.';
+      el('[data-hours]').replaceChildren(...settings.openingHours.map(day => { const label = textNode('label', day.label); const rangeInput = document.createElement('input'); rangeInput.name = `hours-${day.day}`; rangeInput.value = day.ranges.map(range => `${range.opens}-${range.closes}`).join(', '); rangeInput.placeholder = 'Chiuso'; rangeInput.setAttribute('aria-label', `Fasce orarie di ${day.label}`); label.append(rangeInput); return label; }));
+    }
+
+    function renderAutomation(automation: Automation) {
+      const card = el('[data-automation]'); const title = textNode('h3', automation.configured ? 'Invio automatico collegato' : 'Invio automatico da collegare');
+      const copy = textNode('p', automation.configured ? 'I promemoria con consenso vengono inviati il giorno prima, all’orario scelto e nei limiti impostati.' : 'L’agenda e le prenotazioni funzionano. Per inviare promemoria automatici occorre completare il collegamento WhatsApp Business; al momento non partono invii automatici. Puoi usare i pulsanti manuali.');
+      card.replaceChildren(title, copy, textNode('p', `Limiti: ${automation.dailyLimit} invii al giorno, ${automation.monthlyLimit} al mese. Invii di questo mese: ${automation.sentThisMonth}.`, 'agenda-note'));
+      if (automation.configured && (automation.dailyLimit === 0 || automation.monthlyLimit === 0)) card.append(textNode('p', 'Gli invii sono sospesi perché un limite è impostato a 0.', 'agenda-note'));
+    }
+
+    function renderReminders() {
+      const list = el('[data-reminders]');
+      if (!reminders.length) { list.replaceChildren(textNode('p', 'Non ci sono ancora promemoria. Verranno pianificati per gli appuntamenti con consenso.', 'agenda-card')); return; }
+      list.replaceChildren(...reminders.map(item => {
+        const card = textNode('article', '', 'agenda-card reminder-card');
+        const top = textNode('div', '', 'appointment-top'); top.append(textNode('h3', item.name), textNode('span', reminderLabels[item.status] || item.status, 'status-badge')); card.append(top);
+        card.append(textNode('p', `${prettyDate(item.date)} · ${item.time}`));
+        if (item.dueAt) card.append(textNode('p', `Promemoria previsto: ${new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.dueAt))}`, 'agenda-note'));
+        if (item.status === 'needs_review') card.append(textNode('p', 'L’esito dell’invio è incerto. Controlla WhatsApp prima di mandare un altro messaggio: non viene riprovato automaticamente.', 'agenda-note'));
+        if (item.status === 'skipped') card.append(textNode('p', item.errorCode === 'after_cutoff' ? 'Appuntamento inserito dopo l’orario del promemoria: nessun invio tardivo.' : 'Il promemoria non è stato inviato. Controlla lo stato dell’appuntamento, il consenso e i limiti.', 'agenda-note'));
+        if (item.status === 'failed' && item.errorText) card.append(textNode('p', item.errorText, 'agenda-note'));
+        if (item.status !== 'skipped' || !['cancelled', 'no_consent'].includes(item.errorCode || '')) card.append(manualLink(item));
+        return card;
+      }));
+    }
+
+    on(loginForm, 'submit', event => { event.preventDefault(); void act(loginForm, async () => { showAccess(await api<Session>('/api/auth/login', 'POST', { email: input(loginForm, 'email').value.trim(), password: input(loginForm, 'password').value })); input(loginForm, 'password').value = ''; await loadAll(); inform('Accesso riuscito. La tua agenda è pronta.'); focus('#calendar-title'); }); });
+    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim() })); activationToken = ''; setupForm.reset(); await loadAll(); inform('Agenda attivata. Imposta le durate dei servizi per aprire le prenotazioni online.'); focus('#calendar-title'); }); });
+    on(el('[data-logout]'), 'click', () => { void act(null, async () => { await api('/api/auth/logout', 'POST', {}); activationToken = ''; showAccess({ authenticated: false, setupRequired: false }); loginForm.reset(); input(loginForm, 'email').value = root.dataset.ownerEmail || ''; inform('Sei uscita dall’agenda.'); input(loginForm, 'email').focus(); }); });
+    on(el('[data-new]'), 'click', () => openEditor(undefined, el('[data-new]')));
+    root.querySelectorAll<HTMLElement>('[data-editor-close]').forEach(button => on(button, 'click', closeEditor));
+    on(input<HTMLSelectElement>(appointmentForm, 'serviceId'), 'change', () => { const service = services.find(item => item.id === input<HTMLSelectElement>(appointmentForm, 'serviceId').value); input(appointmentForm, 'title').value = service?.name || ''; input(appointmentForm, 'durationMinutes').value = service?.durationMinutes ? String(service.durationMinutes) : ''; });
+    on(appointmentForm, 'submit', event => { event.preventDefault(); void act(appointmentForm, async () => {
+      const body = { serviceId: input<HTMLSelectElement>(appointmentForm, 'serviceId').value || null, title: input(appointmentForm, 'title').value.trim(), date: input(appointmentForm, 'date').value, time: input(appointmentForm, 'time').value, durationMinutes: Number(input(appointmentForm, 'durationMinutes').value), name: input(appointmentForm, 'name').value.trim(), phone: input(appointmentForm, 'phone').value.trim(), reminderConsent: input(appointmentForm, 'reminderConsent').checked, ...(editingId ? { status: input<HTMLSelectElement>(appointmentForm, 'status').value } : {}) };
+      const appointment = await api<Appointment>(editingId ? `/api/admin/appointments/${encodeURIComponent(editingId)}` : '/api/admin/appointments', editingId ? 'PATCH' : 'POST', body); selectedDate = appointment.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; closeEditor(); await loadAll(); inform(appointment.status === 'cancelled' ? 'Appuntamento annullato. I promemoria ancora da inviare sono stati fermati.' : 'Appuntamento salvato.'); focus('#calendar-title');
+    }); });
+    on(settingsForm, 'submit', event => { event.preventDefault(); void act(settingsForm, async () => {
+      if (!settings) return;
+      const openingHours = settings.openingHours.map(day => { const value = input(settingsForm, `hours-${day.day}`).value.trim(); const ranges = value ? value.split(',').map(part => { const match = part.trim().match(/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/); if (!match) { input(settingsForm, `hours-${day.day}`).focus(); throw new Error(`Controlla gli orari di ${day.label}: usa il formato 09:00-13:00.`); } return { opens: match[1], closes: match[2] }; }) : []; return { day: day.day, label: day.label, ranges }; });
+      const closedDates = input<HTMLTextAreaElement>(settingsForm, 'closedDates').value.split(/[\s,]+/).filter(Boolean);
+      await api('/api/admin/settings', 'PATCH', { bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); await loadAll(); inform('Impostazioni salvate.');
+    }); });
+    on(passwordForm, 'submit', event => { event.preventDefault(); void act(passwordForm, async () => { const password = input(passwordForm, 'password').value; if (password !== input(passwordForm, 'confirmation').value) { input(passwordForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const result = await api<Session>('/api/admin/password', 'POST', { currentPassword: input(passwordForm, 'currentPassword').value, password }); if (result.csrfToken) { session = result; csrfToken = result.csrfToken; } else { const refreshed = await api<Session>('/api/auth/session'); session = refreshed; csrfToken = refreshed.csrfToken || ''; } passwordForm.reset(); inform('Password aggiornata. Gli altri accessi sono stati chiusi.'); }); });
+
+    root.querySelectorAll<HTMLElement>('[data-tab]').forEach(button => on(button, 'click', () => { const tab = button.dataset.tab!; root.querySelectorAll<HTMLElement>('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== tab; }); root.querySelectorAll<HTMLElement>('[data-tab]').forEach(candidate => { const selected = candidate === button; candidate.setAttribute('aria-pressed', String(selected)); candidate.classList.toggle('secondary', !selected); }); focus(`#${tab === 'calendar' ? 'calendar' : tab}-title`); }));
+    async function moveDate(date: string) { selectedDate = date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; await loadCalendar(); inform('Agenda aggiornata.'); }
+    el<HTMLInputElement>('[data-calendar-date]').value = selectedDate;
+    on(el('[data-date-prev]'), 'click', () => { void act(null, () => moveDate(addDays(selectedDate, view === 'week' ? -7 : -1))); });
+    on(el('[data-date-next]'), 'click', () => { void act(null, () => moveDate(addDays(selectedDate, view === 'week' ? 7 : 1))); });
+    on(el('[data-today]'), 'click', () => { void act(null, () => moveDate(today())); });
+    on(el('[data-calendar-date]'), 'change', () => { const date = el<HTMLInputElement>('[data-calendar-date]').value; if (date) void act(null, () => moveDate(date)); });
+    on(el('[data-refresh]'), 'click', () => { void act(null, async () => { await loadAll(); inform('Agenda aggiornata.'); }); });
+    root.querySelectorAll<HTMLElement>('[data-view]').forEach(button => on(button, 'click', () => { void act(null, async () => { view = button.dataset.view!; root.querySelectorAll<HTMLElement>('[data-view]').forEach(candidate => { const selected = candidate === button; candidate.setAttribute('aria-pressed', String(selected)); candidate.classList.toggle('secondary', !selected); }); await loadCalendar(); inform('Vista calendario aggiornata.'); }); }));
+
+    dispose = () => { lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; reminders = []; settings = undefined; activeRoot = null; };
+    void act(null, async () => { showAccess(await api<Session>('/api/auth/session')); if (session.authenticated) { await loadAll(); inform('La tua agenda è pronta.'); } else inform(session.setupRequired ? 'Il primo accesso è riservato a Jessica.' : 'Accedi per vedere e gestire gli appuntamenti.'); });
+  }
+
+  document.addEventListener('astro:before-swap', () => { dispose?.(); dispose = undefined; });
+  document.addEventListener('astro:page-load', initAgenda);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAgenda, { once: true }); else initAgenda();
+</script>
+
+<style is:global>
+  .agenda { padding-block: 2.5rem 5rem; }
+  .agenda [hidden] { display: none !important; }
+  .agenda-heading, .agenda-section-head, .appointment-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .agenda-heading { margin-bottom: 1.5rem; }
+  .agenda-heading h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
+  .agenda-heading .lead { font-size: 1rem; margin-top: .75rem; }
+  .agenda [data-owner-controls] { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; font-size: .8rem; overflow-wrap: anywhere; }
+  .agenda-notice { padding: 1rem 1.2rem; background: #edf3ff; border: 1px solid #c9d8f7; border-radius: 1rem; margin-bottom: 1.5rem; overflow-wrap: anywhere; }
+  .agenda-notice.is-error { background: #fff0ef; border-color: #e5aaa5; color: #862b25; }
+  .agenda-card, .calendar-day { border: 1px solid var(--color-line, #dbe1ed); border-radius: 1.2rem; background: #fff; padding: clamp(1rem, 3vw, 1.5rem); min-width: 0; }
+  .agenda h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
+  .agenda h3 { font-size: 1.2rem; }
+  .agenda h4 { font-size: 1.2rem; margin-block: .5rem .25rem; overflow-wrap: anywhere; }
+  .agenda-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border: 1px solid var(--color-primary); border-radius: .8rem; padding: .65rem 1rem; color: #fff; background: #2459c8; font-size: .86rem; font-weight: 650; cursor: pointer; text-decoration: none; line-height: 1.3; text-align: center; }
+  .agenda-button.secondary { color: #204b9f; border-color: #c5d2ec; background: #f2f6ff; }
+  .agenda-button:disabled { opacity: .6; cursor: wait; }
+  .agenda :is(button, a, input, select, textarea):focus-visible { outline: 3px solid #2e6be6; outline-offset: 3px; }
+  .agenda label { display: flex; flex-direction: column; gap: .4rem; font-weight: 600; font-size: .86rem; min-width: 0; }
+  .agenda :is(input:not([type=checkbox]), select, textarea) { width: 100%; min-width: 0; min-height: 44px; padding: .7rem .8rem; border: 1px solid #b8c3d8; border-radius: .65rem; background: #fff; }
+  .agenda textarea { resize: vertical; }
+  .agenda .checkbox-label { flex-direction: row; align-items: flex-start; gap: .7rem; line-height: 1.5; }
+  .agenda input[type=checkbox] { margin-top: .2rem; width: 1.1rem; height: 1.1rem; flex: 0 0 auto; accent-color: #2e6be6; }
+  .agenda form { display: grid; gap: 1.2rem; }
+  .agenda form > .agenda-button { justify-self: start; }
+  .agenda .form-grid, .agenda .hours-grid { display: grid; gap: 1rem; }
+  .agenda-note, .agenda small { color: #48536b; font-size: .82rem; line-height: 1.6; overflow-wrap: anywhere; }
+  .agenda-note { margin-block: .75rem 1.2rem; }
+  .auth-card { max-width: 32rem; margin-inline: auto; }
+  .auth-card > p { margin-block: .8rem 1.4rem; }
+  .agenda-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-block: 1.5rem; }
+  .stat-card { background: #fff; border: 1px solid #dde5f4; border-radius: 1rem; padding: 1rem; display: flex; flex-direction: column; gap: .25rem; }
+  .stat-card strong { font-size: 1.8rem; color: #2459c8; }
+  .stat-card span { font-size: .75rem; color: #48536b; }
+  .agenda-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1.5rem 2rem; }
+  .agenda-section-head { margin-block: 0 1.2rem; }
+  .calendar-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+  .calendar-toolbar label { flex: 1 1 10rem; }
+  .button-group { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .calendar-days { display: grid; gap: 1rem; }
+  .calendar-day h3 { text-transform: capitalize; margin-bottom: 1rem; }
+  .appointment-card { border-left: 3px solid #2e6be6; background: #f6f8fc; border-radius: .5rem .8rem .8rem .5rem; padding: 1rem; margin-top: .8rem; overflow-wrap: anywhere; }
+  .appointment-card .button-group { margin-top: .9rem; }
+  .appointment-top strong { font-size: .9rem; }
+  .status-badge { display: inline-block; font-size: .7rem; font-weight: 650; padding: .25rem .55rem; border-radius: 2rem; background: #e8eefc; color: #224580; }
+  .appointment-card.is-cancelled { border-color: #adb6c8; background: #f5f5f6; }
+  .appointment-card.is-cancelled .status-badge { background: #e8e8ed; color: #545b69; }
+  .appointment-editor { margin-top: 1.5rem; scroll-margin-top: calc(var(--header-h) + 1rem); }
+  .service-settings, .reminder-list { display: grid; gap: 1rem; margin-top: 1.5rem; }
+  .security-card { margin-top: 1.5rem; }
+  .security-card form { max-width: 32rem; margin-top: 1.2rem; }
+  .reminder-card h3 { overflow-wrap: anywhere; }
+  .reminder-card .agenda-button { margin-top: .75rem; }
+  .agenda [data-panel=settings] > form { margin-top: 1.5rem; }
+  .agenda [data-panel=settings] h3 { margin-top: .7rem; }
+  .agenda [data-automation] { margin-top: 1.5rem; }
+  .agenda [data-automation] h3 { margin-bottom: .8rem; }
+  @media (min-width: 640px) { .agenda .form-grid, .agenda .hours-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .service-settings, .reminder-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 960px) { .agenda-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } .calendar-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .calendar-day:only-child { grid-column: 1 / -1; } }
+  @media (max-width: 360px) { .agenda-button { padding-inline: .7rem; } .agenda-tabs .agenda-button { flex: 1 1 calc(50% - .5rem); } .calendar-toolbar .button-group { gap: .35rem; } }
+</style>

@@ -1,0 +1,879 @@
+---
+import { site } from '../data/site';
+import { whatsappHref } from '../lib/contact';
+import { withBase } from '../lib/href';
+
+const message = `Ciao ${site.ownerName.split(' ')[0]}! Vorrei prenotare un appuntamento da ${site.businessName}. Possiamo scegliere insieme servizio, giorno e orario?`;
+const fallbackHref = whatsappHref(site.whatsapp, message);
+---
+
+<div
+  class="booking"
+  data-booking-calendar
+  data-api-base={withBase('api/public/')}
+  data-whatsapp-number={site.whatsapp.replace(/[^\d]/g, '')}
+  data-business-name={site.businessName}
+>
+  <p class="booking__status" data-booking-status role="status" aria-live="polite" hidden></p>
+  <button class="btn btn--outline booking__retry" type="button" data-config-retry hidden>
+    Riprova a vedere gli orari
+  </button>
+
+  <form class="booking__form" data-booking-form hidden>
+    <fieldset class="booking__panel booking__service">
+      <legend><span aria-hidden="true">1.</span> Scegli il servizio</legend>
+      <label class="booking__label" for="booking-service">Servizio</label>
+      <select id="booking-service" name="serviceId" required data-service>
+        <option value="">Scegli un servizio</option>
+      </select>
+      <p class="booking__help" data-service-duration></p>
+    </fieldset>
+
+    <div class="booking__when">
+      <fieldset class="booking__panel">
+        <legend><span aria-hidden="true">2.</span> Scegli il giorno</legend>
+        <div class="booking__month-nav">
+          <button class="booking__month-button" type="button" data-month-prev aria-label="Mese precedente">
+            <span aria-hidden="true">←</span>
+          </button>
+          <p class="booking__month" id="booking-month" data-month-title aria-live="polite"></p>
+          <button class="booking__month-button" type="button" data-month-next aria-label="Mese successivo">
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+        <div class="booking__calendar" data-calendar role="grid" aria-labelledby="booking-month"></div>
+        <p class="booking__help" id="booking-calendar-help">
+          Nel calendario puoi usare anche i tasti freccia. Gli orari disponibili
+          compaiono dopo aver scelto un servizio e un giorno.
+        </p>
+        <label class="booking__label booking__date-label" for="booking-date">Data dell’appuntamento</label>
+        <input id="booking-date" type="date" name="date" required data-date aria-describedby="booking-calendar-help" />
+      </fieldset>
+
+      <fieldset class="booking__panel booking__times-panel">
+        <legend><span aria-hidden="true">3.</span> Scegli l’orario</legend>
+        <p class="booking__help" data-slots-status role="status" aria-live="polite">
+          Scegli prima un servizio e un giorno.
+        </p>
+        <div class="booking__slots" data-slots></div>
+        <button class="booking__text-button" type="button" data-slots-retry hidden>
+          Ricarica gli orari
+        </button>
+        <p class="booking__timezone">Gli orari sono quelli del salone, in Italia.</p>
+      </fieldset>
+    </div>
+
+    <fieldset class="booking__panel booking__details" data-details>
+      <legend><span aria-hidden="true">4.</span> I tuoi recapiti</legend>
+      <p class="booking__summary" data-selection-summary>Scegli un orario per completare la prenotazione.</p>
+      <div class="booking__contact-fields">
+        <div>
+          <label class="booking__label" for="booking-name">Nome e cognome</label>
+          <input id="booking-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="100" required data-name />
+        </div>
+        <div>
+          <label class="booking__label" for="booking-phone">Numero di telefono</label>
+          <input id="booking-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+39 …" maxlength="25" required data-phone aria-describedby="booking-phone-help" />
+          <p class="booking__help" id="booking-phone-help">Inserisci anche il prefisso internazionale, per esempio +39.</p>
+        </div>
+      </div>
+      <label class="booking__consent" for="booking-reminder">
+        <input id="booking-reminder" type="checkbox" name="reminderConsent" data-reminder />
+        <span>Vorrei ricevere un promemoria su WhatsApp il giorno prima dell’appuntamento.</span>
+      </label>
+      <p class="booking__help">
+        Il promemoria è facoltativo. Usiamo i tuoi recapiti per gestire
+        l’appuntamento: <a href={withBase('privacy/')}>leggi l’informativa privacy</a>.
+      </p>
+      <p class="booking__submit-status" data-submit-status role="status" aria-live="polite" hidden></p>
+      <button class="btn btn--primary booking__submit" type="submit" data-submit disabled>
+        Conferma appuntamento
+      </button>
+    </fieldset>
+  </form>
+
+  <section class="booking__confirmation booking__panel" data-confirmation hidden aria-labelledby="booking-confirmation-title">
+    <p class="eyebrow">Ci vediamo in salone</p>
+    <h2 id="booking-confirmation-title" tabindex="-1">Appuntamento confermato</h2>
+    <p class="booking__confirmation-recap" data-confirmation-recap></p>
+    <p class="booking__reference">Il tuo riferimento: <strong data-confirmation-reference></strong></p>
+    <p>Per modificare o cancellare l’appuntamento, scrivici indicando questo riferimento.</p>
+    <a class="btn btn--outline" data-change-link href={fallbackHref} target="_blank" rel="noopener">Contatta il salone</a>
+  </section>
+
+  <aside class="booking__fallback" aria-label="Prenota con un messaggio">
+    <div>
+      <h2>Preferisci parlarne con Jessica?</h2>
+      <p>Ti aiutiamo a scegliere il servizio e a trovare il momento giusto.</p>
+    </div>
+    <a class="btn btn--whatsapp" data-fallback-link href={fallbackHref} target="_blank" rel="noopener">
+      Prenota su WhatsApp
+    </a>
+  </aside>
+</div>
+
+<script>
+  interface BookingService {
+    id: string;
+    name: string;
+    durationMinutes: number;
+  }
+
+  interface BookingConfig {
+    bookingEnabled: boolean;
+    today: string;
+    bookingDays: number;
+    services: BookingService[];
+  }
+
+  interface Slot {
+    time: string;
+    label: string;
+    startsAt: number;
+    endsAt: number;
+  }
+
+  interface BookingConfirmation {
+    reference: string;
+    status: string;
+    serviceName: string;
+    date: string;
+    time: string;
+    durationMinutes: number;
+  }
+
+  class BookingApiError extends Error {
+    status: number;
+    code: string;
+    constructor(status: number, code = '') {
+      super(code || 'booking_request_failed');
+      this.status = status;
+      this.code = code;
+    }
+  }
+
+  const monthFormatter = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const dayFormatter = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const timePattern = /^\d{2}:\d{2}$/;
+
+  // The API supplies calendar days in Europe/Rome. UTC is used only to do
+  // arithmetic on those day labels, never to convert a client's local time.
+  function dayValue(value: string): Date {
+    return new Date(`${value}T12:00:00Z`);
+  }
+
+  function isoDay(value: Date): string {
+    return value.toISOString().slice(0, 10);
+  }
+
+  function shiftDay(value: string, offset: number): string {
+    const day = dayValue(value);
+    day.setUTCDate(day.getUTCDate() + offset);
+    return isoDay(day);
+  }
+
+  function shiftMonth(value: string, offset: number): string {
+    const day = dayValue(`${value.slice(0, 7)}-01`);
+    day.setUTCMonth(day.getUTCMonth() + offset);
+    return isoDay(day);
+  }
+
+  function validDay(value: unknown): value is string {
+    return typeof value === 'string' && datePattern.test(value)
+      && !Number.isNaN(dayValue(value).getTime()) && isoDay(dayValue(value)) === value;
+  }
+
+  function readConfig(value: unknown): BookingConfig {
+    const config = value as BookingConfig;
+    if (!config || typeof config.bookingEnabled !== 'boolean' || !validDay(config.today)
+      || !Number.isInteger(config.bookingDays) || config.bookingDays < 1 || config.bookingDays > 366
+      || !Array.isArray(config.services)) {
+      throw new BookingApiError(502);
+    }
+    const services = config.services.filter((service) => service && typeof service.id === 'string'
+      && typeof service.name === 'string' && Number.isInteger(service.durationMinutes)
+      && service.durationMinutes >= 5 && service.durationMinutes <= 480);
+    return { ...config, services };
+  }
+
+  let disposeCurrent: (() => void) | undefined;
+
+  function initializeBooking() {
+    const root = document.querySelector<HTMLElement>('[data-booking-calendar]');
+    if (!root || root.dataset.bookingReady === 'true') return;
+    disposeCurrent?.();
+    root.dataset.bookingReady = 'true';
+
+    const form = root.querySelector<HTMLFormElement>('[data-booking-form]')!;
+    const status = root.querySelector<HTMLElement>('[data-booking-status]')!;
+    const configRetry = root.querySelector<HTMLButtonElement>('[data-config-retry]')!;
+    const serviceSelect = root.querySelector<HTMLSelectElement>('[data-service]')!;
+    const serviceDuration = root.querySelector<HTMLElement>('[data-service-duration]')!;
+    const dateInput = root.querySelector<HTMLInputElement>('[data-date]')!;
+    const calendar = root.querySelector<HTMLElement>('[data-calendar]')!;
+    const monthTitle = root.querySelector<HTMLElement>('[data-month-title]')!;
+    const monthPrev = root.querySelector<HTMLButtonElement>('[data-month-prev]')!;
+    const monthNext = root.querySelector<HTMLButtonElement>('[data-month-next]')!;
+    const slotsContainer = root.querySelector<HTMLElement>('[data-slots]')!;
+    const slotsStatus = root.querySelector<HTMLElement>('[data-slots-status]')!;
+    const slotsRetry = root.querySelector<HTMLButtonElement>('[data-slots-retry]')!;
+    const selectionSummary = root.querySelector<HTMLElement>('[data-selection-summary]')!;
+    const nameInput = root.querySelector<HTMLInputElement>('[data-name]')!;
+    const phoneInput = root.querySelector<HTMLInputElement>('[data-phone]')!;
+    const reminderInput = root.querySelector<HTMLInputElement>('[data-reminder]')!;
+    const submit = root.querySelector<HTMLButtonElement>('[data-submit]')!;
+    const submitStatus = root.querySelector<HTMLElement>('[data-submit-status]')!;
+    const confirmation = root.querySelector<HTMLElement>('[data-confirmation]')!;
+    const fallbackLink = root.querySelector<HTMLAnchorElement>('[data-fallback-link]')!;
+    const changeLink = root.querySelector<HTMLAnchorElement>('[data-change-link]')!;
+    const lifecycle = new AbortController();
+    let configRequest: AbortController | undefined;
+    let availabilityRequest: AbortController | undefined;
+    let bookingRequest: AbortController | undefined;
+    let config: BookingConfig | undefined;
+    let maxDate = '';
+    let displayedMonth = '';
+    let selectedDate = '';
+    let focusedDate = '';
+    let selectedTime = '';
+    let slots: Slot[] = [];
+    let submitting = false;
+    let uncertainSubmission = false;
+
+    disposeCurrent = () => {
+      lifecycle.abort();
+      configRequest?.abort();
+      availabilityRequest?.abort();
+      bookingRequest?.abort();
+    };
+
+    const on = (target: EventTarget, event: string, listener: EventListener) => {
+      target.addEventListener(event, listener, { signal: lifecycle.signal });
+    };
+
+    const showMessage = (target: HTMLElement, message: string) => {
+      target.textContent = message;
+      target.hidden = !message;
+    };
+
+    function service(): BookingService | undefined {
+      return config?.services.find((item) => item.id === serviceSelect.value);
+    }
+
+    function makeWhatsappLink(message: string): string {
+      return `https://wa.me/${root!.dataset.whatsappNumber}?text=${encodeURIComponent(message)}`;
+    }
+
+    function updateSelection() {
+      const chosenService = service();
+      submit.disabled = !chosenService || !selectedDate || !selectedTime || submitting || uncertainSubmission;
+      if (chosenService && selectedDate && selectedTime) {
+        selectionSummary.textContent = `${chosenService.name} · ${dayFormatter.format(dayValue(selectedDate))} alle ${selectedTime} · ${chosenService.durationMinutes} minuti`;
+      } else {
+        selectionSummary.textContent = 'Scegli un orario per completare la prenotazione.';
+      }
+      let message = uncertainSubmission
+        ? `Ciao! Ho richiesto una prenotazione da ${root!.dataset.businessName}, ma non ho ricevuto una conferma.`
+        : `Ciao! Vorrei prenotare un appuntamento da ${root!.dataset.businessName}.`;
+      if (chosenService) message += ` Il servizio è ${chosenService.name}.`;
+      if (selectedDate) message += ` Preferirei ${dayFormatter.format(dayValue(selectedDate))}${selectedTime ? ` alle ${selectedTime}` : ''}.`;
+      message += uncertainSubmission
+        ? ' Potete verificare se il mio appuntamento è stato registrato, prima di prenotarne un altro?'
+        : ' Possiamo confermare la disponibilità?';
+      fallbackLink.href = makeWhatsappLink(message);
+    }
+
+    function clearSlots() {
+      selectedTime = '';
+      slots = [];
+      slotsContainer.replaceChildren();
+      slotsRetry.hidden = true;
+      updateSelection();
+    }
+
+    async function requestJson(path: string, request: RequestInit, controller: AbortController): Promise<{ value: unknown; status: number }> {
+      const timedRequest = new AbortController();
+      const cancel = () => timedRequest.abort();
+      controller.signal.addEventListener('abort', cancel, { once: true });
+      const timeout = window.setTimeout(cancel, 20_000);
+      try {
+        const response = await fetch(`${root!.dataset.apiBase}${path}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+          ...request,
+          signal: timedRequest.signal,
+          headers: { Accept: 'application/json', ...request.headers },
+        });
+        if (!response.headers.get('content-type')?.includes('application/json')) {
+          throw new BookingApiError(response.status || 502);
+        }
+        const value = await response.json();
+        if (!response.ok) throw new BookingApiError(response.status, value?.error?.code);
+        return { value, status: response.status };
+      } finally {
+        window.clearTimeout(timeout);
+        controller.signal.removeEventListener('abort', cancel);
+      }
+    }
+
+    function renderCalendar(focus = false) {
+      if (!config) return;
+      monthTitle.textContent = monthFormatter.format(dayValue(displayedMonth));
+      monthPrev.disabled = displayedMonth.slice(0, 7) <= config.today.slice(0, 7);
+      monthNext.disabled = displayedMonth.slice(0, 7) >= maxDate.slice(0, 7);
+      calendar.replaceChildren();
+      const weekdayRow = document.createElement('div');
+      weekdayRow.className = 'booking-calendar-row booking-calendar-weekdays';
+      weekdayRow.setAttribute('role', 'row');
+      ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].forEach((label) => {
+        const cell = document.createElement('span');
+        cell.setAttribute('role', 'columnheader');
+        cell.textContent = label;
+        weekdayRow.append(cell);
+      });
+      calendar.append(weekdayRow);
+      const firstDay = `${displayedMonth.slice(0, 7)}-01`;
+      const offset = (dayValue(firstDay).getUTCDay() + 6) % 7;
+      const firstCell = shiftDay(firstDay, -offset);
+      const nextMonth = shiftMonth(firstDay, 1);
+      const daysInMonth = dayValue(shiftDay(nextMonth, -1)).getUTCDate();
+      const cells = Math.ceil((offset + daysInMonth) / 7) * 7;
+      const firstAllowed = firstDay < config.today ? config.today : firstDay;
+      const focusDay = focusedDate.slice(0, 7) === displayedMonth.slice(0, 7) ? focusedDate : firstAllowed;
+      let row: HTMLDivElement | undefined;
+      for (let index = 0; index < cells; index++) {
+        if (index % 7 === 0) {
+          row = document.createElement('div');
+          row.className = 'booking-calendar-row';
+          row.setAttribute('role', 'row');
+          calendar.append(row);
+        }
+        const date = shiftDay(firstCell, index);
+        const cell = document.createElement('div');
+        cell.setAttribute('role', 'gridcell');
+        if (date.slice(0, 7) !== displayedMonth.slice(0, 7)) {
+          cell.className = 'booking-calendar-empty';
+          cell.setAttribute('aria-hidden', 'true');
+        } else {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'booking-day';
+          button.dataset.day = date;
+          button.textContent = String(dayValue(date).getUTCDate());
+          button.setAttribute('aria-label', dayFormatter.format(dayValue(date)));
+          button.setAttribute('aria-pressed', String(date === selectedDate));
+          button.disabled = date < config.today || date > maxDate || submitting;
+          button.tabIndex = !button.disabled && date === focusDay ? 0 : -1;
+          if (date === config.today) button.setAttribute('aria-current', 'date');
+          cell.append(button);
+        }
+        row!.append(cell);
+      }
+      if (focus) calendar.querySelector<HTMLButtonElement>('[tabindex="0"]')?.focus();
+    }
+
+    async function loadSlots() {
+      availabilityRequest?.abort();
+      clearSlots();
+      const chosenService = service();
+      if (!chosenService || !selectedDate) {
+        slotsStatus.textContent = 'Scegli prima un servizio e un giorno.';
+        return;
+      }
+      const controller = new AbortController();
+      availabilityRequest = controller;
+      slotsContainer.setAttribute('aria-busy', 'true');
+      slotsStatus.textContent = 'Cerchiamo gli orari disponibili…';
+      const query = new URLSearchParams({ serviceId: chosenService.id, date: selectedDate });
+      try {
+        const { value } = await requestJson(`availability?${query}`, {}, controller);
+        if (controller.signal.aborted || lifecycle.signal.aborted) return;
+        const result = value as { date: string; serviceId: string; slots: Slot[] };
+        if (result.date !== selectedDate || result.serviceId !== chosenService.id || !Array.isArray(result.slots)) {
+          throw new BookingApiError(502);
+        }
+        slots = result.slots.filter((slot) => slot && timePattern.test(slot.time)
+          && typeof slot.label === 'string' && Number.isFinite(slot.startsAt) && Number.isFinite(slot.endsAt));
+        if (!slots.length) {
+          slotsStatus.textContent = 'Non ci sono orari disponibili per questo servizio in questo giorno. Prova un’altra data oppure scrivici.';
+          return;
+        }
+        slotsStatus.textContent = `Orari disponibili per ${dayFormatter.format(dayValue(selectedDate))}.`;
+        slots.forEach((slot) => {
+          const label = document.createElement('label');
+          label.className = 'booking-slot';
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.name = 'time';
+          input.value = slot.time;
+          input.required = true;
+          const text = document.createElement('span');
+          text.textContent = slot.label;
+          label.append(input, text);
+          slotsContainer.append(label);
+        });
+      } catch (error) {
+        if (controller.signal.aborted || lifecycle.signal.aborted) return;
+        slotsStatus.textContent = error instanceof BookingApiError && error.status === 429
+          ? 'Aspetta un momento prima di cercare altri orari. Puoi anche contattarci su WhatsApp.'
+          : 'Non riusciamo a mostrare gli orari di questo giorno. Riprova oppure scrivici su WhatsApp.';
+        slotsRetry.hidden = false;
+      } finally {
+        if (availabilityRequest === controller) slotsContainer.removeAttribute('aria-busy');
+      }
+    }
+
+    function chooseDate(value: string, focus = false) {
+      if (!config || !validDay(value) || value < config.today || value > maxDate || submitting) return;
+      selectedDate = value;
+      focusedDate = value;
+      displayedMonth = `${value.slice(0, 7)}-01`;
+      dateInput.value = value;
+      dateInput.setCustomValidity('');
+      showMessage(submitStatus, '');
+      renderCalendar(focus);
+      void loadSlots();
+    }
+
+    async function loadConfig() {
+      configRequest?.abort();
+      availabilityRequest?.abort();
+      configRetry.hidden = true;
+      form.hidden = true;
+      const controller = new AbortController();
+      configRequest = controller;
+      showMessage(status, 'Un momento, cerchiamo gli appuntamenti disponibili…');
+      try {
+        const { value } = await requestJson('config', {}, controller);
+        if (controller.signal.aborted || lifecycle.signal.aborted) return;
+        config = readConfig(value);
+        if (!config.bookingEnabled || !config.services.length) {
+          showMessage(status, 'Per prenotare scegliamo insieme servizio, giorno e orario. Scrivici su WhatsApp: ti aiutiamo volentieri.');
+          return;
+        }
+        maxDate = shiftDay(config.today, config.bookingDays);
+        displayedMonth = `${config.today.slice(0, 7)}-01`;
+        selectedDate = '';
+        focusedDate = config.today;
+        dateInput.min = config.today;
+        dateInput.max = maxDate;
+        serviceSelect.replaceChildren(new Option('Scegli un servizio', ''));
+        config.services.forEach((item) => serviceSelect.add(new Option(item.name, item.id)));
+        showMessage(status, '');
+        renderCalendar();
+        form.hidden = false;
+        updateSelection();
+      } catch {
+        if (controller.signal.aborted || lifecycle.signal.aborted) return;
+        showMessage(status, 'Al momento non riusciamo a mostrare gli appuntamenti disponibili. Puoi prenotare scrivendoci su WhatsApp.');
+        configRetry.hidden = false;
+      }
+    }
+
+    on(configRetry, 'click', () => { void loadConfig(); });
+    on(serviceSelect, 'change', () => {
+      serviceDuration.textContent = service() ? `Durata prevista: ${service()!.durationMinutes} minuti.` : '';
+      showMessage(submitStatus, '');
+      void loadSlots();
+    });
+    on(dateInput, 'change', () => {
+      if (!config) return;
+      if (!validDay(dateInput.value) || dateInput.value < config.today || dateInput.value > maxDate) {
+        dateInput.setCustomValidity('Scegli una data nel periodo disponibile.');
+        selectedDate = '';
+        availabilityRequest?.abort();
+        clearSlots();
+        slotsStatus.textContent = 'Scegli una data nel periodo disponibile.';
+        renderCalendar();
+        return;
+      }
+      chooseDate(dateInput.value);
+    });
+    on(monthPrev, 'click', () => {
+      if (!monthPrev.disabled) {
+        displayedMonth = shiftMonth(displayedMonth, -1);
+        renderCalendar();
+      }
+    });
+    on(monthNext, 'click', () => {
+      if (!monthNext.disabled) {
+        displayedMonth = shiftMonth(displayedMonth, 1);
+        renderCalendar();
+      }
+    });
+    on(calendar, 'click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('[data-day]');
+      if (button && !button.disabled) chooseDate(button.dataset.day!, true);
+    });
+    on(calendar, 'keydown', (event) => {
+      const keyboard = event as KeyboardEvent;
+      const button = (event.target as Element).closest<HTMLButtonElement>('[data-day]');
+      if (!button || button.disabled || !config) return;
+      let day = button.dataset.day!;
+      const weekday = (dayValue(day).getUTCDay() + 6) % 7;
+      switch (keyboard.key) {
+        case 'ArrowLeft': day = shiftDay(day, -1); break;
+        case 'ArrowRight': day = shiftDay(day, 1); break;
+        case 'ArrowUp': day = shiftDay(day, -7); break;
+        case 'ArrowDown': day = shiftDay(day, 7); break;
+        case 'Home': day = shiftDay(day, -weekday); break;
+        case 'End': day = shiftDay(day, 6 - weekday); break;
+        case 'PageUp': day = shiftMonth(day, -1); break;
+        case 'PageDown': day = shiftMonth(day, 1); break;
+        default: return;
+      }
+      keyboard.preventDefault();
+      focusedDate = day < config.today ? config.today : day > maxDate ? maxDate : day;
+      displayedMonth = `${focusedDate.slice(0, 7)}-01`;
+      renderCalendar(true);
+    });
+    on(slotsContainer, 'change', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (input.name !== 'time' || !slots.some((slot) => slot.time === input.value)) return;
+      selectedTime = input.value;
+      showMessage(submitStatus, '');
+      updateSelection();
+    });
+    on(slotsRetry, 'click', () => { void loadSlots(); });
+    on(nameInput, 'input', () => nameInput.setCustomValidity(''));
+    on(phoneInput, 'input', () => phoneInput.setCustomValidity(''));
+
+    on(form, 'submit', async (event) => {
+      event.preventDefault();
+      if (submitting || uncertainSubmission || !service() || !selectedDate || !selectedTime) return;
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      if (name.length < 2) nameInput.setCustomValidity('Inserisci il tuo nome e cognome.');
+      if (!/^\+[1-9]\d{7,14}$/.test(phone.replace(/[\s().-]/g, ''))) {
+        phoneInput.setCustomValidity('Inserisci un numero con prefisso internazionale, per esempio +39.');
+      }
+      if (!form.reportValidity()) return;
+      submitting = true;
+      updateSelection();
+      form.setAttribute('aria-busy', 'true');
+      const fields = Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>('input, select, button'));
+      const originallyDisabled = fields.map((field) => field.disabled);
+      fields.forEach((field) => { field.disabled = true; });
+      showMessage(submitStatus, 'Stiamo confermando il tuo appuntamento…');
+      const controller = new AbortController();
+      bookingRequest = controller;
+      try {
+        const result = await requestJson('bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ serviceId: serviceSelect.value, date: selectedDate, time: selectedTime, name, phone, reminderConsent: reminderInput.checked }),
+        }, controller);
+        if (controller.signal.aborted || lifecycle.signal.aborted) return;
+        const booking = result.value as BookingConfirmation;
+        if (result.status !== 201 || booking.status !== 'confirmed' || typeof booking.reference !== 'string'
+          || !booking.reference || typeof booking.serviceName !== 'string' || !validDay(booking.date) || !timePattern.test(booking.time)) {
+          uncertainSubmission = true;
+          throw new BookingApiError(502);
+        }
+        form.hidden = true;
+        showMessage(status, '');
+        root!.querySelector<HTMLElement>('[data-confirmation-recap]')!.textContent = `${booking.serviceName} · ${dayFormatter.format(dayValue(booking.date))} alle ${booking.time}.`;
+        root!.querySelector<HTMLElement>('[data-confirmation-reference]')!.textContent = booking.reference;
+        changeLink.href = makeWhatsappLink(`Ciao! Vorrei modificare il mio appuntamento da ${root!.dataset.businessName}. Il riferimento è ${booking.reference}, per ${dayFormatter.format(dayValue(booking.date))} alle ${booking.time}.`);
+        nameInput.value = '';
+        phoneInput.value = '';
+        reminderInput.checked = false;
+        confirmation.hidden = false;
+        root!.querySelector<HTMLElement>('#booking-confirmation-title')!.focus();
+      } catch (error) {
+        if (controller.signal.aborted || lifecycle.signal.aborted) return;
+        if (error instanceof BookingApiError && error.status === 409) {
+          showMessage(submitStatus, 'Questo orario è stato appena prenotato. Abbiamo aggiornato le disponibilità: scegli un altro orario.');
+          void loadSlots();
+        } else if (error instanceof BookingApiError && error.status === 429) {
+          showMessage(submitStatus, 'Aspetta un momento prima di inviare un’altra richiesta, oppure contattaci su WhatsApp.');
+        } else if (error instanceof BookingApiError && error.status >= 400 && error.status < 500) {
+          showMessage(submitStatus, 'Non abbiamo potuto confermare l’appuntamento. Controlla i recapiti e l’orario scelto, oppure scrivici su WhatsApp.');
+          void loadSlots();
+        } else {
+          uncertainSubmission = true;
+          showMessage(submitStatus, 'Non è arrivata una conferma. Prima di riprovare, contatta il salone per verificare se l’appuntamento è stato registrato.');
+        }
+      } finally {
+        if (!lifecycle.signal.aborted) {
+          submitting = false;
+          form.removeAttribute('aria-busy');
+          fields.forEach((field, index) => { field.disabled = originallyDisabled[index]; });
+          updateSelection();
+          renderCalendar();
+        }
+      }
+    });
+
+    void loadConfig();
+  }
+
+  document.addEventListener('astro:before-swap', () => {
+    disposeCurrent?.();
+    disposeCurrent = undefined;
+  });
+  document.addEventListener('astro:page-load', initializeBooking);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeBooking, { once: true });
+  } else {
+    initializeBooking();
+  }
+</script>
+
+<style>
+  .booking [hidden] {
+    display: none !important;
+  }
+  .booking__status,
+  .booking__submit-status {
+    padding: var(--space-md);
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    line-height: 1.55;
+  }
+  .booking__status {
+    margin-bottom: var(--space-lg);
+  }
+  .booking__retry {
+    margin-bottom: var(--space-lg);
+  }
+  .booking__form,
+  .booking__when {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .booking__panel {
+    min-width: 0;
+    padding: clamp(1rem, 2.5vw, 1.75rem);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+  }
+  .booking__panel legend {
+    padding-inline: 0.35rem;
+    font-size: var(--fs-300);
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+  .booking__panel legend span {
+    color: var(--color-primary-strong);
+  }
+  .booking__label {
+    display: block;
+    margin-bottom: var(--space-xs);
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+  .booking input:not([type='checkbox']):not([type='radio']),
+  .booking select {
+    display: block;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #a6b5cb;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    font-size: 1rem;
+  }
+  .booking__service select {
+    max-width: 38rem;
+  }
+  .booking__help {
+    margin-top: var(--space-xs);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--color-ink-soft);
+  }
+  .booking__help:empty {
+    display: none;
+  }
+  .booking__month-nav {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+  }
+  .booking__month {
+    text-align: center;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+  .booking__month-button {
+    min-height: 2.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  .booking button:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+  .booking__calendar :global(.booking-calendar-row) {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+  }
+  .booking__calendar :global(.booking-calendar-weekdays) {
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    text-align: center;
+    color: var(--color-ink-soft);
+  }
+  .booking__calendar :global(.booking-day) {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.2rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    cursor: pointer;
+  }
+  .booking__calendar :global(.booking-day:hover:not(:disabled)) {
+    border-color: var(--color-primary);
+  }
+  .booking__calendar :global(.booking-day[aria-current='date']) {
+    border-color: #9eacc0;
+    font-weight: 700;
+  }
+  .booking__calendar :global(.booking-day[aria-pressed='true']) {
+    background: var(--color-primary-strong);
+    color: var(--color-primary-contrast);
+    border-color: var(--color-primary-strong);
+    font-weight: 700;
+  }
+  .booking__date-label {
+    margin-top: var(--space-lg);
+  }
+  .booking__slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+  }
+  .booking__slots :global(.booking-slot) {
+    position: relative;
+    cursor: pointer;
+  }
+  .booking__slots :global(.booking-slot input) {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+  }
+  .booking__slots :global(.booking-slot span) {
+    display: grid;
+    place-items: center;
+    min-height: 3rem;
+    padding: var(--space-xs);
+    border: 1px solid #a6b5cb;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-weight: 600;
+  }
+  .booking__slots :global(.booking-slot input:checked + span) {
+    border-color: var(--color-primary-strong);
+    background: var(--color-primary-strong);
+    color: var(--color-primary-contrast);
+  }
+  .booking__slots :global(.booking-slot input:focus-visible + span) {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  .booking__text-button {
+    margin-top: var(--space-md);
+    padding: 0.3rem 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-primary-strong);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+  .booking__timezone {
+    margin-top: var(--space-lg);
+    font-size: 0.8125rem;
+    color: var(--color-muted);
+  }
+  .booking__contact-fields {
+    display: grid;
+    gap: var(--space-md);
+    margin-block: var(--space-lg);
+  }
+  .booking__summary {
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .booking__consent {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding-block: var(--space-xs);
+    line-height: 1.5;
+    cursor: pointer;
+  }
+  .booking__consent input {
+    flex: 0 0 auto;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-top: 0.15rem;
+    accent-color: var(--color-primary-strong);
+  }
+  .booking__submit {
+    margin-top: var(--space-lg);
+  }
+  .booking__submit-status {
+    margin-top: var(--space-lg);
+  }
+  .booking__confirmation {
+    background: var(--color-blush-soft);
+  }
+  .booking__confirmation > * + * {
+    margin-top: var(--space-md);
+  }
+  .booking__confirmation-recap {
+    font-size: var(--fs-300);
+    font-weight: 600;
+  }
+  .booking__reference strong {
+    overflow-wrap: anywhere;
+  }
+  .booking__fallback {
+    display: grid;
+    align-items: center;
+    gap: var(--space-lg);
+    margin-top: var(--space-xl);
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-alt);
+  }
+  .booking__fallback h2 {
+    font-size: var(--fs-400);
+    margin-bottom: var(--space-xs);
+  }
+  .booking__fallback p {
+    line-height: 1.55;
+    color: var(--color-ink-soft);
+  }
+  @media (min-width: 640px) {
+    .booking__contact-fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .booking__fallback {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+  }
+  @media (min-width: 840px) {
+    .booking__when {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+</style>

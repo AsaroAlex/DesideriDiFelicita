@@ -3,13 +3,13 @@
 > **«La bellezza nasce da un desiderio, la felicità lo rende reale.»**
 > *Creiamo insieme il tuo momento felice.*
 
-Sito **vetrina** del salone di parrucchiera **Desideri di Felicità** di **Jessica Asaro**
+Sito del salone di parrucchiera **Desideri di Felicità** di **Jessica Asaro**
 a Galliera (BO). Specialità: **cura del capello riccio**, oltre a taglio, colore,
-balayage, styling e trattamenti. Nessun e-commerce e nessuna prenotazione online: le
-prenotazioni avvengono via **WhatsApp**, telefono o DM Instagram. Obiettivo: **conversione
-locale** e **SEO locale**, con un design editoriale premium e mobile-first.
+balayage, styling e trattamenti. Include **calendario di prenotazione**, **agenda
+privata** e motore proprietario per i **promemoria WhatsApp**, senza un gestionale
+SaaS. Design editoriale e mobile-first; nessun e-commerce.
 
-Online su GitHub Pages: <https://asaroalex.github.io/DesideriDiFelicita/>
+Online su Railway: <https://desideri-di-felicita-production.up.railway.app/>
 
 ---
 
@@ -19,17 +19,19 @@ Online su GitHub Pages: <https://asaroalex.github.io/DesideriDiFelicita/>
 - CSS moderno con custom properties (nessun framework CSS).
 - Font self-hosted via `@fontsource`: **Fraunces** (display), **Manrope** (testo).
 - `@astrojs/sitemap` per `sitemap-index.xml`.
+- **Node 24**, HTTP nativo, `node:sqlite` e `serve-handler` per sito e API nello
+  stesso servizio. Solo 13 dipendenze runtime; Astro e font servono al build.
 - Motion leggero: View Transitions native (`ClientRouter`), reveal via IntersectionObserver,
   barra di scroll in CSS — tutto gated da `prefers-reduced-motion`.
 
 ## Sviluppo
 
 ```bash
-npm install
-npm run dev      # server di sviluppo
-npm run build    # build di produzione in dist/
-npm run preview  # anteprima della build
-npx astro check  # diagnostica TypeScript/Astro
+npm ci
+npm run dev      # anteprima grafica Astro; non avvia le API
+npm test         # prove store, orari, autenticazione e invii Meta simulati
+SITE_URL=http://127.0.0.1:3000 BASE_PATH=/ npm run build
+npm start        # sito e API; database locale privato .data/
 ```
 
 ## Struttura
@@ -46,6 +48,8 @@ src/
   pages/*.astro          index, chi-siamo, servizi, galleria, contatti, privacy, 404, robots.txt.ts
   styles/tokens.css      Design token (palette, tipografia, spaziature) — punto unico per il look.
   styles/global.css      Stili base, bottoni, card, accessibilità, reveal.
+server/                  API, autenticazione, SQLite, scheduler e adapter Meta.
+tests/                   Test con database temporanei e provider simulato.
 public/                  favicon, manifest, immagini OG.
 docs/                    Materiali di brand e brief (non parte del build).
 ```
@@ -88,14 +92,14 @@ URL pubblico: <https://desideri-di-felicita-production.up.railway.app/>
 
 Il ramo dedicato è `codex/railway-deploy`. Collegare il repository al servizio
 Railway e selezionare questo ramo, oppure pubblicare il checkout con `railway up`.
-`railway.json` definisce build con Railpack, avvio tramite `npm start` e healthcheck `/`.
-Il sito viene compilato una volta e servito come file statici da `dist/`.
+`railway.json` definisce build con Railpack, avvio tramite `npm start` e healthcheck `/api/health`.
+Il sito viene compilato una volta e servito da `dist/` insieme alle API Node.
 `serve.json` disabilita gli elenchi delle cartelle e distingue la cache degli asset
 con hash (`/_astro/`, un anno) dalla rivalidazione delle pagine e degli altri file.
 
 ```bash
 npm ci
-npm run build
+SITE_URL=http://127.0.0.1:3000 BASE_PATH=/ npm run build
 PORT=3000 npm start
 ```
 
@@ -115,6 +119,16 @@ Per un futuro dominio personalizzato, aggiungerlo in Networking, configurare i
 record DNS indicati da Railway e impostare `SITE_URL=https://dominio-reale` prima
 del nuovo deploy. Non è necessario `public/CNAME` su Railway.
 
+L’agenda richiede **un volume persistente montato in `/data`**, **una replica** e
+le variabili `NODE_ENV=production`, `DATA_DIR=/data`, `APP_ORIGIN` uguale all’origine
+HTTPS pubblica. Healthcheck: `/api/health`. Tenere il servizio sempre attivo per
+eseguire i promemoria; lo sleep sospenderebbe il timer. Il build rimuove le
+dipendenze di sviluppo con `npm prune --omit=dev` dopo aver generato il sito.
+
+Per attivazione iniziale, configurazione Meta, limiti di costo, backup e recupero,
+leggere [la guida dell’agenda](docs/agenda-proprietaria.md). Le durate dei servizi
+devono essere impostate da Jessica: il calendario parte disabilitato.
+
 ### GitHub Pages
 
 Senza `SITE_URL`, `RAILWAY_PUBLIC_DOMAIN` e `BASE_PATH`, la configurazione mantiene
@@ -122,3 +136,5 @@ Senza `SITE_URL`, `RAILWAY_PUBLIC_DOMAIN` e `BASE_PATH`, la configurazione manti
 `.github/workflows/deploy.yml` pubblica su **GitHub Pages** a ogni push su `main`
 o con avvio manuale. In *Settings → Pages* la sorgente deve essere impostata su
 **GitHub Actions**.
+Questa versione resta una vetrina statica con contatto WhatsApp: le API e l’agenda
+persistente funzionano nel servizio Railway, non su GitHub Pages.

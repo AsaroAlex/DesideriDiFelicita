@@ -3,7 +3,6 @@ import { Image } from 'astro:assets';
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
 import { heroImage, heroImageAlt } from '../data/images';
-import WhatsappButton from './WhatsappButton.astro';
 ---
 
 <section class="hero">
@@ -22,7 +21,7 @@ import WhatsappButton from './WhatsappButton.astro';
       </p>
       <div class="hero__actions hero__a4">
         <a class="btn btn--primary" href={withBase('/galleria')}>Guarda i lavori</a>
-        <WhatsappButton label="WhatsApp" class="hero__wa" />
+        <a class="btn hero__wa" href={withBase('/prenota')}>Prenota</a>
       </div>
     </div>
 

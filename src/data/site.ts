@@ -137,7 +137,7 @@ export const site = {
   faqs: [
     {
       q: 'Come posso prenotare un appuntamento?',
-      a: 'Puoi prenotare scrivendoci su WhatsApp, chiamandoci al telefono oppure inviandoci un messaggio diretto su Instagram. Ti rispondiamo il prima possibile.',
+      a: 'Apri il calendario dalla voce Prenota e scegli tra i servizi e gli orari disponibili. La prenotazione è confermata quando ricevi il riferimento sul sito. Per consulenze o richieste su misura puoi anche scriverci su WhatsApp, chiamarci o contattarci su Instagram.',
     },
     {
       q: 'Quali servizi offre il salone?',

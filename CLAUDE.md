@@ -34,7 +34,7 @@
 
 ## 3. Obiettivo del sito
 
-Sito **vetrina** (no e-commerce, no booking) per **conversione locale** + **SEO locale**.
+Sito del salone con **prenotazioni e agenda proprietarie** (no e-commerce) per **conversione locale** + **SEO locale**.
 Priorità: 1) conversione (WhatsApp/telefono/indirizzo/orari/mappa/servizi/galleria/IG);
 2) SEO locale (JSON-LD HairSalon + FAQPage + BreadcrumbList, sitemap, robots, canonical,
 OG, performance); 3) design premium editoriale; 4) rifinitura "Awwwards-like".
@@ -70,7 +70,7 @@ OG, performance); 3) design premium editoriale; 4) rifinitura "Awwwards-like".
 | Email | asarojessica92@gmail.com |
 | Slogan | "La bellezza nasce da un desiderio, la felicità lo rende reale." |
 | Servizi | taglio donna/uomo/bambini, colore, balayage/biondo, cura del riccio, piega/frangia, trattamenti (Vitality's, anti-caduta) |
-| Prenotazioni | WhatsApp, telefono, DM Instagram |
+| Prenotazioni | Calendario proprietario su Railway, WhatsApp, telefono, DM Instagram |
 | P. IVA | IT04315221202 |
 | Orari | Mar/Mer 9–15·17–19, Gio 9–15, Ven 9–13·17–19, Sab 9–13, Dom/Lun chiuso |
 | Recensioni Google | 5,0 · 3 recensioni (Monica Malverti, Tatiana Flocea, alice paxia) — in vetrina, non nel JSON-LD |
@@ -192,3 +192,40 @@ la mappa è attiva, niente badge "da confermare".
   residuo segnala Astro, sharp ed esbuild; `npm start` usa solo il server statico
   `serve`, non il runtime Astro. Per azzerare tutte le segnalazioni npm propone una
   migrazione alla major 7, da verificare come manutenzione separata.
+
+
+## 15. Agenda proprietaria — 2026-10-04
+
+- L’utente ha scelto software proprietario e promemoria **WhatsApp automatici**,
+  scartando gestionali SaaS. Non riproporre servizi esterni a pagamento come soluzione.
+- `/prenota`: servizi/orari realmente disponibili, conferma atomica con riferimento,
+  nome/telefono e consenso WhatsApp facoltativo, nessun account cliente.
+- `/agenda`: accesso privato Jessica, attivazione iniziale con token monouso e scadenza,
+  password scrypt, sessione 12h, CSRF, calendario giorno/settimana, CRUD appuntamenti,
+  durate servizi, orari/chiusure e limiti di invio. Noindex, no-store, no localStorage.
+- **Non inventare durate:** inizialmente i servizi sono disabilitati e senza durata.
+  Jessica imposta i tempi reali e abilita il calendario dalla sua area.
+- Server Node **24**, `node:sqlite`, API Node HTTP e `serve-handler` per `dist/`.
+  Astro/font/sitemap sono dipendenze di build; il deploy le rimuove dal runtime.
+- SQLite privato su volume Railway `/data`, **una sola replica**, healthcheck
+  `/api/health`, `NODE_ENV=production`, `DATA_DIR=/data`, `APP_ORIGIN` HTTPS.
+  Il volume deve esistere prima del deploy; non usare storage effimero per l’agenda.
+- Backup giornalieri privati con 7 copie, CSV riservato. Gli snapshot sullo stesso
+  volume non sostituiscono una copia esterna/backup volume Railway.
+- Promemoria default 18:00 Europe/Rome del giorno prima: una sola coda persistente,
+  nessun messaggio di conferma a pagamento, quote default 20/giorno e 200/mese.
+  Solo 429 esplicito può essere riprovato(max 3), errori ambigui/5xx/timeout richiedono
+  verifica; nessun reinvio automatico dopo riavvio o recupero dopo mezzanotte.
+- Meta Cloud API ufficiale, versione Graph v26.0, template **utility approvato**
+  con 3 parametri nome/data/ora. Nessuna automazione WhatsApp Web.
+  Codice pronto non significa invio attivo: servono account/numero/credenziali/template
+  Meta. Non promettere che il numero già nell’app funzioni senza migrazione/coexistence.
+- Costi: infrastruttura Railway + messaggi Meta secondo tariffa applicabile;
+  nessun canone del gestionale. Non presentare come gratis né inventare tariffe Italia.
+- Segreti solo variabili server; mai versionare token/password/link di attivazione.
+  Test WhatsApp solo con provider simulato; non inviare a clienti durante le verifiche.
+- Pages mantiene vetrina/fallback WhatsApp, **non ospita** agenda e API persistenti.
+- Dati operativi dell’agenda (durate, orari, chiusure) stanno nel DB e sono modificabili
+  dalla titolare; identità/contatti del brand rimangono centralizzati in `site.ts`.
+- Privacy aggiornata per modulo prenotazioni, agenda privata/cookie tecnico,
+  hosting e consenso facoltativo ai promemoria, senza marketing o analytics.

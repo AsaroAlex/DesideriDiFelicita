@@ -3,19 +3,25 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
-  "description": "Sito vetrina del salone di parrucchiera Desideri di Felicità",
+  "description": "Sito e agenda proprietaria del salone Desideri di Felicità",
   "scripts": {
     "dev": "astro dev",
-    "start": "serve dist --config ../serve.json --listen tcp://0.0.0.0:${PORT:-3000} --no-clipboard",
+    "start": "node --env-file-if-exists=.env server/index.mjs",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
+    "serve-handler": "^6.1.7"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "devDependencies": {
     "@astrojs/sitemap": "^3.2.1",
     "@fontsource-variable/fraunces": "^5.2.9",
     "@fontsource-variable/manrope": "^5.2.8",
-    "astro": "^5.18.2",
-    "serve": "^14.2.6"
+    "astro": "^5.18.2"
   }
 }
