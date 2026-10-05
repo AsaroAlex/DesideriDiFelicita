@@ -2,17 +2,18 @@
 import ServiceCard from './ServiceCard.astro';
 import { site } from '../data/site';
 import { withBase } from '../lib/href';
+import { seedServiceId } from '../lib/public-config';
 
 interface Props {
   variant?: 'card' | 'line';
   headingLevel?: 'h2' | 'h3';
   max?: number;
-  excludeNames?: string[];
+  excludeIds?: string[];
 }
 
-const { variant = 'card', headingLevel = 'h3', max = 0, excludeNames = [] } = Astro.props;
+const { variant = 'card', headingLevel = 'h3', max = 0, excludeIds = [] } = Astro.props;
 const fallbackServices = site.services
-  .filter((service) => !excludeNames.includes(service.name))
+  .filter((service, index) => !excludeIds.includes(seedServiceId(service, index)))
   .slice(0, max > 0 ? max : undefined);
 ---
 
@@ -22,7 +23,7 @@ const fallbackServices = site.services
   data-api={withBase('/api/public/config')}
   data-booking-path={withBase('/prenota')}
   data-max={max}
-  data-exclude={JSON.stringify(excludeNames)}
+  data-exclude-ids={JSON.stringify(excludeIds)}
 >
   <div class:list={['grid', 'grid--3', 'service-catalog__list', variant === 'line' && 'service-catalog__list--lines']} data-service-list>
     {fallbackServices.map((service, index) => (
@@ -44,38 +45,29 @@ const fallbackServices = site.services
 </div>
 
 <script>
-  interface PublicService {
-    id: string;
-    name: string;
-    description: string;
-    durationMinutes: number | null;
-    priceCents: number | null;
-    priceFrom: boolean;
-    listed: boolean;
-  }
-  const activeCatalogRequests = new Set<AbortController>();
+  import { getPublicConfig, type PublicService } from '../lib/public-config';
 
-  function normalizeCatalog(value: unknown): PublicService[] | null {
-    if (!Array.isArray(value)) return null;
-    const result: PublicService[] = [];
-    const ids = new Set<string>();
-    for (const item of value) {
-      if (!item || typeof item !== 'object' || typeof item.id !== 'string' || !item.id.trim()
-        || typeof item.name !== 'string' || !item.name.trim() || typeof item.listed !== 'boolean'
-        || ids.has(item.id)) return null;
-      ids.add(item.id);
-      result.push({
-        id: item.id,
-        name: item.name,
-        description: typeof item.description === 'string' ? item.description : '',
-        durationMinutes: Number.isInteger(item.durationMinutes) && item.durationMinutes > 0
-          ? item.durationMinutes : null,
-        priceCents: Number.isSafeInteger(item.priceCents) && item.priceCents >= 0 ? item.priceCents : null,
-        priceFrom: item.priceFrom === true,
-        listed: item.listed,
-      });
-    }
-    return result;
+  function updateFeaturedServices(api: string, bookingPath: string, catalog: PublicService[]) {
+    document.querySelectorAll<HTMLElement>('[data-featured-service]').forEach((feature) => {
+      if (feature.dataset.configUrl !== api) return;
+      const service = catalog.find((item) => item.id === feature.dataset.featuredService && item.listed);
+      feature.hidden = !service;
+      if (!service) return;
+      const name = feature.querySelector<HTMLElement>('[data-featured-name]');
+      const description = feature.querySelector<HTMLElement>('[data-featured-description]');
+      const fallback = feature.querySelector<HTMLElement>('[data-featured-fallback]');
+      const booking = feature.querySelector<HTMLAnchorElement>('[data-featured-booking]');
+      if (name) name.textContent = service.name;
+      if (description) {
+        description.textContent = service.description;
+        description.hidden = !service.description;
+      }
+      if (fallback) fallback.hidden = true;
+      if (booking) {
+        booking.href = `${bookingPath}?servizio=${encodeURIComponent(service.id)}`;
+        booking.setAttribute('aria-label', `Prenota: ${service.name}`);
+      }
+    });
   }
 
   async function updateCatalog(root: HTMLElement) {
@@ -85,19 +77,14 @@ const fallbackServices = site.services
     const template = root.querySelector<HTMLTemplateElement>('[data-service-template]');
     const empty = root.querySelector<HTMLElement>('[data-service-empty]');
     if (!list || !template || !empty || !root.dataset.api) return;
-    const controller = new AbortController();
-    activeCatalogRequests.add(controller);
     try {
-      const response = await fetch(root.dataset.api, {
-        headers: { Accept: 'application/json' }, cache: 'no-store', signal: controller.signal,
-      });
-      if (!response.ok) return;
-      const config = await response.json();
-      const catalog = normalizeCatalog(config.catalog);
+      const config = await getPublicConfig(root.dataset.api);
+      const catalog = config?.catalog;
       if (!catalog || !root.isConnected) return;
-      const excluded: string[] = JSON.parse(root.dataset.exclude || '[]');
+      updateFeaturedServices(root.dataset.api, root.dataset.bookingPath || '', catalog);
+      const excluded: string[] = JSON.parse(root.dataset.excludeIds || '[]');
       const max = Number(root.dataset.max) || 0;
-      const services = catalog.filter((service) => service.listed && !excluded.includes(service.name))
+      const services = catalog.filter((service) => service.listed && !excluded.includes(service.id))
         .slice(0, max > 0 ? max : undefined);
       const fragment = document.createDocumentFragment();
       const currency = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
@@ -126,8 +113,6 @@ const fallbackServices = site.services
       empty.hidden = services.length > 0;
     } catch {
       // La vetrina statica resta leggibile anche su Pages o con API non raggiungibile.
-    } finally {
-      activeCatalogRequests.delete(controller);
     }
   }
 
@@ -135,10 +120,6 @@ const fallbackServices = site.services
     document.querySelectorAll<HTMLElement>('[data-service-catalog]').forEach((root) => void updateCatalog(root));
   }
   document.addEventListener('astro:page-load', initializeCatalogs);
-  document.addEventListener('astro:before-swap', () => {
-    activeCatalogRequests.forEach((controller) => controller.abort());
-    activeCatalogRequests.clear();
-  });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeCatalogs, { once: true });
   else initializeCatalogs();
 </script>

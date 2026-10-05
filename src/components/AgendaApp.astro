@@ -120,14 +120,19 @@ import CustomerDirectory from './CustomerDirectory.astro';
 
       <section data-panel="services" hidden aria-labelledby="services-title">
         <h2 id="services-title" tabindex="-1">I servizi del salone</h2>
-        <p class="agenda-note">Scegli quali servizi mostrare nel calendario, imposta i nomi e le durate reali. Nascondere un servizio conserva gli appuntamenti e le richieste già ricevute.</p>
+        <p class="agenda-note">Gestisci i servizi visibili sul sito e nel calendario delle clienti. Ogni variante è un servizio indipendente, con nome, durata e prezzo propri. I servizi rimossi dal catalogo restano nello storico.</p>
         <form class="agenda-card service-create-form" data-service-create>
-          <h3>Aggiungi un servizio</h3><div class="form-grid"><label>Nome<input name="name" maxlength="100" minlength="2" required placeholder="Nome del servizio" /></label><label>Durata del trattamento, in minuti<input name="durationMinutes" type="number" min="5" max="480" step="1" placeholder="Puoi impostarla in seguito" /></label><label>Prezzo, in euro<input name="price" type="number" min="0" max="10000" step="0.01" placeholder="Su richiesta se lasciato vuoto" /></label><label>Tempo di riordino dopo il servizio, in minuti<input name="bufferAfterMinutes" type="number" min="0" max="120" step="1" value="0" required /></label></div>
+          <div class="agenda-section-head"><h3 tabindex="-1" data-service-create-title>Aggiungi un servizio</h3><div class="button-group"><button type="button" class="agenda-button secondary" data-service-create-restart>Nuovo servizio</button><button type="button" class="agenda-button secondary" data-service-variant-close hidden>Chiudi variante</button></div></div>
+          <p class="agenda-note" data-service-variant-origin hidden></p>
+          <div class="agenda-notice" data-service-create-guard hidden><p>Ci sono modifiche non salvate in questo modulo. Puoi conservarle oppure sostituirle per continuare.</p><div class="button-group"><button type="button" class="agenda-button" data-service-create-keep>Conserva la bozza</button><button type="button" class="agenda-button secondary" data-service-create-replace>Sostituisci la bozza</button></div></div>
+          <div class="form-grid"><label>Nome<input name="name" maxlength="100" minlength="2" required placeholder="Nome del servizio" /></label><label>Durata del trattamento, in minuti<input name="durationMinutes" type="number" min="5" max="480" step="1" placeholder="Puoi impostarla in seguito" /></label><label>Prezzo, in euro<input name="price" type="number" min="0" max="10000" step="0.01" placeholder="Su richiesta se lasciato vuoto" /></label><label>Tempo di riordino dopo il servizio, in minuti<input name="bufferAfterMinutes" type="number" min="0" max="120" step="1" value="0" required /></label></div>
           <label>Descrizione per le clienti<textarea name="description" maxlength="1000" rows="3" /></label><label class="checkbox-label"><input name="priceFrom" type="checkbox" />Il prezzo indicato è un prezzo “a partire da”</label>
-          <label class="checkbox-label"><input name="listed" type="checkbox" checked />Mostra il servizio nel calendario delle clienti</label>
+          <label class="checkbox-label"><input name="listed" type="checkbox" checked />Mostra il servizio sul sito e nel calendario delle clienti</label>
           <label class="checkbox-label"><input name="enabled" type="checkbox" />Abilita la conferma automatica per questo servizio</label>
-          <button class="agenda-button" type="submit">Aggiungi servizio</button>
+          <button class="agenda-button" type="submit" data-service-create-save>Aggiungi servizio</button>
         </form>
+        <div class="agenda-card service-filters"><label>Cerca un servizio<input type="search" data-service-search placeholder="Nome o descrizione" autocomplete="off" /></label><label>Mostra<select data-service-visibility><option value="visible">Visibili</option><option value="archived">Archiviati</option><option value="all">Tutti</option></select></label></div>
+        <p class="agenda-note" data-service-summary aria-live="polite"></p>
         <div class="service-settings" data-services></div>
       </section>
 
@@ -239,6 +244,11 @@ import CustomerDirectory from './CustomerDirectory.astro';
     let activePanel = 'overview';
     let settingsDirty = false;
     const serviceDrafts = new Map<string, ServiceDraft>();
+    let serviceSearch = '';
+    let serviceVisibility = 'visible';
+    let serviceVariantOrigin: { id: string; name: string } | null = null;
+    let serviceCreateBaseline = '';
+    let pendingServiceCreateTransition: (() => void) | null = null;
     let editingId = '';
     let editorOpener: HTMLElement | null = null;
     let editorBaseline = '';
@@ -311,7 +321,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       busy = true;
       inform('Operazione in corso…');
       const buttons = form ? Array.from(form.querySelectorAll<HTMLButtonElement>('button')) : [];
-      const fields = form === appointmentForm ? Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')) : [];
+      const fields = form === appointmentForm || form === createServiceForm ? Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')) : [];
       const previous = buttons.map(button => button.disabled);
       const priorFields = fields.map(field => field.disabled);
       buttons.forEach(button => { button.disabled = true; });
@@ -330,6 +340,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; input(accountForm, 'email').value = next.email || ''; document.dispatchEvent(new CustomEvent('agenda:authenticated', { detail: { email: next.email, csrfToken } })); return; }
       document.dispatchEvent(new CustomEvent('agenda:logout'));
       automation = undefined; closedDatesDraft = []; settingsDirty = false; serviceDrafts.clear(); reminderPeriod = 'today'; el<HTMLSelectElement>('[data-reminder-period]').value = 'today'; el('[data-reminder-summary]').textContent = ''; showPanel('overview', false);
+      serviceSearch = ''; serviceVisibility = 'visible'; el<HTMLInputElement>('[data-service-search]').value = ''; el<HTMLSelectElement>('[data-service-visibility]').value = 'visible'; el('[data-service-summary]').textContent = ''; resetServiceCreation();
       services = []; appointments = []; blocks = []; operationAppointments = []; operationBlocks = []; requests = []; reminders = []; settings = undefined; requestStatus = 'pending'; el<HTMLSelectElement>('[data-request-status]').value = requestStatus;
       calendarSearch = ''; calendarStatus = 'active'; el<HTMLInputElement>('[data-calendar-search]').value = ''; el<HTMLSelectElement>('[data-calendar-status]').value = 'active'; el('[data-next-appointment]').replaceChildren(); el('[data-today-capacity]').replaceChildren(); el('[data-calendar-summary]').textContent = ''; pendingEditorTransition = null; editorBaseline = ''; blockForm.reset(); el('[data-block-editor]').hidden = true; el('[data-editor-guard]').hidden = true;
       el('[data-calendar]').replaceChildren(); el('[data-services]').replaceChildren(); el('[data-reminders]').replaceChildren(); el('[data-stats]').replaceChildren(); el('[data-automation]').replaceChildren();
@@ -656,26 +667,81 @@ import CustomerDirectory from './CustomerDirectory.astro';
       }));
     }
 
+    function serviceCreationSignature() {
+      return JSON.stringify(Array.from(createServiceForm.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input[name], textarea[name]')).map(field => [field.name, field instanceof HTMLInputElement && field.type === 'checkbox' ? field.checked : field.value]));
+    }
+
+    function resetServiceCreation() {
+      createServiceForm.reset(); serviceVariantOrigin = null; pendingServiceCreateTransition = null;
+      el('[data-service-create-title]').textContent = 'Aggiungi un servizio'; el('[data-service-create-save]').textContent = 'Aggiungi servizio';
+      el('[data-service-variant-close]').hidden = true; el('[data-service-variant-origin]').hidden = true; el('[data-service-variant-origin]').textContent = ''; el('[data-service-create-guard]').hidden = true;
+      serviceCreateBaseline = serviceCreationSignature();
+    }
+
+    function serviceCreationTransition(task: () => void) {
+      if (busy) return;
+      if (serviceCreationSignature() !== serviceCreateBaseline) {
+        pendingServiceCreateTransition = task; el('[data-service-create-guard]').hidden = false;
+        createServiceForm.scrollIntoView({ behavior: 'auto', block: 'start' }); focus('[data-service-create-keep]'); return;
+      }
+      pendingServiceCreateTransition = null; el('[data-service-create-guard]').hidden = true; task();
+    }
+
+    function suggestedVariantName(source: Service) {
+      const normalize = (name: string) => name.trim().replace(/\s+/g, ' ').normalize('NFKC').toLocaleLowerCase('it-IT'); const names = new Set(services.map(service => normalize(service.name)));
+      for (let index = 1; ; index++) { const suffix = ` · variante${index === 1 ? '' : ` ${index}`}`; const name = source.name.slice(0, 100 - suffix.length).trimEnd() + suffix; if (!names.has(normalize(name))) return name; }
+    }
+
+    function beginServiceVariant(id: string) {
+      serviceCreationTransition(() => {
+        const source = services.find(service => service.id === id);
+        if (!source) { inform('Il servizio di origine non è più disponibile. Aggiorna il catalogo.', true); return; }
+        resetServiceCreation(); serviceVariantOrigin = { id: source.id, name: source.name };
+        input(createServiceForm, 'name').value = suggestedVariantName(source); input<HTMLTextAreaElement>(createServiceForm, 'description').value = source.description || '';
+        input(createServiceForm, 'durationMinutes').value = source.durationMinutes === null ? '' : String(source.durationMinutes);
+        input(createServiceForm, 'price').value = source.priceCents === null || source.priceCents === undefined ? '' : (source.priceCents / 100).toFixed(2);
+        input(createServiceForm, 'priceFrom').checked = Boolean(source.priceFrom); input(createServiceForm, 'bufferAfterMinutes').value = String(source.bufferAfterMinutes || 0);
+        input(createServiceForm, 'listed').checked = true; input(createServiceForm, 'enabled').checked = false;
+        el('[data-service-create-title]').textContent = 'Crea una variante'; el('[data-service-create-save]').textContent = 'Crea variante'; el('[data-service-variant-close]').hidden = false;
+        const origin = el('[data-service-variant-origin]'); origin.textContent = `Da «${source.name}»: sono stati copiati gli ultimi dati salvati. Puoi cambiare ogni campo. La variante è un servizio separato: le modifiche future ai due servizi resteranno indipendenti. La conferma automatica parte disattivata. Il servizio verrà creato solo quando premi Crea variante.`; origin.hidden = false;
+        serviceCreateBaseline = serviceCreationSignature(); createServiceForm.scrollIntoView({ behavior: 'auto', block: 'start' }); input(createServiceForm, 'name').focus();
+      });
+    }
+
     function renderServices() {
-      el('[data-services]').replaceChildren(...services.map(service => {
+      const query = serviceSearch.trim().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT');
+      const visibleCount = services.filter(service => service.listed !== false).length; const archivedCount = services.length - visibleCount;
+      const choices = el<HTMLSelectElement>('[data-service-visibility]'); choices.options[0].textContent = `Visibili (${visibleCount})`; choices.options[1].textContent = `Archiviati (${archivedCount})`; choices.options[2].textContent = `Tutti (${services.length})`;
+      const filtered = services.filter(service => (serviceVisibility === 'all' || (serviceVisibility === 'archived' ? service.listed === false : service.listed !== false)) && (!query || `${service.name} ${service.description || ''}`.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').includes(query)));
+      el('[data-service-summary]').textContent = `${filtered.length} servizi trovati · ${visibleCount} visibili sul sito e nel calendario · ${archivedCount} archiviati. La ricerca usa i dati salvati; le bozze restano disponibili quando torni alla scheda.`;
+      if (!filtered.length) { el('[data-services]').replaceChildren(textNode('p', 'Nessun servizio corrisponde ai filtri scelti.', 'agenda-card')); return; }
+      el('[data-services]').replaceChildren(...filtered.map(service => {
         const draft = serviceDrafts.get(service.id);
         const form = document.createElement('form'); form.className = 'agenda-card service-form'; form.dataset.serviceId = service.id;
-        const top = textNode('div', '', 'appointment-top'); top.append(textNode('h3', service.name), textNode('span', service.listed !== false ? 'Visibile alle clienti' : 'Nascosto', 'status-badge')); form.append(top);
+        const top = textNode('div', '', 'appointment-top'); top.append(textNode('h3', service.name), textNode('span', service.listed !== false ? 'Visibile sul sito e nel calendario' : 'Archiviato', 'status-badge')); form.append(top);
         const nameLabel = textNode('label', 'Nome del servizio'); const name = document.createElement('input'); name.name = 'name'; name.required = true; name.minLength = 2; name.maxLength = 100; name.value = draft?.name ?? service.name; nameLabel.append(name);
         const durationLabel = textNode('label', 'Durata, in minuti'); const duration = document.createElement('input'); duration.type = 'number'; duration.min = '5'; duration.max = '480'; duration.step = '1'; duration.name = 'durationMinutes'; duration.value = draft?.duration ?? (service.durationMinutes ? String(service.durationMinutes) : ''); duration.placeholder = 'Durata reale del servizio'; durationLabel.append(duration);
         const descriptionLabel = textNode('label', 'Descrizione per le clienti'); const description = document.createElement('textarea'); description.name = 'description'; description.maxLength = 1000; description.rows = 3; description.value = draft?.description ?? service.description ?? ''; descriptionLabel.append(description);
         const priceLabel = textNode('label', 'Prezzo, in euro'); const price = document.createElement('input'); price.name = 'price'; price.type = 'number'; price.min = '0'; price.max = '10000'; price.step = '0.01'; price.placeholder = 'Su richiesta se lasciato vuoto'; price.value = draft?.price ?? (service.priceCents === null || service.priceCents === undefined ? '' : (service.priceCents / 100).toFixed(2)); priceLabel.append(price);
         const priceFromLabel = textNode('label', '', 'checkbox-label'); const priceFrom = document.createElement('input'); priceFrom.type = 'checkbox'; priceFrom.name = 'priceFrom'; priceFrom.checked = draft?.priceFrom ?? Boolean(service.priceFrom); priceFromLabel.append(priceFrom, document.createTextNode('Prezzo “a partire da”'));
         const bufferLabel = textNode('label', 'Tempo di riordino dopo il servizio, in minuti'); const buffer = document.createElement('input'); buffer.name = 'bufferAfterMinutes'; buffer.type = 'number'; buffer.min = '0'; buffer.max = '120'; buffer.step = '1'; buffer.required = true; buffer.value = draft?.buffer ?? String(service.bufferAfterMinutes || 0); bufferLabel.append(buffer);
-        const listedLabel = textNode('label', '', 'checkbox-label'); const listed = document.createElement('input'); listed.type = 'checkbox'; listed.name = 'listed'; listed.checked = draft?.listed ?? (service.listed !== false); listedLabel.append(listed, document.createTextNode('Mostra nel calendario delle clienti'));
-        const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = draft?.enabled ?? Boolean(service.enabled); enabled.disabled = !listed.checked; enabledLabel.append(enabled, document.createTextNode('Abilita la conferma automatica per questo servizio'));
-        on(listed, 'change', () => { enabled.disabled = !listed.checked; if (!listed.checked) enabled.checked = false; });
-        const rememberDraft = () => { serviceDrafts.set(service.id, { name: name.value, description: description.value, duration: duration.value, price: price.value, priceFrom: priceFrom.checked, buffer: buffer.value, listed: listed.checked, enabled: listed.checked && enabled.checked }); };
+        const listed = service.listed !== false;
+        const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = listed && (draft?.enabled ?? Boolean(service.enabled)); enabled.disabled = !listed; enabledLabel.append(enabled, document.createTextNode('Abilita la conferma automatica per questo servizio'));
+        const rememberDraft = () => { serviceDrafts.set(service.id, { name: name.value, description: description.value, duration: duration.value, price: price.value, priceFrom: priceFrom.checked, buffer: buffer.value, listed, enabled: listed && enabled.checked }); };
         on(form, 'input', rememberDraft); on(form, 'change', rememberDraft);
-        const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit'; form.append(nameLabel, descriptionLabel, durationLabel, priceLabel, priceFromLabel, bufferLabel, textNode('small', 'Il tempo di riordino blocca l’agenda dopo il trattamento. Le nuove durate e i tempi di riordino non cambiano gli appuntamenti già salvati.'), listedLabel, enabledLabel, textNode('small', 'Senza durata impostata, Jessica controlla e conferma le richieste. La conferma automatica richiede anche l’attivazione nelle impostazioni.'), save);
+        const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit';
+        const variant = textNode('button', 'Crea variante', 'agenda-button secondary') as HTMLButtonElement; variant.type = 'button'; variant.dataset.serviceVariant = service.id; on(variant, 'click', () => beginServiceVariant(service.id));
+        const archive = textNode('button', listed ? 'Rimuovi dal catalogo' : 'Ripristina nel catalogo', 'agenda-button secondary') as HTMLButtonElement; archive.type = 'button'; archive.dataset.serviceVisibilityAction = service.id;
+        on(archive, 'click', () => { if (busy) return; inlineAction(form, archive, listed ? `Rimuovere «${service.name}» dal sito e dal calendario? Non sarà possibile sceglierlo per nuove prenotazioni. Appuntamenti, richieste e storico già registrati resteranno conservati. Questa azione non salva le modifiche presenti nella scheda.` : `Ripristinare «${service.name}» sul sito e nel calendario? La conferma automatica resterà disattivata finché non la abiliti. Questa azione non salva le modifiche presenti nella scheda.`, listed ? 'Conferma rimozione' : 'Conferma ripristino', async () => {
+          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', listed ? { listed: false } : { listed: true, enabled: false });
+          const currentDraft = serviceDrafts.get(service.id); if (currentDraft) serviceDrafts.set(service.id, { ...currentDraft, listed: !listed, enabled: false });
+          await loadAll(); inform(listed ? 'Servizio rimosso dal catalogo. Appuntamenti e storico sono conservati.' : 'Servizio ripristinato nel catalogo. La conferma automatica resta disattivata.'); focus('#services-title');
+        }); });
+        const actions = textNode('div', '', 'button-group'); actions.append(save, variant, archive);
+        form.append(nameLabel, descriptionLabel, durationLabel, priceLabel, priceFromLabel, bufferLabel, textNode('small', 'Il tempo di riordino blocca l’agenda dopo il trattamento. Le nuove durate e i tempi di riordino non cambiano gli appuntamenti già salvati.'), textNode('p', listed ? 'Visibile sul sito e nel calendario delle clienti.' : 'Archiviato: non selezionabile per nuove prenotazioni. Appuntamenti, richieste e storico sono conservati.', 'agenda-note'), enabledLabel, textNode('small', 'Senza durata impostata, Jessica controlla e conferma le richieste. La conferma automatica richiede anche l’attivazione nelle impostazioni.'), actions);
         on(form, 'submit', event => { event.preventDefault(); void act(form, async () => {
           if (enabled.checked && !duration.value) { duration.focus(); throw new Error('Imposta la durata prima di abilitare la conferma automatica.'); }
-          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', { name: name.value.trim(), description: description.value.trim(), priceCents: price.value === '' ? null : Math.round(Number(price.value) * 100), priceFrom: priceFrom.checked, bufferAfterMinutes: Number(buffer.value), durationMinutes: duration.value ? Number(duration.value) : null, listed: listed.checked, enabled: listed.checked && enabled.checked }); serviceDrafts.delete(service.id); await loadAll(); inform(`Servizio ${name.value.trim()} salvato.`); focus('#services-title');
+          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', { name: name.value.trim(), description: description.value.trim(), priceCents: price.value === '' ? null : Math.round(Number(price.value) * 100), priceFrom: priceFrom.checked, bufferAfterMinutes: Number(buffer.value), durationMinutes: duration.value ? Number(duration.value) : null, enabled: listed && enabled.checked }); serviceDrafts.delete(service.id); await loadAll(); inform(`Servizio ${name.value.trim()} salvato.`); focus('#services-title');
         }); }); return form;
       }));
     }
@@ -826,12 +892,22 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(document, 'agenda:configuration-changed', () => { if (!session.authenticated) return; void api<Automation>('/api/admin/automation').then(next => { if (!session.authenticated || lifetime.signal.aborted) return; automation = next; renderAutomation(next); renderOverview(); }).catch(() => {}); });
     on(document, 'agenda:new-appointment', event => { if (!session.authenticated || busy) return; const detail = (event as CustomEvent<{ name: string; phone: string; serviceId?: string; title?: string; durationMinutes?: number }>).detail; if (!detail || typeof detail.name !== 'string' || typeof detail.phone !== 'string') return; const serviceId = typeof detail.serviceId === 'string' && services.some(service => service.id === detail.serviceId) ? detail.serviceId : ''; const title = typeof detail.title === 'string' ? detail.title.slice(0, 100) : ''; const durationMinutes = Number.isInteger(detail.durationMinutes) && detail.durationMinutes! >= 5 && detail.durationMinutes! <= 480 ? detail.durationMinutes : undefined; showPanel('calendar', false); openEditor(undefined, undefined, { name: detail.name.slice(0, 100), phone: detail.phone, serviceId, title, durationMinutes, date: '' }); });
     on(settingsForm, 'input', () => { settingsDirty = true; renderCostPreview(); }); on(settingsForm, 'change', () => { settingsDirty = true; renderCostPreview(); });
+    on(el('[data-service-search]'), 'input', () => { serviceSearch = el<HTMLInputElement>('[data-service-search]').value; renderServices(); });
+    on(el('[data-service-visibility]'), 'change', () => { serviceVisibility = el<HTMLSelectElement>('[data-service-visibility]').value; renderServices(); });
+    on(el('[data-service-create-restart]'), 'click', () => serviceCreationTransition(() => { resetServiceCreation(); input(createServiceForm, 'name').focus(); }));
+    on(el('[data-service-variant-close]'), 'click', () => serviceCreationTransition(() => { resetServiceCreation(); focus('#services-title'); }));
+    on(el('[data-service-create-keep]'), 'click', () => { if (busy) return; pendingServiceCreateTransition = null; el('[data-service-create-guard]').hidden = true; input(createServiceForm, 'name').focus(); });
+    on(el('[data-service-create-replace]'), 'click', () => { if (busy) return; const next = pendingServiceCreateTransition; pendingServiceCreateTransition = null; el('[data-service-create-guard]').hidden = true; next?.(); });
     on(accountForm, 'submit', event => { event.preventDefault(); void act(accountForm, async () => { const next = await api<Session>('/api/admin/account', 'PATCH', { email: input(accountForm, 'email').value.trim(), currentPassword: input(accountForm, 'currentPassword').value }); accountForm.reset(); showAccess(next); document.dispatchEvent(new CustomEvent('agenda:panel', { detail: { panel: activePanel } })); inform('Email aggiornata. Gli altri accessi sono stati chiusi.'); }); });
-    on(createServiceForm, 'submit', event => { event.preventDefault(); void act(createServiceForm, async () => {
+    on(createServiceForm, 'submit', event => {
+      event.preventDefault(); if (busy) return;
       const duration = input(createServiceForm, 'durationMinutes'); const enabled = input(createServiceForm, 'enabled').checked; const listed = input(createServiceForm, 'listed').checked;
-      if (enabled && (!listed || !duration.value)) { duration.focus(); throw new Error('Per la conferma automatica, mostra il servizio e indica la durata reale.'); }
-      await api('/api/admin/services', 'POST', { name: input(createServiceForm, 'name').value.trim(), description: input<HTMLTextAreaElement>(createServiceForm, 'description').value.trim(), priceCents: input(createServiceForm, 'price').value === '' ? null : Math.round(Number(input(createServiceForm, 'price').value) * 100), priceFrom: input(createServiceForm, 'priceFrom').checked, bufferAfterMinutes: Number(input(createServiceForm, 'bufferAfterMinutes').value), durationMinutes: duration.value ? Number(duration.value) : null, enabled, listed }); createServiceForm.reset(); await loadAll(); inform('Nuovo servizio aggiunto.'); focus('#services-title');
-    }); });
+      if (enabled && (!listed || !duration.value)) { duration.focus(); inform('Per la conferma automatica, mostra il servizio e indica la durata reale.', true); return; }
+      void act(createServiceForm, async () => {
+      const variant = serviceVariantOrigin !== null;
+      await api('/api/admin/services', 'POST', { name: input(createServiceForm, 'name').value.trim(), description: input<HTMLTextAreaElement>(createServiceForm, 'description').value.trim(), priceCents: input(createServiceForm, 'price').value === '' ? null : Math.round(Number(input(createServiceForm, 'price').value) * 100), priceFrom: input(createServiceForm, 'priceFrom').checked, bufferAfterMinutes: Number(input(createServiceForm, 'bufferAfterMinutes').value), durationMinutes: duration.value ? Number(duration.value) : null, enabled, listed }); resetServiceCreation(); await loadAll(); inform(variant ? 'Variante creata come servizio indipendente.' : 'Nuovo servizio aggiunto.'); focus('#services-title');
+      });
+    });
     on(el('[data-closure-add]'), 'click', () => {
       const control = el<HTMLInputElement>('[data-closure-date]'); if (!control.value || !/^\d{4}-\d{2}-\d{2}$/.test(control.value)) { control.focus(); inform('Scegli il giorno di chiusura.', true); return; }
       if (closedDatesDraft.includes(control.value)) { inform('Questo giorno è già tra le chiusure.'); return; }
@@ -868,7 +944,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
 
     const incomingInterval = window.setInterval(() => { void refreshIncomingRequests(); }, 60_000);
     on(document, 'visibilitychange', () => { if (!document.hidden) void refreshIncomingRequests(); });
-    dispose = () => { window.clearInterval(incomingInterval); lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; blocks = []; operationAppointments = []; operationBlocks = []; requests = []; reminders = []; settings = undefined; automation = undefined; serviceDrafts.clear(); closedDatesDraft = []; pendingEditorTransition = null; editorBaseline = ''; activeRoot = null; };
+    dispose = () => { window.clearInterval(incomingInterval); lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; blocks = []; operationAppointments = []; operationBlocks = []; requests = []; reminders = []; settings = undefined; automation = undefined; serviceDrafts.clear(); serviceSearch = ''; serviceVisibility = 'visible'; resetServiceCreation(); closedDatesDraft = []; pendingEditorTransition = null; editorBaseline = ''; activeRoot = null; };
+    resetServiceCreation();
     void act(null, async () => { showAccess(await api<Session>('/api/auth/session')); if (session.authenticated) { await loadAll(); showPanel('overview', false); inform('La tua area privata è pronta.'); } else inform(session.setupRequired ? 'Il primo accesso è riservato a Jessica.' : 'Accedi per vedere e gestire gli appuntamenti.'); });
   }
 
@@ -977,6 +1054,11 @@ import CustomerDirectory from './CustomerDirectory.astro';
   .daily-guide { padding-left: 1.3rem; margin-top: 1rem; color: #44516a; }
   .daily-guide li + li { margin-top: 1rem; }
   .service-create-form { margin-top: 1.2rem; }
+  .service-create-form > .agenda-section-head { margin-bottom: 0; }
+  .service-create-form [data-service-variant-origin], .service-create-form [data-service-create-guard] { margin-bottom: 0; }
+  [data-service-create-guard] .button-group { margin-top: .9rem; }
+  .service-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .service-form h3 { overflow-wrap: anywhere; }
   .hours-day { min-width: 0; border: 1px solid #d4deef; border-radius: .8rem; padding: 1rem; background: #f8faff; }
   .hours-day legend { font-size: .9rem; font-weight: 650; padding-inline: .4rem; }
   .hours-ranges { display: grid; gap: .75rem; margin-block: .9rem; }

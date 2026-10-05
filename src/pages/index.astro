@@ -16,6 +16,8 @@ import { galleryImages, teamImages } from '../data/images';
 const featuredGallery = galleryImages.filter((image) => image.featured);
 const jessicaImage = teamImages[1];
 const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? galleryImages[1];
+// Stable seed ID: renaming the treatment must not duplicate the dedicated band.
+const featuredServiceId = 'cura-del-riccio';
 ---
 
 <BaseLayout faq={site.faqs}>
@@ -73,7 +75,12 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
   </section>
 
   <!-- Cura del riccio — band full-bleed inchiostro (foto a sanguinare sul bordo) -->
-  <section class="ricci-band section--dark">
+  <section
+    class="ricci-band section--dark"
+    data-featured-service={featuredServiceId}
+    data-config-url={withBase('/api/public/config')}
+    aria-labelledby="home-featured-service-title"
+  >
     <div class="ricci-band__inner">
       <Reveal class="ricci-band__media" data-reveal="fade">
         <Image
@@ -87,14 +94,22 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
       </Reveal>
       <div class="ricci-band__copy stack">
         <p class="eyebrow">La specialità</p>
-        <h2>Cura del riccio, senza forzarlo</h2>
-        <p class="lead">
+        <h2 id="home-featured-service-title" data-featured-name>Cura del riccio, senza forzarlo</h2>
+        <p class="lead" data-featured-description>
           Taglio, asciugatura e consigli per la routine a casa: scegliamo insieme
           come prenderci cura della forma e del volume dei tuoi ricci.
         </p>
-        <p>
+        <p data-featured-fallback>
           L’obiettivo è lasciare forma, volume e morbidezza naturali, senza trasformare il
           tuo capello in qualcosa che non ti somiglia.
+        </p>
+        <p>
+          <a
+            class="btn btn--outline"
+            data-featured-booking
+            href={`${withBase('/prenota')}?servizio=${encodeURIComponent('Cura del riccio')}`}
+            aria-label="Prenota: Cura del riccio"
+          >Scegli il tuo appuntamento</a>
         </p>
       </div>
     </div>
@@ -113,7 +128,7 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
           pagina dedicata.
         </p>
       </div>
-      <RuntimeServiceCatalog variant="line" max={6} excludeNames={['Cura del riccio']} />
+      <RuntimeServiceCatalog variant="line" max={6} excludeIds={[featuredServiceId]} />
       <p class="section__cta">
         <a class="btn btn--outline" href={withBase('/servizi')}>Tutti i servizi</a>
       </p>
@@ -216,6 +231,10 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
   .ricci-band {
     position: relative;
     overflow: hidden;
+  }
+  .ricci-band[hidden],
+  .ricci-band [hidden] {
+    display: none;
   }
   .ricci-band__inner {
     display: grid;

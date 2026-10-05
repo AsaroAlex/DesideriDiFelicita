@@ -339,3 +339,19 @@ la mappa è attiva, niente badge "da confermare".
   Calendario con ricerca aggregata di massimo 14 giorni, servizio preselezionato,
   riepilogo e distinzione chiara richiesta/conferma. Retry della conferma immediata
   usa l’UUID di invio per evitare doppi appuntamenti.
+
+## 20. Servizi e varianti indipendenti — 2026-10-05
+
+- L’utente richiede aggiunta, rimozione e modifica completa dei servizi, inclusi
+  varianti indipendenti dello stesso trattamento (corto/lungo, prezzi e durate propri).
+- Ogni variante è un servizio distinto con ID proprio. «Crea variante» prepara
+  una bozza dai dati salvati dell’originale, non copia automaticamente l’abilitazione
+  alla conferma immediata e non pubblica nulla prima del salvataggio. Le modifiche
+  all’originale o alla variante non si propagano tra loro.
+- Rimozione dal catalogo archivia con `listed:false`, conservando storico e richieste;
+  ripristino usa `listed:true,enabled:false`. Conferme inline e guard delle bozze.
+- Ricerca e filtri Visibili/Archiviati/Tutti; ogni campo operativo resta modificabile.
+- Home riccio e relative esclusioni devono usare l’ID stabile, non il nome. Nome,
+  descrizione e visibilità seguono il catalogo pubblicato, anche nei dati strutturati.
+  Il catalogo e gli altri dati pubblici condividono la lettura config per pagina,
+  solo in memoria; nessun nuovo servizio o dipendenza a pagamento.

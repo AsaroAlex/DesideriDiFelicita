@@ -3,20 +3,18 @@ import { withBase } from '../lib/href';
 ---
 <span data-runtime-business data-config-url={withBase('api/public/config')} hidden></span>
 <script>
-  type Hours = {day: string; label: string; ranges: {opens: string; closes: string}[]}[];
+  import { getPublicConfig } from '../lib/public-config';
+
   let root: HTMLElement | null = null;
-  let controller: AbortController | undefined;
-  async function syncHours() {
+  async function syncBusiness() {
     const next = document.querySelector<HTMLElement>('[data-runtime-business]');
     if (!next || next === root) return;
-    root = next; controller?.abort(); controller = new AbortController();
+    root = next;
     try {
-      const response = await fetch(next.dataset.configUrl!, { signal: controller.signal, credentials: 'omit', headers: {Accept: 'application/json'} });
-      if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) return;
-      const config = await response.json();
-      if (root !== next || !next.isConnected || !Array.isArray(config.openingHours)) return;
-      const hours: Hours = config.openingHours;
-      for (const entry of hours) {
+      const config = await getPublicConfig(next.dataset.configUrl!);
+      if (root !== next || !next.isConnected || !config) return;
+      const hours = config.openingHours;
+      for (const entry of hours || []) {
         const text = entry.ranges.length ? entry.ranges.map(range => `${range.opens}–${range.closes}`).join(' · ') : 'Chiuso';
         document.querySelectorAll<HTMLElement>('[data-public-hours] [data-hour-day]').forEach(row => {
           if (row.dataset.hourDay !== entry.day) return;
@@ -25,18 +23,34 @@ import { withBase } from '../lib/href';
           row.classList.toggle('is-closed', !entry.ranges.length);
         });
       }
-      const mapping: Record<string,string> = {Monday:'Monday',Tuesday:'Tuesday',Wednesday:'Wednesday',Thursday:'Thursday',Friday:'Friday',Saturday:'Saturday',Sunday:'Sunday'};
       document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]').forEach(script => {
         try {
           const schema = JSON.parse(script.textContent || '{}');
           if (schema['@type'] !== 'HairSalon') return;
-          schema.openingHoursSpecification = hours.flatMap(day => day.ranges.map(range => ({'@type':'OpeningHoursSpecification',dayOfWeek:`https://schema.org/${mapping[day.day] || day.day}`,opens:range.opens,closes:range.closes})));
+          if (hours) {
+            schema.openingHoursSpecification = hours.flatMap(day => day.ranges.map(range => ({
+              '@type': 'OpeningHoursSpecification', dayOfWeek: `https://schema.org/${day.day}`,
+              opens: range.opens, closes: range.closes,
+            })));
+          }
+          if (config.catalog) {
+            const services = config.catalog.filter(service => service.listed);
+            if (services.length) {
+              schema.hasOfferCatalog = {
+                '@type': 'OfferCatalog', name: 'Servizi',
+                itemListElement: services.map(service => ({
+                  '@type': 'Offer',
+                  itemOffered: { '@type': 'Service', name: service.name, description: service.description },
+                })),
+              };
+            } else delete schema.hasOfferCatalog;
+          }
           script.textContent = JSON.stringify(schema);
         } catch { /* Non-business structured data remains intact. */ }
       });
-    } catch { /* Static confirmed hours remain available when the API cannot be reached. */ }
+    } catch { /* Static confirmed business data remains available offline and on Pages. */ }
   }
-  document.addEventListener('astro:before-swap', () => { controller?.abort(); root = null; });
-  document.addEventListener('astro:page-load', () => { void syncHours(); });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { void syncHours(); }, {once:true}); else void syncHours();
+  document.addEventListener('astro:before-swap', () => { root = null; });
+  document.addEventListener('astro:page-load', () => { void syncBusiness(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { void syncBusiness(); }, {once:true}); else void syncBusiness();
 </script>

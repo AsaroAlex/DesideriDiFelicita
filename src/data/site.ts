@@ -143,7 +143,7 @@ export const site = {
     },
     {
       q: 'Quali servizi offre il salone?',
-      a: 'Taglio donna, uomo e bambino, colore, balayage e schiariture, cura e taglio dei capelli ricci, pieghe e styling, oltre a trattamenti professionali di cura e anti-caduta.',
+      a: 'Nella pagina Servizi trovi il catalogo aggiornato del salone, con le descrizioni, le varianti e gli eventuali prezzi e tempi pubblicati da Jessica. Dal calendario puoi scegliere il trattamento e richiedere il giorno e l’orario che preferisci.',
     },
     {
       q: 'Come posso modificare o annullare un appuntamento?',

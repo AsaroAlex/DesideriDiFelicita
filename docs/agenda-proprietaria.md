@@ -194,6 +194,23 @@ su Pages resta il contenuto statico confermato come fallback.
 Nascondere un servizio non cancella appuntamenti o richieste preesistenti; può essere
 ripristinato. Le durate non vengono precompilate senza una decisione della titolare.
 
+Ogni variante è un servizio indipendente: per esempio, taglio corto e taglio lungo
+possono avere nome, descrizione, prezzo, durata e tempi di riordino diversi. **Crea
+variante** prepara un nuovo servizio partendo dai dati già salvati; Jessica può
+modificare tutti i campi prima di crearlo. La variante non cambia l’originale e la
+conferma automatica parte disattivata. Una bozza non viene pubblicata prima del salvataggio.
+
+**Rimuovi dal catalogo** toglie il servizio dal sito e dalle nuove prenotazioni,
+conservando appuntamenti e richieste nello storico. **Ripristina nel catalogo**
+lo rende nuovamente visibile senza riattivare automaticamente la conferma immediata.
+La ricerca e i filtri **Visibili**, **Archiviati** e **Tutti** aiutano a trovare
+anche i servizi rimossi. Le modifiche non salvate restano in memoria tra i filtri.
+
+La home, il catalogo pubblico e il calendario leggono i servizi pubblicati. La
+specialità riccio è collegata al servizio originale tramite il suo identificativo,
+così rinominarlo non lo duplica e rimuoverlo nasconde anche la sua scheda dedicata.
+In assenza di API o JavaScript resta la vetrina statica di fallback.
+
 Il tempo di preparazione impedisce una prenotazione consecutiva troppo ravvicinata,
 ma non allunga la durata del trattamento mostrata alla cliente. Parte da 0 minuti;
 una modifica del servizio si applica ai nuovi appuntamenti, senza modificare quelli
