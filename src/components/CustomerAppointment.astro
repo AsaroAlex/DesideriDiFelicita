@@ -1,0 +1,538 @@
+---
+import { site } from '../data/site';
+import { withBase } from '../lib/href';
+import { salonQuestionMessage, whatsappHref } from '../lib/contact';
+const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerName));
+---
+
+<script is:inline data-astro-rerun>
+  (() => {
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const value = fragment.get('chiave') || '';
+    delete window.__desideriCustomerToken;
+    if (/^[A-Za-z0-9_-]{43}$/.test(value)) window.__desideriCustomerToken = value;
+    if (window.location.hash || window.location.search) {
+      window.history.replaceState(window.history.state, '', window.location.pathname);
+    }
+  })();
+</script>
+
+<div class="customer-app" data-customer-appointment data-api-base={withBase('api/public/customer/')} data-whatsapp-number={site.whatsapp.replace(/[^\d]/g, '')}>
+  <header class="customer-app__heading">
+    <p class="customer-app__eyebrow">Uno spazio per il tuo prossimo look</p>
+    <h1>Il tuo appuntamento</h1>
+    <p class="customer-app__intro">Qui trovi lo stato aggiornato e le opzioni per organizzarti.</p>
+  </header>
+
+  <p class="customer-app__message" data-customer-message role="status" aria-live="polite">Apriamo il tuo appuntamento…</p>
+  <button class="btn btn--outline" type="button" data-customer-retry hidden>Riprova</button>
+  <section class="customer-app__empty customer-app__card" data-customer-empty hidden>
+    <h2 data-customer-empty-title>Serve il tuo collegamento personale</h2>
+    <p data-customer-empty-description>Apri il collegamento che hai conservato dopo la prenotazione oppure chiedilo al salone.</p>
+    <a class="btn btn--outline" href={withBase('/prenota')}>Apri il calendario del salone</a>
+  </section>
+
+  <div data-customer-content hidden>
+    <section class="customer-app__card customer-app__summary" aria-labelledby="customer-service-title">
+      <p class="customer-app__badge" data-customer-status></p>
+      <h2 id="customer-service-title" data-customer-service tabindex="-1"></h2>
+      <p class="customer-app__when" data-customer-when></p>
+      <p class="customer-app__duration" data-customer-duration hidden></p>
+      <p class="customer-app__reference">Riferimento <strong data-customer-reference></strong></p>
+      <p class="customer-app__next" data-customer-next></p>
+      <details class="customer-app__notes" data-customer-notes-wrap hidden>
+        <summary>Le indicazioni che hai inviato</summary>
+        <p data-customer-notes></p>
+      </details>
+      <div class="customer-app__actions">
+        <button class="btn btn--outline" type="button" data-customer-refresh>Aggiorna stato</button>
+        <button class="customer-app__copy" type="button" data-customer-copy-link>Copia il collegamento personale</button>
+        <button class="btn btn--outline" type="button" data-customer-calendar hidden>Aggiungi al calendario</button>
+      </div>
+      <input class="customer-app__copy-url" type="text" data-customer-copy-url readonly hidden aria-label="Collegamento personale da copiare" />
+      <p class="customer-app__help" data-customer-copy-message role="status" aria-live="polite" hidden></p>
+      <p class="customer-app__help" data-customer-calendar-message role="status" aria-live="polite" hidden></p>
+    </section>
+
+    <section class="customer-app__card customer-app__manage" aria-labelledby="customer-manage-title">
+      <h2 id="customer-manage-title">Organizza il tuo appuntamento</h2>
+      <p class="customer-app__help" data-customer-policy></p>
+      <div class="customer-app__actions" data-customer-manage-actions>
+        <button class="btn btn--primary" type="button" data-customer-open-move hidden>Cambia giorno o orario</button>
+        <button class="customer-app__quiet" type="button" data-customer-open-cancel hidden>Annulla appuntamento</button>
+        <button class="customer-app__quiet" type="button" data-customer-open-withdraw hidden>Ritira la richiesta</button>
+      </div>
+      <div class="customer-app__confirm" data-customer-confirm hidden>
+        <h3 data-customer-confirm-title tabindex="-1"></h3>
+        <p data-customer-confirm-copy></p>
+        <div class="customer-app__actions">
+          <button class="btn customer-app__destructive" type="button" data-customer-confirm-action></button>
+          <button class="btn btn--outline" type="button" data-customer-close-confirm>Torna indietro</button>
+        </div>
+      </div>
+
+      <form class="customer-app__move" data-customer-move-form hidden>
+        <h3 id="customer-move-title" tabindex="-1">Scegli un nuovo momento</h3>
+        <p class="customer-app__help">Gli orari rispettano la durata del tuo appuntamento.</p>
+        <div class="customer-app__range">
+          <div>
+            <label for="customer-range-from">Cerca a partire dal</label>
+            <input id="customer-range-from" type="date" required data-customer-range-from />
+          </div>
+          <button class="btn btn--outline" type="button" data-customer-search>Mostra gli orari</button>
+        </div>
+        <p class="customer-app__help" data-customer-range-message role="status" aria-live="polite"></p>
+        <div class="customer-app__days" data-customer-days role="group" aria-label="Giorni per spostare l’appuntamento"></div>
+        <fieldset class="customer-app__times">
+          <legend data-customer-slots-legend>Scegli un giorno</legend>
+          <div class="customer-app__slots" data-customer-slots></div>
+        </fieldset>
+        <p class="customer-app__move-summary" data-customer-move-summary></p>
+        <div class="customer-app__actions">
+          <button class="btn btn--primary" type="submit" data-customer-save-move disabled>Conferma il nuovo orario</button>
+          <button class="btn btn--outline" type="button" data-customer-close-move>Torna al riepilogo</button>
+        </div>
+        <p class="customer-app__help" data-customer-move-message role="status" aria-live="polite" hidden></p>
+      </form>
+    </section>
+  </div>
+  <p class="customer-app__support">Hai bisogno di aiuto? <a data-customer-support href={supportHref} target="_blank" rel="noopener noreferrer">Scrivi al salone su WhatsApp</a>.</p>
+  <noscript><p class="customer-app__message">Per controllare il tuo appuntamento attiva JavaScript oppure contatta il salone usando il collegamento qui sopra.</p></noscript>
+</div>
+
+<script>
+  interface CustomerView {
+    kind: 'request' | 'appointment';
+    reference: string;
+    status: 'pending' | 'confirmed' | 'cancelled' | 'declined' | 'withdrawn';
+    serviceName: string;
+    date: string;
+    time: string;
+    durationMinutes: number | null;
+    revision: number | null;
+    notes?: string;
+    canDownloadCalendar?: boolean;
+    canCancel: boolean;
+    canReschedule: boolean;
+    canWithdraw: boolean;
+    changeNoticeHours: number;
+    changesEnabled: boolean;
+    managementExpiresAt: number;
+  }
+  interface CustomerSlot { time: string; label: string; startsAt: number; endsAt: number; }
+  interface CustomerDay { date: string; slots: CustomerSlot[]; }
+  class CustomerApiError extends Error {
+    status: number;
+    code: string;
+    constructor(status: number, code = '') { super('customer_request_failed'); this.status = status; this.code = code; }
+  }
+  const dayFormatter = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const weekFormatter = new Intl.DateTimeFormat('it-IT', { weekday: 'short', timeZone: 'UTC' });
+  const monthFormatter = new Intl.DateTimeFormat('it-IT', { month: 'short', timeZone: 'UTC' });
+  const romeTodayFormatter = new Intl.DateTimeFormat('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Rome' });
+  const statusLabels: Record<CustomerView['status'], string> = {
+    pending: 'In attesa di conferma', confirmed: 'Appuntamento confermato', cancelled: 'Appuntamento annullato', declined: 'Richiesta non confermata', withdrawn: 'Richiesta ritirata',
+  };
+  function dayValue(value: string) { return new Date(`${value}T12:00:00Z`); }
+  function validDay(value: unknown): value is string { return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(dayValue(value).getTime()) && dayValue(value).toISOString().slice(0, 10) === value; }
+  function validTime(value: unknown): value is string { return typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value); }
+  function readView(value: unknown): CustomerView {
+    const view = value as CustomerView;
+    if (!view || !['request', 'appointment'].includes(view.kind) || !Object.hasOwn(statusLabels, view.status)
+      || typeof view.reference !== 'string' || typeof view.serviceName !== 'string' || !validDay(view.date) || !validTime(view.time)
+      || !['canCancel', 'canReschedule', 'canWithdraw', 'changesEnabled'].every((key) => typeof (view as unknown as Record<string, unknown>)[key] === 'boolean')
+      || !(view.revision === null || Number.isSafeInteger(view.revision))) throw new CustomerApiError(502);
+    return view;
+  }
+  let disposeCurrent: (() => void) | undefined;
+
+  function initializeCustomer(force = false) {
+    const root = document.querySelector<HTMLElement>('[data-customer-appointment]');
+    if (!root || (root.dataset.customerReady === 'true' && !force)) return;
+    const transfer = window as Window & { __desideriCustomerToken?: string };
+    let token = transfer.__desideriCustomerToken || new URLSearchParams(location.hash.slice(1)).get('chiave') || '';
+    delete transfer.__desideriCustomerToken;
+    if (location.hash || location.search) history.replaceState(history.state, '', location.pathname);
+    disposeCurrent?.();
+    root.dataset.customerReady = 'true';
+    const lifecycle = new AbortController();
+    const requests = new Set<AbortController>();
+    const objectUrls = new Set<string>();
+    let view: CustomerView | undefined;
+    let reading = false;
+    let mutating = false;
+    let rangeLoading = false;
+    let downloading = false;
+    let viewSequence = 0;
+    let rangeSequence = 0;
+    let confirmationAction: 'cancel' | 'withdraw' | null = null;
+    let confirmationRevision: number | null = null;
+    let draftRevision: number | null = null;
+    let availableDays: CustomerDay[] = [];
+    let selectedDate = '';
+    let selectedTime = '';
+    let activeRangeController: AbortController | undefined;
+    let expired = false;
+    const find = <T extends HTMLElement = HTMLElement>(selector: string): T => root.querySelector<T>(selector)!;
+    const message = find('[data-customer-message]');
+    const empty = find('[data-customer-empty]');
+    const content = find('[data-customer-content]');
+    const refreshButton = find<HTMLButtonElement>('[data-customer-refresh]');
+    const retryButton = find<HTMLButtonElement>('[data-customer-retry]');
+    const calendarButton = find<HTMLButtonElement>('[data-customer-calendar]');
+    const copyLink = find<HTMLButtonElement>('[data-customer-copy-link]');
+    const copyUrl = find<HTMLInputElement>('[data-customer-copy-url]');
+    const openMove = find<HTMLButtonElement>('[data-customer-open-move]');
+    const openCancel = find<HTMLButtonElement>('[data-customer-open-cancel]');
+    const openWithdraw = find<HTMLButtonElement>('[data-customer-open-withdraw]');
+    const confirm = find('[data-customer-confirm]');
+    const confirmButton = find<HTMLButtonElement>('[data-customer-confirm-action]');
+    const moveForm = find<HTMLFormElement>('[data-customer-move-form]');
+    const fromInput = find<HTMLInputElement>('[data-customer-range-from]');
+    const dayButtons = find('[data-customer-days]');
+    const slotButtons = find('[data-customer-slots]');
+    const saveMove = find<HTMLButtonElement>('[data-customer-save-move]');
+    const moveMessage = find('[data-customer-move-message]');
+    const rangeMessage = find('[data-customer-range-message]');
+    const support = find<HTMLAnchorElement>('[data-customer-support]');
+    disposeCurrent = () => {
+      lifecycle.abort();
+      requests.forEach((controller) => controller.abort());
+      requests.clear();
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      objectUrls.clear();
+      token = '';
+      copyUrl.value = '';
+      view = undefined;
+    };
+    const on = (target: EventTarget, name: string, listener: EventListener) => target.addEventListener(name, listener, { signal: lifecycle.signal });
+    const showMessage = (element: HTMLElement, value: string) => { element.textContent = value; element.hidden = !value; };
+    const isBusy = () => reading || mutating || rangeLoading || downloading;
+    function syncControls() {
+      root.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button,input').forEach((element) => { element.disabled = isBusy() || expired; });
+      dayButtons.querySelectorAll<HTMLButtonElement>('[data-customer-day]').forEach((button) => {
+        button.disabled = isBusy() || !availableDays.find((day) => day.date === button.dataset.customerDay)?.slots.length;
+      });
+      saveMove.disabled = isBusy() || !selectedDate || !selectedTime || !view?.canReschedule || draftRevision === null;
+      root.setAttribute('aria-busy', String(isBusy()));
+    }
+    function denyAccess(missing = false) {
+      expired = true;
+      token = '';
+      copyUrl.value = '';
+      copyUrl.hidden = true;
+      view = undefined;
+      content.hidden = true;
+      confirm.hidden = true;
+      moveForm.hidden = true;
+      empty.hidden = false;
+      find('[data-customer-empty-title]').textContent = missing ? 'Serve il tuo collegamento personale' : 'Questo collegamento non è disponibile';
+      find('[data-customer-empty-description]').textContent = missing ? 'Apri il collegamento che hai conservato dopo la prenotazione oppure chiedilo al salone.'
+        : 'Può essere scaduto o essere stato sostituito. Chiedi al salone un nuovo collegamento per il tuo appuntamento.';
+      retryButton.hidden = true;
+      showMessage(message, '');
+      syncControls();
+    }
+    async function request(path: string, options: RequestInit = {}, provided?: AbortController): Promise<Response> {
+      const controller = provided || new AbortController();
+      requests.add(controller);
+      const timer = setTimeout(() => controller.abort(), 20_000);
+      try {
+        const response = await fetch(`${root.dataset.apiBase}${path}`, {
+          ...options, credentials: 'omit', cache: 'no-store', signal: controller.signal,
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
+        });
+        if (!response.ok) {
+          let code = '';
+          if (response.headers.get('content-type')?.includes('application/json')) {
+            try { code = (await response.json())?.error?.code || ''; } catch { /* Use the same public error shape. */ }
+          }
+          throw new CustomerApiError(response.status, code);
+        }
+        const body = await response.arrayBuffer();
+        return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+      } finally { clearTimeout(timer); requests.delete(controller); }
+    }
+    async function jsonRequest(path: string, options: RequestInit = {}, controller?: AbortController) {
+      const response = await request(path, options, controller);
+      if (!response.headers.get('content-type')?.includes('application/json')) throw new CustomerApiError(502);
+      return response.json();
+    }
+    function renderView(next: CustomerView) {
+      view = next;
+      content.hidden = false;
+      empty.hidden = true;
+      find('[data-customer-status]').textContent = statusLabels[next.status];
+      find('[data-customer-status]').classList.toggle('is-inactive', ['cancelled', 'declined', 'withdrawn'].includes(next.status));
+      find('[data-customer-service]').textContent = next.serviceName;
+      find('[data-customer-when]').textContent = `${dayFormatter.format(dayValue(next.date))} alle ${next.time}${next.status === 'pending' ? ' · da confermare' : ''}`;
+      const duration = find('[data-customer-duration]');
+      duration.hidden = !Number.isInteger(next.durationMinutes) || Number(next.durationMinutes) < 1;
+      duration.textContent = duration.hidden ? '' : `Durata del servizio: ${next.durationMinutes} minuti.`;
+      find('[data-customer-reference]').textContent = next.reference;
+      find('[data-customer-next]').textContent = next.status === 'pending' ? 'Jessica verifica la disponibilità e ti contatta per confermare l’orario. Puoi aggiornare lo stato da questa pagina.'
+        : next.status === 'confirmed' ? 'Il tuo appuntamento è in agenda. Ti aspettiamo in salone.'
+        : next.status === 'cancelled' ? 'L’appuntamento è stato annullato. Se vuoi tornare, scegli un nuovo momento dal calendario del salone.'
+        : next.status === 'withdrawn' ? 'Hai ritirato la richiesta. Il salone non deve più confermare questo orario.'
+        : 'Il salone non ha potuto confermare questa richiesta. Contattaci per trovare insieme un altro appuntamento.';
+      const notes = typeof next.notes === 'string' ? next.notes : '';
+      find('[data-customer-notes-wrap]').hidden = !notes;
+      find('[data-customer-notes]').textContent = notes;
+      calendarButton.hidden = next.canDownloadCalendar === undefined ? next.status !== 'confirmed' : next.canDownloadCalendar !== true;
+      openMove.hidden = !next.canReschedule;
+      openCancel.hidden = !next.canCancel;
+      openWithdraw.hidden = !next.canWithdraw;
+      find('[data-customer-policy]').textContent = next.canReschedule || next.canCancel
+        ? Number(next.changeNoticeHours) > 0 ? `Puoi modificare o annullare online con almeno ${next.changeNoticeHours} ore di anticipo. Per richieste più vicine all’appuntamento, contatta Jessica.`
+          : 'Puoi scegliere un nuovo orario oppure annullare l’appuntamento qui.'
+        : next.canWithdraw ? 'Se questo momento non fa più per te, puoi ritirare la richiesta prima che venga confermata.'
+        : next.status === 'confirmed' ? 'Per modificare questo appuntamento, contatta il salone: Jessica ti aiuterà a organizzarti.'
+        : 'Per un nuovo appuntamento puoi usare il calendario del salone.';
+      const subject = next.status === 'pending' || next.status === 'declined' || next.status === 'withdrawn' ? 'la mia richiesta' : 'il mio appuntamento';
+      support.href = `https://wa.me/${root.dataset.whatsappNumber}?text=${encodeURIComponent(`Ciao Jessica, ti scrivo per ${subject} ${next.reference}: ${next.serviceName}, ${dayFormatter.format(dayValue(next.date))} alle ${next.time}. Avrei bisogno di un’informazione.`)}`;
+      if (!next.canReschedule) { moveForm.hidden = true; selectedDate = ''; selectedTime = ''; }
+      if (confirmationAction && !(confirmationAction === 'cancel' ? next.canCancel : next.canWithdraw)) { confirm.hidden = true; confirmationAction = null; }
+      syncControls();
+    }
+    async function loadView({ quiet = false } = {}) {
+      if (!token || expired || reading) return;
+      const sequence = ++viewSequence;
+      reading = true;
+      syncControls();
+      retryButton.hidden = true;
+      if (!quiet) showMessage(message, 'Aggiorniamo il tuo appuntamento…');
+      try {
+        const next = readView(await jsonRequest('appointment'));
+        if (lifecycle.signal.aborted || sequence !== viewSequence) return;
+        renderView(next);
+        if (!quiet) showMessage(message, 'Stato aggiornato.');
+      } catch (error) {
+        if (lifecycle.signal.aborted) return;
+        if (error instanceof CustomerApiError && [401, 403, 404].includes(error.status)) denyAccess();
+        else {
+          retryButton.hidden = Boolean(view);
+          showMessage(message, error instanceof CustomerApiError && error.status === 429 ? 'Hai effettuato diverse richieste in poco tempo. Aspetta qualche minuto e riprova.' : 'Non riusciamo a mostrare lo stato. Riprova tra poco per aggiornare i dati.');
+        }
+      } finally { if (!lifecycle.signal.aborted && sequence === viewSequence) { reading = false; syncControls(); } }
+    }
+    function renderDays() {
+      dayButtons.replaceChildren();
+      availableDays.forEach((day) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.customerDay = day.date;
+        button.className = 'customer-app__day';
+        button.setAttribute('aria-pressed', String(day.date === selectedDate));
+        button.setAttribute('aria-label', `${dayFormatter.format(dayValue(day.date))}${day.slots.length ? '' : ', nessun orario disponibile'}`);
+        const weekday = document.createElement('span'); weekday.textContent = weekFormatter.format(dayValue(day.date));
+        const number = document.createElement('strong'); number.textContent = `${dayValue(day.date).getUTCDate()} ${monthFormatter.format(dayValue(day.date))}`;
+        button.append(weekday, number);
+        dayButtons.append(button);
+      });
+      syncControls();
+    }
+    function updateMoveSummary() {
+      find('[data-customer-move-summary]').textContent = selectedDate && selectedTime
+        ? `Nuovo appuntamento: ${dayFormatter.format(dayValue(selectedDate))} alle ${selectedTime}.`
+        : 'Scegli il giorno e il nuovo orario, poi conferma lo spostamento.';
+      syncControls();
+    }
+    function renderSlots() {
+      slotButtons.replaceChildren();
+      const day = availableDays.find((item) => item.date === selectedDate);
+      find('[data-customer-slots-legend]').textContent = selectedDate ? dayFormatter.format(dayValue(selectedDate)) : 'Scegli un giorno';
+      day?.slots.forEach((slot) => {
+        const label = document.createElement('label'); label.className = 'customer-app__slot';
+        const input = document.createElement('input'); input.type = 'radio'; input.name = 'customerTime'; input.value = slot.time; input.required = true; input.checked = slot.time === selectedTime;
+        const text = document.createElement('span'); text.textContent = slot.label;
+        label.append(input, text); slotButtons.append(label);
+      });
+      updateMoveSummary();
+    }
+    async function loadAvailability() {
+      if (!view?.canReschedule || !token || expired || !validDay(fromInput.value)) return;
+      activeRangeController?.abort();
+      const controller = new AbortController(); activeRangeController = controller;
+      const sequence = ++rangeSequence;
+      rangeLoading = true;
+      selectedDate = ''; selectedTime = ''; availableDays = []; dayButtons.replaceChildren(); slotButtons.replaceChildren();
+      draftRevision = view.revision;
+      syncControls();
+      showMessage(rangeMessage, 'Cerchiamo gli orari per il tuo appuntamento…');
+      showMessage(moveMessage, '');
+      try {
+        const query = new URLSearchParams({ from: fromInput.value, days: '14' });
+        const range = await jsonRequest(`availability?${query}`, {}, controller) as { mode: string; days: CustomerDay[] };
+        if (lifecycle.signal.aborted || controller.signal.aborted || sequence !== rangeSequence) return;
+        if (range.mode !== 'instant' || !Array.isArray(range.days)) throw new CustomerApiError(502);
+        availableDays = range.days.filter((day) => validDay(day.date) && Array.isArray(day.slots)).map((day) => ({ date: day.date, slots: day.slots.filter((slot) => validTime(slot.time) && typeof slot.label === 'string' && Number.isFinite(slot.startsAt) && Number.isFinite(slot.endsAt)) }));
+        selectedDate = availableDays.find((day) => day.slots.length)?.date || '';
+        renderDays(); renderSlots();
+        showMessage(rangeMessage, selectedDate ? 'Mostriamo i prossimi 14 giorni a partire dalla data scelta.' : 'Non ci sono orari in questo periodo. Prova a cercare da un’altra data oppure contatta Jessica.');
+      } catch (error) {
+        if (lifecycle.signal.aborted || controller.signal.aborted || sequence !== rangeSequence) return;
+        if (error instanceof CustomerApiError && [401, 403, 404].includes(error.status)) denyAccess();
+        else showMessage(rangeMessage, 'Non riusciamo a mostrare gli orari di questo periodo. Scegli un’altra data e riprova.');
+      } finally { if (!lifecycle.signal.aborted && sequence === rangeSequence) { rangeLoading = false; syncControls(); } }
+    }
+    function closePanels() { confirm.hidden = true; confirmationAction = null; moveForm.hidden = true; }
+    async function mutate(action: 'cancel' | 'withdraw' | 'reschedule', payload: Record<string, unknown>) {
+      if (isBusy() || !token || expired) return;
+      mutating = true; syncControls();
+      const feedback = action === 'reschedule' ? moveMessage : message;
+      showMessage(feedback, 'Registriamo la tua scelta…');
+      try {
+        const next = readView(await jsonRequest(action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }));
+        if (lifecycle.signal.aborted) return;
+        closePanels(); renderView(next);
+        showMessage(message, action === 'reschedule' ? 'Appuntamento spostato. Il riepilogo mostra il nuovo giorno e orario.' : action === 'withdraw' ? 'Richiesta ritirata.' : 'Appuntamento annullato.');
+        find('[data-customer-service]').focus({ preventScroll: true });
+      } catch (error) {
+        if (lifecycle.signal.aborted) return;
+        if (error instanceof CustomerApiError && [401, 403, 404].includes(error.status)) denyAccess();
+        else if (error instanceof CustomerApiError && error.status === 409) {
+          confirm.hidden = true; confirmationAction = null;
+          await loadView({ quiet: true });
+          if (action === 'reschedule' && view?.canReschedule && !expired) await loadAvailability();
+          showMessage(feedback, 'L’orario o lo stato è cambiato. Abbiamo aggiornato i dati: controlla il riepilogo e scegli di nuovo.');
+        } else showMessage(feedback, 'Non abbiamo ricevuto la risposta. Premi Aggiorna stato prima di riprovare, per verificare la tua scelta.');
+      } finally { if (!lifecycle.signal.aborted) { mutating = false; syncControls(); } }
+    }
+    on(copyLink, 'click', async () => {
+      if (!token || expired || isBusy()) return;
+      const value = `${location.origin}${location.pathname}#chiave=${encodeURIComponent(token)}`;
+      const feedback = find('[data-customer-copy-message]');
+      try {
+        await navigator.clipboard.writeText(value);
+        if (!lifecycle.signal.aborted) showMessage(feedback, 'Collegamento copiato. Conservalo per ritrovare questa pagina.');
+      } catch {
+        if (lifecycle.signal.aborted) return;
+        copyUrl.value = value; copyUrl.hidden = false; copyUrl.focus(); copyUrl.select();
+        showMessage(feedback, 'Seleziona e copia il collegamento qui sopra. È personale.');
+      }
+    });
+    on(retryButton, 'click', () => { void loadView(); });
+    on(refreshButton, 'click', () => { closePanels(); void loadView(); });
+    on(openCancel, 'click', () => {
+      if (!view?.canCancel || isBusy()) return;
+      moveForm.hidden = true; confirmationAction = 'cancel'; confirmationRevision = view.revision;
+      find('[data-customer-confirm-title]').textContent = 'Vuoi annullare l’appuntamento?';
+      find('[data-customer-confirm-copy]').textContent = `${view.serviceName}, ${dayFormatter.format(dayValue(view.date))} alle ${view.time}. L’orario verrà liberato per altre clienti.`;
+      confirmButton.textContent = 'Sì, annulla appuntamento'; confirm.hidden = false;
+      find('[data-customer-confirm-title]').focus();
+    });
+    on(openWithdraw, 'click', () => {
+      if (!view?.canWithdraw || isBusy()) return;
+      moveForm.hidden = true; confirmationAction = 'withdraw'; confirmationRevision = null;
+      find('[data-customer-confirm-title]').textContent = 'Vuoi ritirare la richiesta?';
+      find('[data-customer-confirm-copy]').textContent = 'Jessica non dovrà più verificare e confermare questo orario. Potrai inviare una nuova richiesta quando vorrai.';
+      confirmButton.textContent = 'Sì, ritira la richiesta'; confirm.hidden = false;
+      find('[data-customer-confirm-title]').focus();
+    });
+    on(find('[data-customer-close-confirm]'), 'click', () => { confirm.hidden = true; const was = confirmationAction; confirmationAction = null; (was === 'cancel' ? openCancel : openWithdraw).focus(); });
+    on(confirmButton, 'click', () => { if (confirmationAction) void mutate(confirmationAction, confirmationAction === 'cancel' ? { revision: confirmationRevision } : {}); });
+    on(openMove, 'click', () => {
+      if (!view?.canReschedule || isBusy()) return;
+      confirm.hidden = true; confirmationAction = null; moveForm.hidden = false;
+      const today = romeTodayFormatter.format(new Date());
+      fromInput.min = today; if (!validDay(fromInput.value) || fromInput.value < today) fromInput.value = today;
+      find('[id="customer-move-title"]').focus(); void loadAvailability();
+    });
+    on(find('[data-customer-close-move]'), 'click', () => { moveForm.hidden = true; openMove.focus(); });
+    on(find('[data-customer-search]'), 'click', () => { if (fromInput.reportValidity()) void loadAvailability(); });
+    on(dayButtons, 'click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('[data-customer-day]');
+      if (!button || button.disabled || isBusy()) return;
+      selectedDate = button.dataset.customerDay!; selectedTime = ''; showMessage(moveMessage, ''); renderDays(); renderSlots();
+    });
+    on(slotButtons, 'change', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (input.name !== 'customerTime' || !availableDays.find((day) => day.date === selectedDate)?.slots.some((slot) => slot.time === input.value)) return;
+      selectedTime = input.value; showMessage(moveMessage, ''); updateMoveSummary();
+    });
+    on(moveForm, 'submit', (event) => { event.preventDefault(); if (!selectedDate || !selectedTime || draftRevision === null) return; void mutate('reschedule', { date: selectedDate, time: selectedTime, revision: draftRevision }); });
+    on(calendarButton, 'click', async () => {
+      if (isBusy() || !token || view?.status !== 'confirmed') return;
+      downloading = true; syncControls(); const feedback = find('[data-customer-calendar-message]');
+      showMessage(feedback, 'Prepariamo il file per il tuo calendario…');
+      try {
+        const response = await request('calendar.ics', { headers: { Accept: 'text/calendar' } });
+        if (!response.headers.get('content-type')?.includes('text/calendar')) throw new CustomerApiError(502);
+        const blob = await response.blob(); if (lifecycle.signal.aborted) return;
+        const url = URL.createObjectURL(blob); objectUrls.add(url);
+        const link = document.createElement('a'); link.href = url; link.download = 'desideri-appuntamento.ics'; document.body.append(link); link.click(); link.remove();
+        setTimeout(() => { URL.revokeObjectURL(url); objectUrls.delete(url); }, 1_000);
+        showMessage(feedback, 'File pronto. Aprilo nel calendario del tuo telefono.');
+      } catch (error) {
+        if (lifecycle.signal.aborted) return;
+        if (error instanceof CustomerApiError && [401, 403, 404].includes(error.status)) denyAccess();
+        else showMessage(feedback, 'Il file non è disponibile per questo appuntamento. Aggiorna lo stato oppure contatta il salone.');
+      } finally { if (!lifecycle.signal.aborted) { downloading = false; syncControls(); } }
+    });
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) denyAccess(true);
+    else { expired = false; empty.hidden = true; content.hidden = true; void loadView(); }
+  }
+  document.addEventListener('astro:before-swap', () => { disposeCurrent?.(); disposeCurrent = undefined; });
+  document.addEventListener('astro:page-load', () => initializeCustomer());
+  window.addEventListener('hashchange', () => { if (location.hash) initializeCustomer(true); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => initializeCustomer(), { once: true });
+  else initializeCustomer();
+</script>
+
+<style>
+  .customer-app [hidden] { display: none !important; }
+  .customer-app__heading { margin-bottom: 1.5rem; }
+  .customer-app__eyebrow { color: var(--color-primary-strong); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .6rem; }
+  .customer-app h1 { font-size: var(--fs-600); }
+  .customer-app h2 { font-size: var(--fs-500); line-height: 1.2; }
+  .customer-app h3 { font-size: var(--fs-400); line-height: 1.25; }
+  .customer-app__intro { margin-top: .8rem; color: var(--color-ink-soft); }
+  .customer-app__card { padding: clamp(1.1rem, 3vw, 1.8rem); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }
+  .customer-app__empty > * + * { margin-top: 1rem; }
+  .customer-app__manage { margin-top: 1rem; }
+  .customer-app__message { padding: .85rem 1rem; margin-bottom: 1rem; border-radius: var(--radius-md); background: #e8f0fe; color: #18396d; line-height: 1.5; }
+  .customer-app__badge { display: inline-block; margin-bottom: .8rem; padding: .35rem .65rem; border-radius: var(--radius-pill); background: #e8f0fe; color: #164ca7; font-size: .82rem; font-weight: 700; }
+  .customer-app__badge.is-inactive { background: #f0f2f6; color: #4a5668; }
+  .customer-app__summary h2 { overflow-wrap: anywhere; }
+  .customer-app__when { margin-top: .8rem; font-size: 1.0625rem; font-weight: 600; }
+  .customer-app__duration, .customer-app__reference { margin-top: .4rem; font-size: .88rem; color: var(--color-ink-soft); }
+  .customer-app__reference strong { color: var(--color-ink); overflow-wrap: anywhere; }
+  .customer-app__next { margin-top: 1rem; line-height: 1.55; }
+  .customer-app__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; margin-top: 1rem; }
+  .customer-app .btn { min-height: 2.75rem; padding: .8rem 1rem; font-size: .88rem; line-height: 1.25; }
+  .customer-app button:disabled { opacity: .55; cursor: default; }
+  .customer-app__help { margin-top: .7rem; font-size: .875rem; color: var(--color-ink-soft); line-height: 1.5; }
+  .customer-app__copy { padding: .45rem .2rem; border: 0; background: none; color: var(--color-primary-strong); font-size: .875rem; text-decoration: underline; text-underline-offset: .2em; min-height: 2.75rem; cursor: pointer; }
+  .customer-app__copy-url { width: 100%; min-width: 0; margin-top: .8rem; padding: .6rem .75rem; border: 1px solid #a6b5cb; border-radius: var(--radius-sm); font: inherit; font-size: .85rem; }
+  .customer-app__quiet { padding: .45rem .2rem; border: 0; background: transparent; font-size: .875rem; color: #9c2337; text-decoration: underline; text-underline-offset: .2em; min-height: 2.75rem; cursor: pointer; }
+  .customer-app__confirm, .customer-app__move { margin-top: 1.4rem; padding-top: 1.4rem; border-top: 1px solid var(--color-line); }
+  .customer-app__confirm > p { margin-top: .8rem; }
+  .customer-app__destructive { background: #9c2337; color: white; }
+  .customer-app__range { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; margin-top: 1rem; }
+  .customer-app__range > div { flex: 1 1 12rem; }
+  .customer-app label { display: block; margin-bottom: .4rem; font-size: .875rem; font-weight: 600; }
+  .customer-app input[type='date'] { display: block; width: 100%; min-width: 0; min-height: 2.75rem; padding: .6rem .75rem; border: 1px solid #a6b5cb; border-radius: var(--radius-sm); background: white; font: inherit; }
+  .customer-app__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .35rem; margin-top: 1rem; }
+  .customer-app__days :global(.customer-app__day) { display: grid; align-content: center; gap: .25rem; min-height: 3.7rem; padding: .3rem .1rem; border: 1px solid transparent; border-radius: var(--radius-sm); background: #f0f5fe; color: var(--color-ink); cursor: pointer; }
+  .customer-app__days :global(.customer-app__day > span) { font-size: .68rem; text-transform: capitalize; }
+  .customer-app__days :global(.customer-app__day > strong) { font-size: .72rem; font-weight: 700; }
+  .customer-app__days :global(.customer-app__day[aria-pressed='true']) { background: var(--color-primary-strong); color: white; }
+  .customer-app__times { min-width: 0; margin-top: 1.2rem; padding: 0; border: 0; }
+  .customer-app__times legend { font-weight: 600; font-size: .92rem; }
+  .customer-app__slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.8rem, 1fr)); gap: .45rem; margin-top: .7rem; max-height: 20rem; overflow-y: auto; padding: .2rem; }
+  .customer-app__slots :global(.customer-app__slot) { display: block; position: relative; margin: 0; cursor: pointer; }
+  .customer-app__slots :global(.customer-app__slot input) { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .customer-app__slots :global(.customer-app__slot span) { display: grid; place-items: center; min-height: 2.75rem; padding: .4rem; border: 1px solid #a6b5cb; border-radius: var(--radius-sm); font-size: .88rem; }
+  .customer-app__slots :global(.customer-app__slot input:checked + span) { background: var(--color-primary-strong); border-color: var(--color-primary-strong); color: white; }
+  .customer-app__slots :global(.customer-app__slot input:focus-visible + span) { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+  .customer-app__move-summary { margin-top: .8rem; font-size: .9rem; font-weight: 600; line-height: 1.5; }
+  .customer-app__notes { margin-top: 1rem; font-size: .875rem; }
+  .customer-app__notes summary { color: var(--color-primary-strong); cursor: pointer; }
+  .customer-app__notes p { margin-top: .6rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .customer-app__support { margin-top: 1.5rem; font-size: .875rem; color: var(--color-ink-soft); }
+  .customer-app__support a { color: var(--color-primary-strong); }
+  @media (max-width: 360px) {
+    .customer-app__days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .customer-app__actions > .btn { flex: 1 1 100%; }
+  }
+</style>

@@ -12,6 +12,8 @@ import { DomainError } from './domain.mjs';
 import { createAuth } from './auth.mjs';
 import { createReminderRunner } from './reminders.mjs';
 import { createWhatsappSettings } from './whatsapp-settings.mjs';
+import { createCustomerAccess } from './customer-access.mjs';
+import { appointmentCalendar } from './calendar.mjs';
 
 const BODY_LIMIT = 32 * 1024;
 const JSON_TYPE = 'application/json; charset=utf-8';
@@ -144,6 +146,7 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
   const origin = new URL(config.origin).origin;
   const store = suppliedStore || createStore({ dataDir: config.dataDir, business: config.business, now });
   const whatsappSettings = createWhatsappSettings({ store, config, now });
+  const customerAccess = createCustomerAccess({ store, config, now });
   const reminderRunner = suppliedRunner || createReminderRunner({ store, config, getWhatsappConfig: whatsappSettings.getWhatsappConfig, now });
   const auth = createAuth({ store, config: { ...config, origin }, now });
   const limit = createRateLimiter({ now });
@@ -208,12 +211,45 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       limit(`availability:${ip}`, 100, 60_000);
       return json(response, 200, store.getRequestAvailability({ serviceId: url.searchParams.get('serviceId'), date: url.searchParams.get('date') }, now()));
     }
+    const rangeQuery = () => {
+      const days = url.searchParams.get('days') || '14';
+      if (!/^\d+$/.test(days) || Number(days) < 1 || Number(days) > 14) throw new DomainError(400, 'invalid_range', 'Scegli un intervallo da 1 a 14 giorni.');
+      return { from: url.searchParams.get('from'), days: Number(days) };
+    };
+    if (method === 'GET' && path === '/api/public/availability-range') {
+      limit(`availability:${ip}`, 100, 60_000);
+      return json(response, 200, store.getAvailabilityRange({ serviceId: url.searchParams.get('serviceId'), ...rangeQuery() }, now()));
+    }
+    if (path.startsWith('/api/public/customer/')) {
+      const token = typeof request.headers.authorization === 'string' ? request.headers.authorization.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1] : undefined;
+      limit(`customer-view:${ip}`, 100, 60_000);
+      if (MUTATIONS.has(method)) { limit(`customer-change:${ip}`, 20, 3_600_000); limit('customer-change:global', 300, 3_600_000); }
+      if (method === 'GET' && path === '/api/public/customer/appointment') return json(response, 200, customerAccess.getView(token));
+      if (method === 'GET' && path === '/api/public/customer/availability') return json(response, 200, customerAccess.availability(token, rangeQuery()));
+      if (method === 'POST' && path === '/api/public/customer/cancel') return json(response, 200, customerAccess.cancel(token, await jsonBody(request)));
+      if (method === 'POST' && path === '/api/public/customer/reschedule') return json(response, 200, customerAccess.reschedule(token, await jsonBody(request)));
+      if (method === 'POST' && path === '/api/public/customer/withdraw') { await jsonBody(request); return json(response, 200, customerAccess.withdraw(token)); }
+      if (method === 'GET' && path === '/api/public/customer/calendar.ics') {
+        const { appointment } = customerAccess.resolve(token);
+        const calendar = appointmentCalendar({ appointment, business: config.business, now: now() });
+        response.statusCode = 200;
+        response.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        response.setHeader('Content-Disposition', 'attachment; filename="appuntamento.ics"');
+        return response.end(calendar);
+      }
+      customerAccess.resolve(token);
+    }
     if (method === 'POST' && (path === '/api/public/bookings' || path === '/api/public/requests')) {
       // Both customer flows share one budget, so alternating endpoints cannot bypass it.
       limit('bookings:global', 60, 3_600_000);
       limit(`bookings:${ip}`, 10, 3_600_000);
       const body = await jsonBody(request);
-      return json(response, 201, path.endsWith('/requests') ? store.createPublicRequest(body, now()) : store.createPublicBooking(body, now()));
+      const kind = path.endsWith('/requests') ? 'request' : 'appointment';
+      const result = store.transaction(() => {
+        const receipt = kind === 'request' ? store.createPublicRequest(body, now()) : store.createPublicBooking(body, now());
+        return { ...receipt, managementPath: customerAccess.issue(kind, receipt.id, { optional: true, recipientPhone: body.phone }).managementPath };
+      });
+      return json(response, 201, result);
     }
     if (method === 'GET' && path === '/api/auth/session') return json(response, 200, sessionResult(auth.getSession(request)));
     if (method === 'POST' && (path === '/api/auth/setup' || path === '/api/auth/login')) {
@@ -281,6 +317,15 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       }
       if (method === 'GET' && path === '/api/admin/appointments') return json(response, 200, { items: store.listAppointments({ from: url.searchParams.get('from') || undefined, to: url.searchParams.get('to') || undefined }, now()) });
       if (method === 'POST' && path === '/api/admin/appointments') return json(response, 201, store.createAdminAppointment(await jsonBody(request), now()));
+      const customerLinkMatch = path.match(/^\/api\/admin\/(appointments|requests)\/([^/]+)\/customer-link$/);
+      if (method === 'POST' && customerLinkMatch) {
+        const body = await jsonBody(request);
+        return json(response, 200, customerAccess.issue(customerLinkMatch[1] === 'requests' ? 'request' : 'appointment', resourceId(customerLinkMatch[2]), { rotate: body.rotate ?? false }));
+      }
+      if (method === 'GET' && path === '/api/admin/blocks') return json(response, 200, { items: store.listBlocks({ from: url.searchParams.get('from') || undefined, to: url.searchParams.get('to') || undefined }, now()) });
+      if (method === 'POST' && path === '/api/admin/blocks') return json(response, 201, store.createBlock(await jsonBody(request), now()));
+      const blockMatch = path.match(/^\/api\/admin\/blocks\/([^/]+)$/);
+      if (method === 'DELETE' && blockMatch) return json(response, 200, store.deleteBlock(resourceId(blockMatch[1]), now()));
       const appointmentMatch = path.match(/^\/api\/admin\/appointments\/([^/]+)$/);
       if (method === 'PATCH' && appointmentMatch) return json(response, 200, store.updateAppointment(resourceId(appointmentMatch[1]), await jsonBody(request), now()));
       if (method === 'GET' && path === '/api/admin/requests') {
@@ -320,6 +365,8 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
         if (!/^\d+$/.test(count) || Number(count) < 1 || Number(count) > 100) throw new DomainError(400, 'invalid_limit', 'Il numero di elementi dello storico non è valido.');
         return json(response, 200, store.getCustomerHistory(url.searchParams.get('phone'), { limit: Number(count) }));
       }
+      if (method === 'GET' && path === '/api/admin/customers/profile') return json(response, 200, store.getCustomerProfile(url.searchParams.get('phone')));
+      if (method === 'PATCH' && path === '/api/admin/customers/profile') return json(response, 200, store.updateCustomerProfile(await jsonBody(request), now()));
       if (method === 'GET' && path === '/api/admin/customers') {
         const count = url.searchParams.get('limit') || '100';
         const query = url.searchParams.get('q') || '';
@@ -345,7 +392,7 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       const api = url.pathname === '/api' || url.pathname.startsWith('/api/');
       let normalizedPath = url.pathname;
       try { normalizedPath = decodeURIComponent(normalizedPath).replace(/\/+/g, '/'); } catch { /* Leave malformed escapes for the static handler to reject. */ }
-      const privatePage = api || /^\/(?:agenda|admin)(?:\/|\.html|$)/.test(normalizedPath);
+      const privatePage = api || /^\/(?:agenda|admin|appuntamento)(?:\/|\.html|$)/.test(normalizedPath);
       securityHeaders(response, { privatePage, https: origin.startsWith('https:') });
       if (api) return await routeApi(request, response, url);
       if (request.method !== 'GET' && request.method !== 'HEAD') throw new DomainError(405, 'method_not_allowed', 'Metodo non consentito.');

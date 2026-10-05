@@ -301,3 +301,41 @@ la mappa è attiva, niente badge "da confermare".
   i timer, né confondere il limite RAM con il consumo fatturato. Il piano Hobby
   prevede un minimo di $5 con $5 di consumi inclusi; piano e fattura effettivi del
   conto non verificati. Ottimizzare l’idle senza promettere riduzioni del minimo.
+
+## 19. Ottimizzazione funzionale — 2026-10-05
+
+- L’utente chiede di ottimizzare tutte le funzioni ispirandosi ai migliori concorrenti.
+  Benchmark ufficiale Exa su Fresha, Treatwell, Booksy e Phorest: 20 risultati in
+  quattro filoni e 12 pattern; fonti e scelte in `docs/ottimizzazioni-competitor.md`.
+  Replicare i comportamenti utili, mantenendo brand, testi e foto del salone.
+- Nessun nuovo SaaS o servizio operativo, nessuna dipendenza runtime aggiuntiva.
+  Conservare limiti WhatsApp, consenso e deduplicazione fra revisioni.
+- Catalogo operativo con descrizione, prezzo facoltativo in centesimi, prezzo “da”
+  e buffer dopo il servizio; prezzi e durate restano ignoti finché Jessica li salva.
+  `RuntimeServiceCatalog` aggiorna vetrina e home dal catalogo pubblico; il contenuto
+  statico confermato resta il fallback su Pages o se l’API non risponde.
+- Preavviso di prenotazione e modifiche cliente partono da 0, buffer da 0; nessuna
+  restrizione commerciale viene inventata. Pause/blocchi sono intervalli privati
+  non prenotabili, distinti dagli appuntamenti e verificati anche dal server.
+- Agenda con tempi occupati, ricerca nel periodo, azioni rapide ed esiti espliciti.
+  Completato/assente sono separati da confermato/annullato e non vengono dedotti
+  dal passare del tempo. Appuntamenti con servizio nascosto conservano il collegamento.
+- Note cliente nel modulo facoltative; note CRM private con versione per evitare
+  sovrascritture concorrenti. Riprenota dallo storico precompila servizio e durata,
+  ma richiede nuova data e nuova verifica del consenso al promemoria.
+- `/appuntamento` è una pagina cliente riservata senza account, noindex/no-store,
+  senza mappa, banner Google o sitemap. Collegamento personale nel frammento URL,
+  subito rimosso e conservato solo in RAM; API con Bearer, mai token in query/log.
+  Accesso derivato con HKDF/HMAC separato dalla chiave server `WHATSAPP_CONFIG_KEY`,
+  hash e nonce nel DB; richiesta confermata conserva il suo collegamento. In assenza
+  della chiave server i flussi precedenti continuano senza collegamento personale.
+- Spostamenti cliente mantengono durata e buffer originari, controllano gli
+  intervalli reali e la revisione. Annullamento/ritiro non liberano quota incerta.
+  Un cambio di telefono della cliente revoca i vecchi link e impedisce al vecchio
+  UUID pubblico di ottenere il link della nuova destinataria, anche dopo rotazione.
+  ICS soltanto confermati e ancora programmati, orari UTC reali, senza dati cliente, token o note;
+  il download non sincronizza automaticamente le modifiche nei calendari esterni.
+- Galleria filtrabile con lightbox e tastiera; nessuna nuova foto o risorsa remota.
+  Calendario con ricerca aggregata di massimo 14 giorni, servizio preselezionato,
+  riepilogo e distinzione chiara richiesta/conferma. Retry della conferma immediata
+  usa l’UUID di invio per evitare doppi appuntamenti.

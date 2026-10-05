@@ -12,7 +12,9 @@
   import { mountAdminPanel } from '../lib/admin-panel';
   import { whatsappHref, telHref } from '../lib/contact';
   type Customer = { phone: string; name: string; appointmentCount: number; requestCount: number; lastDate: string | null; nextDate: string | null };
-  type History = { appointments: { id: string; title: string; date: string; time: string; durationMinutes: number; status: string }[]; requests: { id: string; serviceName: string; date: string; time: string; status: string }[] };
+  type HistoricalAppointment = { id: string; serviceId?: string | null; title: string; date: string; time: string; durationMinutes: number; status: string; outcome?: string; notes?: string };
+  type History = { appointments: HistoricalAppointment[]; requests: { id: string; serviceName: string; date: string; time: string; status: string; withdrawnAt?: number | null; notes?: string }[] };
+  type Profile = { phone: string; notes: string; updatedAt: number | null; version: number };
   mountAdminPanel('[data-customer-directory]', 'customers', ({ root, api, on, isSignedIn }) => {
     const el = <T extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
     const form = el<HTMLFormElement>('[data-customer-search]');
@@ -20,52 +22,167 @@
     const notice = el('[data-customer-notice]');
     const list = el('[data-customer-list]');
     let revision = 0;
+    let generation = 0;
     let timer: number | undefined;
+    const cards = new Map<string, { card: HTMLElement; update: (customer: Customer) => void }>();
     const node = (tag: string, text: string, className = '') => { const item = document.createElement(tag); item.textContent = text; item.className = className; return item; };
     const date = (value: string) => new Intl.DateTimeFormat('it-IT', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value + 'T12:00:00Z'));
     function inform(text: string, error = false) { notice.textContent = text; notice.classList.toggle('is-error', error); notice.setAttribute('role', error ? 'alert' : 'status'); }
-    function clear() { revision++; window.clearTimeout(timer); search.value = ''; list.replaceChildren(); inform('Apri questa sezione per vedere la rubrica.'); }
-    function render(customers: Customer[]) {
-      list.replaceChildren(...customers.map(customer => {
-        const card = node('article', '', 'agenda-card customer-card');
-        card.append(node('h3', customer.name), node('p', customer.phone), node('p', `Appuntamenti registrati: ${customer.appointmentCount} · Richieste ricevute: ${customer.requestCount}`, 'agenda-note'));
-        if (customer.lastDate) card.append(node('p', `Ultimo appuntamento: ${date(customer.lastDate)}`, 'agenda-note'));
-        if (customer.nextDate) card.append(node('p', `Prossimo appuntamento: ${date(customer.nextDate)}`, 'agenda-note'));
-        const actions = node('div', '', 'button-group');
-        const call = node('a', 'Chiama', 'agenda-button secondary') as HTMLAnchorElement; call.href = telHref(customer.phone);
-        const message = node('a', 'Apri chat WhatsApp', 'agenda-button secondary') as HTMLAnchorElement;
-        message.href = whatsappHref(customer.phone); message.target = '_blank'; message.rel = 'noopener noreferrer';
-        const appointment = node('button', 'Nuovo appuntamento', 'agenda-button secondary') as HTMLButtonElement; appointment.type = 'button';
-        on(appointment, 'click', () => { document.dispatchEvent(new CustomEvent('agenda:new-appointment', { detail: { name: customer.name, phone: customer.phone } })); });
-        actions.append(call, message, appointment); card.append(actions);
-        const details = document.createElement('details'); details.className = 'customer-history';
-        details.append(node('summary', 'Appuntamenti e richieste'));
-        const content = node('div', '', 'customer-history-content'); details.append(content); card.append(details);
-        let loaded = false; let loading = false;
-        on(details, 'toggle', () => { if (!details.open || loaded || loading) return; void (async () => {
-          loading = true; content.replaceChildren(node('p', 'Caricamento dello storico…', 'agenda-note'));
+    function clear() { generation++; revision++; window.clearTimeout(timer); cards.clear(); search.value = ''; list.replaceChildren(); inform('Apri questa sezione per vedere la rubrica.'); }
+    function createCard(initialCustomer: Customer) {
+      let customer = initialCustomer;
+      const card = node('article', '', 'agenda-card customer-card');
+      const heading = node('h3', customer.name);
+      const counts = node('p', '', 'agenda-note');
+      const last = node('p', '', 'agenda-note'); const next = node('p', '', 'agenda-note');
+      card.append(heading, node('p', customer.phone), counts, last, next);
+      const actions = node('div', '', 'button-group');
+      const call = node('a', 'Chiama', 'agenda-button secondary') as HTMLAnchorElement; call.href = telHref(customer.phone);
+      const message = node('a', 'Apri chat WhatsApp', 'agenda-button secondary') as HTMLAnchorElement;
+      message.href = whatsappHref(customer.phone); message.target = '_blank'; message.rel = 'noopener noreferrer';
+      const appointment = node('button', 'Nuovo appuntamento', 'agenda-button secondary') as HTMLButtonElement; appointment.type = 'button';
+      on(appointment, 'click', () => { if (isSignedIn()) document.dispatchEvent(new CustomEvent('agenda:new-appointment', { detail: { name: customer.name, phone: customer.phone } })); });
+      actions.append(call, message, appointment); card.append(actions);
+      const details = document.createElement('details'); details.className = 'customer-history';
+      details.append(node('summary', 'Storico e note private'));
+      const content = node('div', '', 'customer-history-content'); details.append(content); card.append(details);
+      const historyContent = node('div', '', 'customer-history-records'); content.append(historyContent);
+      const profileForm = document.createElement('form'); profileForm.className = 'customer-profile-form'; profileForm.dataset.customerProfile = customer.phone;
+      const label = node('label', 'Note private sulla cliente');
+      const notes = document.createElement('textarea'); notes.name = 'notes'; notes.maxLength = 2000; notes.rows = 4; notes.disabled = true;
+      notes.placeholder = 'Preferenze utili per i prossimi appuntamenti'; notes.autocomplete = 'off';
+      const noteHelp = node('small', 'Visibili solo nel portale. Non vengono inviate alla cliente.'); label.append(notes, noteHelp);
+      const counter = node('small', '0 / 2000 caratteri', 'agenda-note');
+      const profileNotice = node('p', 'Apri lo storico per caricare le note.', 'agenda-note'); profileNotice.setAttribute('role', 'status'); profileNotice.setAttribute('aria-live', 'polite');
+      const saveButton = node('button', 'Salva note private', 'agenda-button secondary') as HTMLButtonElement; saveButton.type = 'submit'; saveButton.disabled = true;
+      const conflict = node('div', '', 'customer-profile-conflict'); conflict.hidden = true;
+      profileForm.append(node('h4', 'Note private'), label, counter, profileNotice, conflict, saveButton); content.append(profileForm);
+      let historyLoaded = false; let historyLoading = false; let historyRevision = 0; let profileLoading = false; let profileLoaded = false;
+      let savedVersion = 0; let savedNotes = ''; let dirty = false; let saving = false;
+      const current = (requestGeneration: number) => isSignedIn() && requestGeneration === generation;
+      function profileInform(text: string, error = false) { profileNotice.textContent = text; profileNotice.classList.toggle('is-error', error); profileNotice.setAttribute('role', error ? 'alert' : 'status'); }
+      function updateSave() { saveButton.disabled = !isSignedIn() || !profileLoaded || saving || !dirty; counter.textContent = `${notes.value.length} / 2000 caratteri`; }
+      function applyProfile(profile: Profile) {
+        savedVersion = profile.version; savedNotes = profile.notes; profileLoaded = true;
+        notes.value = profile.notes; notes.disabled = false; dirty = false; conflict.hidden = true; conflict.replaceChildren(); updateSave();
+      }
+      async function loadProfile() {
+        if (profileLoading || profileLoaded || dirty || !isSignedIn()) return;
+        const requestGeneration = generation; profileLoading = true; profileInform('Caricamento delle note private…');
+        try {
+          const profile = await api<Profile>(`/api/admin/customers/profile?phone=${encodeURIComponent(customer.phone)}`);
+          if (!current(requestGeneration)) return;
+          if (dirty) { profileLoaded = true; notes.disabled = false; updateSave(); profileInform('La tua bozza è conservata. Salvala quando hai finito.'); return; }
+          applyProfile(profile); profileInform('Puoi aggiungere o aggiornare le note private.');
+        } catch (error) {
+          if (!current(requestGeneration) || (error instanceof Error && error.name === 'AbortError')) return;
+          if (!notes.disabled) profileLoaded = true;
+          profileInform(error instanceof Error ? error.message : 'Note non disponibili.', true);
+          const retry = node('button', 'Riprova a caricare le note', 'agenda-button secondary') as HTMLButtonElement; retry.type = 'button';
+          on(retry, 'click', () => { conflict.hidden = true; void loadProfile(); }); conflict.replaceChildren(retry); conflict.hidden = false;
+        } finally { if (current(requestGeneration)) { profileLoading = false; updateSave(); } }
+      }
+      async function saveProfile(overrideVersion?: number) {
+        if (!isSignedIn() || saving || !profileLoaded || !dirty) return;
+        const requestGeneration = generation; const draft = notes.value; const version = overrideVersion ?? savedVersion;
+        saving = true; notes.readOnly = true; updateSave(); profileInform('Salvataggio delle note private…');
+        conflict.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = true; });
+        try {
+          const profile = await api<Profile>('/api/admin/customers/profile', 'PATCH', { phone: customer.phone, notes: draft, version });
+          if (!current(requestGeneration)) return;
+          applyProfile(profile); profileInform('Note private salvate.');
+        } catch (error) {
+          if (!current(requestGeneration) || (error instanceof Error && error.name === 'AbortError')) return;
+          profileInform(`${error instanceof Error ? error.message : 'Salvataggio non riuscito.'} La tua bozza è conservata.`, true);
+          // A changed version needs an explicit choice. Keep the original draft
+          // and version until the owner reviews the notes saved elsewhere.
           try {
-            const history = await api<History>(`/api/admin/customers/history?phone=${encodeURIComponent(customer.phone)}&limit=30`);
-            if (!isSignedIn() || !card.isConnected) return;
-            content.replaceChildren(node('h4', 'Appuntamenti'));
-            if (!history.appointments.length) content.append(node('p', 'Nessun appuntamento registrato.', 'agenda-note'));
-            for (const item of history.appointments) content.append(node('p', `${date(item.date)} · ${item.time} · ${item.title} · ${item.durationMinutes} minuti · ${item.status === 'cancelled' ? 'Annullato' : 'Confermato'}`));
-            content.append(node('h4', 'Richieste ricevute'));
-            if (!history.requests.length) content.append(node('p', 'Nessuna richiesta ricevuta.', 'agenda-note'));
-            const labels: Record<string, string> = { pending: 'Da confermare', confirmed: 'Confermata', declined: 'Non accettata' };
-            for (const item of history.requests) content.append(node('p', `${date(item.date)} · ${item.time} · ${item.serviceName} · ${labels[item.status] || item.status}`));
-            if (history.appointments.length === 30 || history.requests.length === 30) content.append(node('p', 'Sono mostrati gli ultimi 30 record per sezione. Per consultare gli altri usa l’agenda o l’esportazione.', 'agenda-note'));
-            loaded = true;
-          } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') return;
-            if (!isSignedIn() || !card.isConnected) return;
-            const retry = node('button', 'Riprova', 'agenda-button secondary') as HTMLButtonElement; retry.type = 'button';
-            on(retry, 'click', () => { details.open = false; queueMicrotask(() => { details.open = true; }); });
-            content.replaceChildren(node('p', error instanceof Error ? error.message : 'Storico non disponibile.', 'agenda-note'), retry);
-          } finally { loading = false; }
-        })(); });
-        return card;
-      }));
+            const latest = await api<Profile>(`/api/admin/customers/profile?phone=${encodeURIComponent(customer.phone)}`);
+            if (!current(requestGeneration) || latest.version === version) return;
+            const preview = node('blockquote', latest.notes || 'Nessuna nota salvata.');
+            const useSaved = node('button', 'Usa le note salvate', 'agenda-button secondary') as HTMLButtonElement; useSaved.type = 'button';
+            on(useSaved, 'click', () => { if (!isSignedIn() || saving) return; applyProfile(latest); profileInform('Note salvate caricate.'); });
+            const overwrite = node('button', 'Sostituisci con la mia bozza', 'agenda-button secondary') as HTMLButtonElement; overwrite.type = 'button';
+            on(overwrite, 'click', () => { void saveProfile(latest.version); });
+            conflict.replaceChildren(node('p', 'Le note salvate nel frattempo sono queste. Scegli quali mantenere.', 'agenda-note'), preview, useSaved, overwrite); conflict.hidden = false;
+          } catch (refreshError) {
+            if (!current(requestGeneration) || (refreshError instanceof Error && refreshError.name === 'AbortError')) return;
+          }
+        } finally {
+          if (current(requestGeneration)) {
+            saving = false; notes.readOnly = false; updateSave();
+            conflict.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = false; });
+          }
+        }
+      }
+      on(notes, 'input', () => { dirty = notes.value !== savedNotes; updateSave(); profileInform(dirty ? 'Bozza conservata finché la salvi. Puoi cambiare sezione senza perderla.' : 'Nessuna modifica da salvare.'); });
+      on(profileForm, 'submit', event => { event.preventDefault(); void saveProfile(); });
+      async function loadHistory() {
+        if (historyLoaded || historyLoading || !isSignedIn()) return;
+        const requestGeneration = generation; const requestRevision = historyRevision; historyLoading = true; historyContent.replaceChildren(node('p', 'Caricamento dello storico…', 'agenda-note'));
+        try {
+          const history = await api<History>(`/api/admin/customers/history?phone=${encodeURIComponent(customer.phone)}&limit=30`);
+          if (!current(requestGeneration) || requestRevision !== historyRevision) return;
+          historyContent.replaceChildren(node('h4', 'Appuntamenti'));
+          if (!history.appointments.length) historyContent.append(node('p', 'Nessun appuntamento registrato.', 'agenda-note'));
+          for (const item of history.appointments) {
+            const record = node('div', '', 'customer-history-record');
+            const outcome = item.status === 'cancelled' ? 'Annullato' : item.outcome === 'completed' ? 'Concluso' : item.outcome === 'no_show' ? 'Cliente non presentata' : 'Confermato';
+            record.append(node('p', `${date(item.date)} · ${item.time} · ${item.title} · ${item.durationMinutes} minuti · ${outcome}`));
+            if (item.notes) record.append(node('p', `Nota per l’appuntamento: ${item.notes}`, 'agenda-note'));
+            const repeat = node('button', 'Riprenota questo servizio', 'agenda-button secondary') as HTMLButtonElement; repeat.type = 'button';
+            on(repeat, 'click', () => {
+              if (!isSignedIn()) return;
+              const detail: { name: string; phone: string; serviceId?: string; title?: string; durationMinutes?: number } = { name: customer.name, phone: customer.phone };
+              if (typeof item.serviceId === 'string' && item.serviceId.length > 0 && item.serviceId.length <= 80 && !/[\u0000-\u001f\u007f]/u.test(item.serviceId)) detail.serviceId = item.serviceId;
+              if (typeof item.title === 'string' && item.title.length > 0 && item.title.length <= 160 && !/[\u0000-\u001f\u007f]/u.test(item.title)) detail.title = item.title;
+              if (Number.isInteger(item.durationMinutes) && item.durationMinutes >= 5 && item.durationMinutes <= 480) detail.durationMinutes = item.durationMinutes;
+              document.dispatchEvent(new CustomEvent('agenda:new-appointment', { detail }));
+            }); record.append(repeat); historyContent.append(record);
+          }
+          historyContent.append(node('h4', 'Richieste ricevute'));
+          if (!history.requests.length) historyContent.append(node('p', 'Nessuna richiesta ricevuta.', 'agenda-note'));
+          const labels: Record<string, string> = { pending: 'Da confermare', confirmed: 'Confermata', declined: 'Non accettata', withdrawn: 'Ritirata dalla cliente' };
+          for (const item of history.requests) {
+            historyContent.append(node('p', `${date(item.date)} · ${item.time} · ${item.serviceName} · ${item.withdrawnAt ? labels.withdrawn : labels[item.status] || item.status}`));
+            if (item.notes) historyContent.append(node('p', `Nota della richiesta: ${item.notes}`, 'agenda-note'));
+          }
+          if (history.appointments.length === 30 || history.requests.length === 30) historyContent.append(node('p', 'Sono mostrati gli ultimi 30 record per sezione. Per consultare gli altri usa l’agenda o l’esportazione.', 'agenda-note'));
+          historyLoaded = true;
+        } catch (error) {
+          if (!current(requestGeneration) || requestRevision !== historyRevision || (error instanceof Error && error.name === 'AbortError')) return;
+          const retry = node('button', 'Riprova a caricare lo storico', 'agenda-button secondary') as HTMLButtonElement; retry.type = 'button';
+          on(retry, 'click', () => { void loadHistory(); }); historyContent.replaceChildren(node('p', error instanceof Error ? error.message : 'Storico non disponibile.', 'agenda-note'), retry);
+        } finally {
+          if (current(requestGeneration)) {
+            historyLoading = false;
+            if (requestRevision !== historyRevision && details.open) void loadHistory();
+          }
+        }
+      }
+      on(details, 'toggle', () => { if (details.open && isSignedIn()) void Promise.allSettled([loadHistory(), loadProfile()]); });
+      function update(value: Customer) {
+        customer = value; heading.textContent = customer.name;
+        counts.textContent = `Appuntamenti registrati: ${customer.appointmentCount} · Richieste ricevute: ${customer.requestCount}`;
+        last.hidden = !customer.lastDate; last.textContent = customer.lastDate ? `Ultimo appuntamento in agenda: ${date(customer.lastDate)}` : '';
+        next.hidden = !customer.nextDate; next.textContent = customer.nextDate ? `Prossimo appuntamento: ${date(customer.nextDate)}` : '';
+        historyRevision++; historyLoaded = false;
+        if (!dirty && !saving) profileLoaded = false;
+        if (details.open && isSignedIn()) void Promise.allSettled([loadHistory(), loadProfile()]);
+      }
+      update(customer); return { card, update };
+    }
+    function render(customers: Customer[]) {
+      const visibleCards = customers.map(customer => {
+        let entry = cards.get(customer.phone);
+        if (!entry) { entry = createCard(customer); cards.set(customer.phone, entry); }
+        else entry.update(customer);
+        return entry.card;
+      });
+      for (let index = 0; index < visibleCards.length; index++) {
+        if (list.children[index] !== visibleCards[index]) list.insertBefore(visibleCards[index], list.children[index] || null);
+      }
+      while (list.children.length > visibleCards.length) list.lastElementChild?.remove();
     }
     async function load() {
       if (!isSignedIn()) return;
@@ -83,13 +200,19 @@
   });
 </script>
 
-<style>
+<style is:global>
   [data-customer-directory], .customer-list { display: grid; gap: 1rem; }
   .customer-card { display: grid; gap: .65rem; }
   .customer-card p { overflow-wrap: anywhere; }
   .customer-search { align-items: end; }
   .customer-history { border-top: 1px solid #dbe1ed; padding-top: .75rem; }
-  summary { cursor: pointer; min-height: 44px; font-weight: 650; }
-  .customer-history-content { display: grid; gap: .65rem; font-size: .85rem; }
+  [data-customer-directory] summary { cursor: pointer; min-height: 44px; font-weight: 650; }
+  .customer-history-content, .customer-history-records, .customer-profile-form { display: grid; gap: .8rem; font-size: .85rem; }
+  .customer-profile-form { border-top: 1px solid #dbe1ed; padding-top: 1rem; }
+  .customer-profile-form textarea { min-height: 7rem; resize: vertical; }
+  .customer-history-record { display: grid; gap: .5rem; border-bottom: 1px solid #edf0f6; padding-bottom: .8rem; }
+  .customer-profile-conflict { border: 1px solid #e6a635; border-radius: .6rem; padding: .8rem; }
+  .customer-profile-conflict blockquote { margin: .6rem 0; padding-left: .7rem; border-left: 3px solid #e6a635; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .customer-profile-conflict button { margin: .3rem .3rem .3rem 0; }
   @media (min-width: 600px) { .customer-search { grid-template-columns: minmax(0, 1fr) auto; } }
 </style>

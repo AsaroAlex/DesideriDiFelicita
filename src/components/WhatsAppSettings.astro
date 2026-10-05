@@ -1,18 +1,44 @@
-<div data-whatsapp-settings>
+---
+import { site } from '../data/site';
+const proposedTemplate = `Ciao {{1}}, ti ricordiamo l’appuntamento da ${site.businessName} il {{2}} alle {{3}}. Per modifiche o cancellazioni contatta il salone.`;
+---
+
+<div data-whatsapp-settings data-template-text={proposedTemplate}>
   <p class="agenda-notice" role="status" aria-live="polite" data-connection-notice>Apri questa sezione per controllare il collegamento.</p>
   <section class="agenda-card" aria-labelledby="connection-status-title">
     <h3 id="connection-status-title" data-connection-title>Collegamento WhatsApp</h3>
     <p class="agenda-note" data-connection-state></p>
     <p class="agenda-note">Un solo promemoria per appuntamento con consenso. In Orari e impostazioni puoi gestire orario, limiti e modalità risparmio: massimo 10 tentativi al giorno e 60 al mese quando è attiva.</p>
   </section>
+  <section class="agenda-card connection-steps" aria-labelledby="connection-steps-title">
+    <h3 id="connection-steps-title">Collega WhatsApp in quattro passaggi</h3>
+    <ol class="connection-checklist">
+      <li><strong>Registra il numero su Meta</strong><span class="agenda-note">Recupera Phone number ID, token di accesso e segreto dell’app.</span><span class="connection-step-state" data-setup-number>Da controllare</span></li>
+      <li><strong>Prepara il modello utility</strong><span class="agenda-note">Nome, data e ora devono essere i tre parametri del testo. Richiedi l’approvazione in WhatsApp Manager.</span><span class="connection-step-state" data-setup-template>Approvazione da verificare su Meta</span></li>
+      <li><strong>Configura il webhook su Meta</strong><span class="agenda-note">Usa l’indirizzo qui sotto e il token di verifica, quindi sottoscrivi gli eventi messages.</span><span class="connection-step-state" data-setup-webhook>Da controllare</span></li>
+      <li><strong>Attiva i promemoria nel portale</strong><span class="agenda-note">Dopo aver completato i passaggi su Meta, abilita gli invii e controlla gli esiti nella sezione Promemoria.</span><span class="connection-step-state" data-setup-activation>Invii sospesi</span></li>
+    </ol>
+    <a class="agenda-button secondary" href="https://business.facebook.com/wa/manage/" target="_blank" rel="noopener noreferrer">Apri WhatsApp Manager</a>
+  </section>
+  <section class="agenda-card connection-template" aria-labelledby="connection-template-title">
+    <h3 id="connection-template-title">Testo proposto per il modello</h3>
+    <blockquote>{proposedTemplate}</blockquote>
+    <button type="button" class="agenda-button secondary" data-copy-template>Copia il testo con i tre parametri</button>
+    <textarea data-template-copy readonly hidden aria-label="Testo del modello da copiare">{proposedTemplate}</textarea>
+    <h4>Anteprima con valori di esempio</h4>
+    <div class="form-grid connection-preview-fields">
+      <label>1 · Nome<input data-template-example="1" value="Anna" maxlength="100" autocomplete="off" /></label>
+      <label>2 · Data<input data-template-example="2" value="martedì 6 ottobre" maxlength="100" autocomplete="off" /></label>
+      <label>3 · Ora<input data-template-example="3" value="10:30" maxlength="30" autocomplete="off" /></label>
+    </div>
+    <p class="connection-preview" data-template-preview aria-live="polite"></p>
+    <p class="agenda-note">Questa è un’anteprima del testo proposto, senza inviare messaggi. Il testo effettivo sarà quello approvato da Meta.</p>
+  </section>
   <details class="agenda-card connection-help">
-    <summary>Cosa serve per collegare WhatsApp</summary>
+    <summary>Dettagli sul collegamento e sui costi</summary>
     <p>Il collegamento usa WhatsApp Business Platform di Meta. Servono un numero registrato sulla piattaforma, un token del sistema, il segreto dell’app e un modello di messaggio approvato come <strong>utility</strong>.</p>
-    <p>Il modello deve avere tre parametri nel testo: nome della cliente, data e ora. Puoi proporre questo testo:</p>
-    <blockquote>Ciao &#123;&#123;1&#125;&#125;, ti ricordiamo l’appuntamento da Desideri di Felicità il &#123;&#123;2&#125;&#125; alle &#123;&#123;3&#125;&#125;. Per modifiche o cancellazioni contatta il salone.</blockquote>
     <p>Genera un token e copialo, poi salva il collegamento in questo portale. Successivamente incolla l’indirizzo webhook e il token nel pannello Meta e sottoscrivi gli eventi <strong>messages</strong>. Gli invii restano sospesi finché li attivi.</p>
     <p class="agenda-note">Il numero già nell’app WhatsApp Business richiede un percorso Meta compatibile o una migrazione. I messaggi hanno il costo applicato da Meta; i limiti riducono gli invii, senza fissare una spesa in euro.</p>
-    <a class="agenda-button secondary" href="https://business.facebook.com/wa/manage/" target="_blank" rel="noopener noreferrer">Apri WhatsApp Manager</a>
   </details>
   <form class="agenda-card" data-connection-form autocomplete="off">
     <h3>Configura il collegamento</h3>
@@ -29,6 +55,7 @@
       </div>
       <div class="button-group"><button type="button" class="agenda-button secondary" data-generate-verify>Genera token di verifica</button><button type="button" class="agenda-button secondary" data-copy-verify>Copia il nuovo token</button></div>
       <label>Indirizzo webhook<input name="webhookUrl" readonly /></label>
+      <button type="button" class="agenda-button secondary" data-copy-webhook disabled>Copia indirizzo webhook</button>
       <label>La tua password del portale<input type="password" name="currentPassword" autocomplete="current-password" required /></label>
       <button type="submit" class="agenda-button">Salva collegamento</button>
     </fieldset>
@@ -55,10 +82,28 @@
     let connection: Connection | undefined;
     let busy = false;
     let dirty = false;
+    let generation = 0;
+    const current = (requestGeneration: number) => isSignedIn() && requestGeneration === generation;
     function inform(message: string, error = false) { notice.textContent = message; notice.classList.toggle('is-error', error); notice.setAttribute('role', error ? 'alert' : 'status'); }
+    function preview() {
+      let text = root.dataset.templateText || '';
+      root.querySelectorAll<HTMLInputElement>('[data-template-example]').forEach(input => { text = text.replace(`{{${input.dataset.templateExample}}}`, () => input.value.trim() || '…'); });
+      el('[data-template-preview]').textContent = text;
+    }
+    function checklist(value?: Connection) {
+      el('[data-setup-number]').textContent = value?.phoneNumberId && value.secrets.accessToken && value.secrets.appSecret ? 'Dati del numero salvati nel portale' : 'Identificativo e credenziali da inserire';
+      el('[data-setup-template]').textContent = value?.templateName ? `Nome salvato: ${value.templateName}. Verifica l’approvazione su Meta.` : 'Nome da inserire dopo l’approvazione su Meta';
+      el('[data-setup-webhook]').textContent = value?.webhookConfigured ? 'Dati salvati. Completa la verifica del webhook su Meta.' : 'Segreto e token di verifica da inserire';
+      el('[data-setup-activation]').textContent = value?.enabled ? 'Invii abilitati nel portale · controlla gli esiti in Promemoria' : 'Invii sospesi';
+      el<HTMLButtonElement>('[data-copy-webhook]').disabled = !isSignedIn() || !value?.webhookUrl || !value.storageAvailable;
+    }
     function clear() {
-      connection = undefined; dirty = false; form.reset(); toggleForm.reset();
+      generation++; connection = undefined; busy = false; dirty = false; form.reset(); toggleForm.reset();
+      root.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = false; });
       el<HTMLFieldSetElement>('[data-connection-fields]').disabled = true; toggle.disabled = true;
+      field('verifyToken').type = 'password';
+      root.querySelectorAll<HTMLInputElement>('[data-template-example]').forEach(input => { input.value = input.defaultValue; });
+      el<HTMLTextAreaElement>('[data-template-copy]').hidden = true; preview(); checklist();
       el('[data-connection-title]').textContent = 'Collegamento WhatsApp'; el('[data-connection-state]').textContent = '';
       root.querySelectorAll('[data-secret-note]').forEach(note => { note.textContent = ''; });
       inform('Apri questa sezione per controllare il collegamento.');
@@ -77,36 +122,52 @@
       toggle.textContent = value.enabled ? 'Sospendi promemoria automatici' : 'Attiva promemoria automatici';
       el('[data-connection-title]').textContent = value.enabled ? 'Invii automatici abilitati' : value.configured ? 'Collegamento salvato · invii sospesi' : 'WhatsApp da configurare';
       el('[data-connection-state]').textContent = !value.storageAvailable ? 'Il collegamento richiede l’abilitazione dello storage protetto sul server.' : value.enabled ? 'I promemoria con consenso seguono l’orario e i limiti scelti. Lo stato di ogni invio è nella sezione Promemoria.' : value.configured && value.webhookConfigured ? 'Le credenziali sono salvate. Puoi attivare gli invii dopo aver completato la configurazione su Meta.' : 'Completa le credenziali e il webhook. Gli appuntamenti e le richieste funzionano anche con i promemoria sospesi.';
+      checklist(value);
     }
     async function load() {
       if (busy || !isSignedIn()) return;
       if (dirty) { inform('Le modifiche non salvate sono conservate. Salva il collegamento per applicarle.'); return; }
-      busy = true; inform('Controlliamo il collegamento…');
-      try { const value = await api<Connection>('/api/admin/whatsapp'); if (isSignedIn()) { render(value); inform('Stato del collegamento aggiornato.'); } }
-      catch (error) { if (isSignedIn() && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Non è stato possibile caricare il collegamento.', true); }
-      finally { busy = false; }
+      const requestGeneration = generation; busy = true; inform('Controlliamo il collegamento…');
+      try { const value = await api<Connection>('/api/admin/whatsapp'); if (current(requestGeneration)) { if (dirty) inform('Le modifiche non salvate sono conservate. Salva il collegamento per applicarle.'); else { render(value); inform('Stato del collegamento aggiornato.'); } } }
+      catch (error) { if (current(requestGeneration) && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Non è stato possibile caricare il collegamento.', true); }
+      finally { if (current(requestGeneration)) busy = false; }
     }
+    root.querySelectorAll<HTMLInputElement>('[data-template-example]').forEach(input => { on(input, 'input', preview); }); preview();
+    on(el('[data-copy-template]'), 'click', () => { void (async () => {
+      if (!isSignedIn()) return; const requestGeneration = generation;
+      try { await navigator.clipboard.writeText(root.dataset.templateText || ''); if (current(requestGeneration)) inform('Testo del modello copiato. In Meta usa un modello utility con i parametri nome, data e ora, in questo ordine.'); }
+      catch { if (!current(requestGeneration)) return; const copy = el<HTMLTextAreaElement>('[data-template-copy]'); copy.hidden = false; copy.focus(); copy.select(); inform('Copia il testo selezionato e incollalo nel modello su Meta.'); }
+    })(); });
+    on(el('[data-copy-webhook]'), 'click', () => { void (async () => {
+      if (!isSignedIn() || !field('webhookUrl').value) return; const requestGeneration = generation;
+      try { await navigator.clipboard.writeText(field('webhookUrl').value); if (current(requestGeneration)) inform('Indirizzo webhook copiato. Incollalo nella configurazione Meta insieme al token di verifica.'); }
+      catch { if (!current(requestGeneration)) return; field('webhookUrl').focus(); field('webhookUrl').select(); inform('Copia l’indirizzo selezionato e incollalo nella configurazione Meta.'); }
+    })(); });
     on(el('[data-generate-verify]'), 'click', () => {
+      if (!isSignedIn() || el<HTMLFieldSetElement>('[data-connection-fields]').disabled) return;
       const bytes = crypto.getRandomValues(new Uint8Array(32));
       field('verifyToken').value = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
       dirty = true;
       inform('Token preparato. Copialo, salva il collegamento qui e poi configura la verifica su Meta.');
     });
     on(el('[data-copy-verify]'), 'click', () => { void (async () => {
+      if (!isSignedIn()) return; const requestGeneration = generation;
       if (!field('verifyToken').value) { inform('Genera o inserisci prima un nuovo token. Il token già salvato non viene mostrato.', true); return; }
-      try { await navigator.clipboard.writeText(field('verifyToken').value); inform('Token copiato. Salva qui il collegamento, poi incollalo nella verifica su Meta.'); }
-      catch { field('verifyToken').type = 'text'; field('verifyToken').focus(); field('verifyToken').select(); inform('Copia il token selezionato, poi salva il collegamento.'); }
+      try { await navigator.clipboard.writeText(field('verifyToken').value); if (current(requestGeneration)) inform('Token copiato. Salva qui il collegamento, poi incollalo nella verifica su Meta.'); }
+      catch { if (!current(requestGeneration)) return; field('verifyToken').type = 'text'; field('verifyToken').focus(); field('verifyToken').select(); inform('Copia il token selezionato, poi salva il collegamento.'); }
     })(); });
     on(form, 'input', () => { dirty = true; });
     async function save(body: Record<string, unknown>, message: string) {
       if (busy || !isSignedIn()) return;
-      busy = true; root.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = true; });
+      const requestGeneration = generation; busy = true; root.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = true; });
       inform('Salvataggio in corso…');
-      try { const value = await api<Connection>('/api/admin/whatsapp', 'PATCH', body); if (isSignedIn()) { render(value); inform(message); document.dispatchEvent(new CustomEvent('agenda:configuration-changed')); } }
-      catch (error) { if (isSignedIn() && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Salvataggio non riuscito.', true); }
+      try { const value = await api<Connection>('/api/admin/whatsapp', 'PATCH', body); if (current(requestGeneration)) { render(value); inform(message); document.dispatchEvent(new CustomEvent('agenda:configuration-changed')); } }
+      catch (error) { if (current(requestGeneration) && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Salvataggio non riuscito.', true); }
       finally {
+        if (!current(requestGeneration)) return;
         busy = false; field('currentPassword').value = ''; (toggleForm.elements.namedItem('currentPassword') as HTMLInputElement).value = ''; field('verifyToken').type = 'password';
         root.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = false; });
+        checklist(connection);
         toggle.disabled = !isSignedIn() || !connection?.storageAvailable || (!connection.enabled && (!connection.configured || !connection.webhookConfigured));
       }
     }
@@ -121,5 +182,11 @@
   fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 1.2rem; min-width: 0; }
   summary { cursor: pointer; font-weight: 650; min-height: 44px; }
   .connection-help p, .connection-help blockquote { margin-block: 1rem; font-size: .9rem; line-height: 1.7; }
-  blockquote { border-left: 3px solid #2e6be6; padding-left: 1rem; }
+  blockquote { border-left: 3px solid #2e6be6; padding-left: 1rem; margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
+  .connection-checklist { padding-left: 1.4rem; display: grid; gap: 1rem; margin: 0; }
+  .connection-checklist li > * { display: block; margin-block: .3rem; }
+  .connection-step-state { color: #294882; font-size: .8rem; font-weight: 650; }
+  .connection-preview { background: #eef4ff; border-radius: .65rem; padding: 1rem; line-height: 1.7; overflow-wrap: anywhere; }
+  .connection-template textarea { min-height: 7rem; resize: vertical; }
+  @media (min-width: 760px) { .connection-preview-fields { grid-template-columns: 1fr 1.5fr .7fr; } }
 </style>

@@ -1,9 +1,15 @@
 ---
+import { withBase } from '../lib/href';
+
 interface Props {
   name: string;
   description: string;
+  serviceId?: string;
   index?: number;
   price?: string;
+  priceCents?: number | null;
+  priceFrom?: boolean;
+  durationMinutes?: number | null;
   variant?: 'card' | 'line';
   headingLevel?: 'h2' | 'h3';
   showPrice?: boolean;
@@ -13,27 +19,37 @@ interface Props {
 const {
   name,
   description,
+  serviceId,
   index,
   price,
+  priceCents = null,
+  priceFrom = false,
+  durationMinutes = null,
   variant = 'card',
   headingLevel: Heading = 'h3',
   showPrice = true,
   priceConfirmed = false,
 } = Astro.props;
 const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
+const hasDuration = Number.isInteger(durationMinutes) && Number(durationMinutes) > 0;
+const hasPrice = Number.isSafeInteger(priceCents) && Number(priceCents) >= 0;
+const formattedPrice = hasPrice
+  ? `${priceFrom ? 'Da ' : ''}${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(Number(priceCents) / 100)}`
+  : priceConfirmed && price ? price : 'Prezzo su richiesta';
+const bookingHref = `${withBase('/prenota')}?servizio=${encodeURIComponent(serviceId || name)}`;
 ---
 
 <article class:list={[variant === 'card' && 'card', 'service', `service--${variant}`]}>
-  {num && <span class="index-num service__num">{num}</span>}
-  <Heading class="service__name">{name}</Heading>
-  <p class="service__desc">{description}</p>
-  {
-    showPrice && (
-      <p class="service__price">
-        {priceConfirmed && price ? price : 'Prezzo su richiesta'}
-      </p>
-    )
-  }
+  <span class="index-num service__num" data-service-number hidden={!num}>{num}</span>
+  <Heading class="service__name" data-service-name>{name}</Heading>
+  <p class="service__desc" data-service-description>{description}</p>
+  <p class="service__duration" data-service-duration hidden={!hasDuration}>
+    {hasDuration ? `Durata: ${durationMinutes} minuti` : ''}
+  </p>
+  <p class="service__price" data-service-price hidden={!showPrice}>{formattedPrice}</p>
+  <a class="service__booking" data-service-booking href={bookingHref} aria-label={`Prenota: ${name}`}>
+    Prenota <span aria-hidden="true">↗</span>
+  </a>
 </article>
 
 <style>
@@ -41,6 +57,7 @@ const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-width: 0;
   }
   .service__num {
     display: block;
@@ -48,11 +65,13 @@ const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
   }
   .service__name {
     font-size: var(--fs-400);
+    overflow-wrap: anywhere;
   }
   .service__desc {
     margin-top: var(--space-sm);
     color: var(--color-ink-soft);
     flex: 1;
+    overflow-wrap: anywhere;
   }
   .service__price {
     margin-top: var(--space-md);
@@ -60,6 +79,24 @@ const num = typeof index === 'number' ? String(index).padStart(2, '0') : null;
     color: var(--color-primary-strong);
     font-size: var(--fs-100);
     letter-spacing: 0.02em;
+  }
+  .service__duration {
+    margin-top: var(--space-md);
+    color: var(--color-muted);
+    font-size: var(--fs-100);
+  }
+  .service__booking {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 44px;
+    margin-top: var(--space-sm);
+    font-weight: 700;
+    text-decoration-thickness: 1px;
+  }
+  .service [hidden] {
+    display: none;
   }
   .service--line {
     position: relative;

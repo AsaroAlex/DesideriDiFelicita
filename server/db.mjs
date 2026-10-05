@@ -40,7 +40,18 @@ CREATE TABLE IF NOT EXISTS customer_interactions (phone TEXT PRIMARY KEY,last_in
 CREATE TABLE IF NOT EXISTS webhook_events (event_hash TEXT PRIMARY KEY,created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY,event TEXT NOT NULL,resource_id TEXT,created_at INTEGER NOT NULL,detail TEXT);
 CREATE INDEX IF NOT EXISTS audit_log_event_resource_time ON audit_log(event,resource_id,created_at);
+CREATE TABLE IF NOT EXISTS calendar_blocks (id TEXT PRIMARY KEY,title TEXT NOT NULL,start_at INTEGER NOT NULL,end_at INTEGER NOT NULL CHECK(end_at>start_at),created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS calendar_blocks_interval ON calendar_blocks(start_at,end_at);
+CREATE TABLE IF NOT EXISTS customer_profiles (phone TEXT PRIMARY KEY,notes TEXT NOT NULL,updated_at INTEGER NOT NULL,version INTEGER NOT NULL CHECK(version>0));
+CREATE TABLE IF NOT EXISTS booking_idempotency (client_request_id TEXT PRIMARY KEY,payload_hash TEXT NOT NULL,appointment_id TEXT NOT NULL REFERENCES appointments(id));
 `;
+
+export function noteText(value = '', maximum = 500) {
+  if (typeof value !== 'string' || value.length > maximum || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) fail('invalid_notes', `Usa un testo di massimo ${maximum} caratteri.`);
+  const normalized = value.normalize('NFC').replace(/\r\n?/g, '\n').trim();
+  if (normalized.length > maximum) fail('invalid_notes', `Usa un testo di massimo ${maximum} caratteri.`);
+  return normalized;
+}
 
 const QUOTA_STATUSES = ['sending', 'accepted', 'delivered', 'read', 'needs_review'];
 const quotaStatements = new WeakMap();
@@ -134,6 +145,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
   db.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;');
   db.exec(SCHEMA);
   let transactionDepth = 0;
+  let customerAccessSync;
   function transaction(fn) {
     if (transactionDepth) return fn();
     db.exec('BEGIN IMMEDIATE');
@@ -151,8 +163,11 @@ export function createStore({ dataDir, business, now = Date.now }) {
   function setting(key, value) { db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, JSON.stringify(value)); }
   const defaults = {
     bookingEnabled: false, requestEnabled: true, reminderTime: '18:00', bookingDays: 60, economyMode: true,
+    bookingLeadMinutes: 0, customerChangesEnabled: true, customerChangeNoticeHours: 0,
     openingHours: validateHours(business.openingHours, business.openingHours), closedDates: [], dailyReminderLimit: 20, monthlyReminderLimit: 200,
   };
+  const settingsKeys = Object.keys(defaults);
+  const settingsQuery = db.prepare(`SELECT key,value FROM settings WHERE key IN (${settingsKeys.map(() => '?').join(',')})`);
   transaction(() => {
     // Existing calendars keep their catalog and history. Run the additive
     // migration under the same write lock as seeding so parallel starts do not
@@ -160,15 +175,32 @@ export function createStore({ dataDir, business, now = Date.now }) {
     if (!db.prepare('PRAGMA table_info(services)').all().some((column) => column.name === 'listed')) {
       db.exec('ALTER TABLE services ADD COLUMN listed INTEGER NOT NULL DEFAULT 1 CHECK(listed IN (0,1))');
     }
+    const addColumns = (table, definitions) => {
+      const columns = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));
+      for (const [name, definition] of Object.entries(definitions)) if (!columns.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+      return columns;
+    };
+    const originalServiceColumns = addColumns('services', { description: "TEXT NOT NULL DEFAULT ''", price_cents: 'INTEGER', price_from: 'INTEGER NOT NULL DEFAULT 0 CHECK(price_from IN(0,1))', buffer_after_minutes: 'INTEGER NOT NULL DEFAULT 0 CHECK(buffer_after_minutes BETWEEN 0 AND 120)' });
+    addColumns('appointments', { notes: "TEXT NOT NULL DEFAULT ''", outcome: "TEXT NOT NULL DEFAULT 'scheduled' CHECK(outcome IN('scheduled','completed','no_show'))", buffer_after_minutes: 'INTEGER NOT NULL DEFAULT 0 CHECK(buffer_after_minutes BETWEEN 0 AND 120)', phone_normalized: 'TEXT' });
+    addColumns('booking_requests', { notes: "TEXT NOT NULL DEFAULT ''", withdrawn_at: 'INTEGER', phone_normalized: 'TEXT' });
+    for (const table of ['appointments', 'booking_requests']) {
+      const update = db.prepare(`UPDATE ${table} SET phone_normalized=? WHERE id=?`);
+      for (const row of db.prepare(`SELECT id,phone FROM ${table} WHERE phone_normalized IS NULL`).all()) {
+        try { update.run(normalizePhone(row.phone), row.id); } catch (error) { if (!(error instanceof DomainError) || error.code !== 'invalid_phone') throw error; }
+      }
+    }
+    db.exec('CREATE INDEX IF NOT EXISTS appointments_customer_history ON appointments(phone_normalized,start_at DESC); CREATE INDEX IF NOT EXISTS requests_customer_history ON booking_requests(phone_normalized,requested_start_at DESC);');
     for (const [key, value] of Object.entries(defaults)) db.prepare('INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)').run(key, JSON.stringify(value));
-    business.services.forEach((service, index) => db.prepare('INSERT OR IGNORE INTO services(id,name,duration_minutes,enabled,sort_order) VALUES(?,?,NULL,0,?)').run(serviceId(service, index), service.name, index));
+    business.services.forEach((service, index) => db.prepare('INSERT OR IGNORE INTO services(id,name,duration_minutes,enabled,sort_order,description) VALUES(?,?,NULL,0,?,?)').run(serviceId(service, index), service.name, index, noteText(service.description || '', 1000)));
+    if (!originalServiceColumns.has('description')) for (const [index, service] of business.services.entries()) db.prepare('UPDATE services SET description=? WHERE id=?').run(noteText(service.description || '', 1000), serviceId(service, index));
   });
   function getSettings() {
     const result = { ...defaults };
-    for (const row of db.prepare('SELECT key,value FROM settings').all()) if (Object.hasOwn(defaults, row.key)) result[row.key] = JSON.parse(row.value);
+    for (const row of settingsQuery.all(...settingsKeys)) result[row.key] = JSON.parse(row.value);
     return result;
   }
-  function mapService(row) { return { id: row.id, name: row.name, durationMinutes: row.duration_minutes, enabled: Boolean(row.enabled), listed: Boolean(row.listed), sortOrder: row.sort_order }; }
+  function mapService(row) { return { id: row.id, name: row.name, description: row.description, durationMinutes: row.duration_minutes, enabled: Boolean(row.enabled), listed: Boolean(row.listed), sortOrder: row.sort_order, priceCents: row.price_cents, priceFrom: Boolean(row.price_from), bufferAfterMinutes: row.buffer_after_minutes }; }
+  function publicService(service) { const { id, name, description, durationMinutes, priceCents, priceFrom, bufferAfterMinutes, listed } = service; return { id, name, description, durationMinutes, priceCents, priceFrom, bufferAfterMinutes, listed }; }
   function listServices() { return db.prepare('SELECT * FROM services ORDER BY sort_order,id').all().map(mapService); }
   function activeServices() { return listServices().filter((service) => service.listed && service.enabled && service.durationMinutes !== null); }
   function getPublicConfig(at = clock()) {
@@ -176,9 +208,11 @@ export function createStore({ dataDir, business, now = Date.now }) {
     return {
       businessName: business.businessName, timezone: TIMEZONE, bookingEnabled: Boolean(settings.bookingEnabled && activeServices().length),
       requestEnabled: settings.requestEnabled, today: toLocalParts(at).date, bookingDays: settings.bookingDays,
-      services: activeServices().map(({ id, name, durationMinutes }) => ({ id, name, durationMinutes })),
-      requestServices: settings.requestEnabled ? listServices().filter((service) => service.listed).map(({ id, name, durationMinutes, enabled }) => ({ id, name, durationMinutes, instantBooking: Boolean(settings.bookingEnabled && enabled && durationMinutes !== null) })) : [],
+      catalog: listServices().filter((service) => service.listed).map(publicService),
+      services: activeServices().map(publicService),
+      requestServices: settings.requestEnabled ? listServices().filter((service) => service.listed).map((service) => ({ ...publicService(service), instantBooking: Boolean(settings.bookingEnabled && service.enabled && service.durationMinutes !== null) })) : [],
       openingHours: settings.openingHours, closedDates: settings.closedDates,
+      bookingLeadMinutes: settings.bookingLeadMinutes, customerChangesEnabled: settings.customerChangesEnabled, customerChangeNoticeHours: settings.customerChangeNoticeHours,
     };
   }
   function getService(id, { publicOnly = false, listedOnly = false } = {}) {
@@ -199,7 +233,10 @@ export function createStore({ dataDir, business, now = Date.now }) {
     return (settings.openingHours.find((day) => day.day === weekday(date))?.ranges || []).some((range) => startMinutes >= parseTime(range.opens).minutes && endMinutes <= parseTime(range.closes).minutes);
   }
   function conflicts(start, end, exceptId = '') {
-    return Boolean(db.prepare("SELECT id FROM appointments WHERE status='confirmed' AND start_at < ? AND end_at > ? AND id <> ? LIMIT 1").get(end, start, exceptId));
+    return Boolean(db.prepare("SELECT id FROM appointments WHERE status='confirmed' AND start_at < ? AND end_at+buffer_after_minutes*60000 > ? AND id <> ? LIMIT 1").get(end, start, exceptId)) || Boolean(db.prepare('SELECT id FROM calendar_blocks WHERE start_at<? AND end_at>? LIMIT 1').get(end, start));
+  }
+  function occupiedBetween(start, end, exceptId = '') {
+    return [...db.prepare("SELECT start_at,end_at+buffer_after_minutes*60000 AS end_at FROM appointments WHERE status='confirmed' AND start_at<? AND end_at+buffer_after_minutes*60000>? AND id<>?").all(end, start, exceptId), ...db.prepare('SELECT start_at,end_at FROM calendar_blocks WHERE start_at<? AND end_at>?').all(end, start)];
   }
   function getAvailability({ serviceId: id, date }, at = clock()) {
     const settings = getSettings();
@@ -209,18 +246,18 @@ export function createStore({ dataDir, business, now = Date.now }) {
     const slots = [];
     if (settings.closedDates.includes(date)) return { date, serviceId: id, slots };
     const day = settings.openingHours.find((entry) => entry.day === weekday(date));
-    const occupied = db.prepare("SELECT start_at,end_at FROM appointments WHERE status='confirmed' AND start_at < ? AND end_at > ?").all(localDateTimeToEpoch(addDays(date, 1), '00:00'), localDateTimeToEpoch(date, '00:00'));
+    const occupied = occupiedBetween(localDateTimeToEpoch(date, '00:00'), localDateTimeToEpoch(addDays(date, 1), '00:00'));
     for (const range of day?.ranges || []) {
       const opens = parseTime(range.opens).minutes;
       const closes = parseTime(range.closes).minutes;
-      for (let minute = Math.ceil(opens / 15) * 15; minute + service.duration_minutes <= closes; minute += 15) {
+      for (let minute = Math.ceil(opens / 15) * 15; minute + service.duration_minutes + service.buffer_after_minutes <= closes; minute += 15) {
         const time = minutesToTime(minute);
         let startsAt;
         try { startsAt = localDateTimeToEpoch(date, time); } catch (error) { if (error instanceof DomainError && ['invalid_local_time', 'ambiguous_local_time'].includes(error.code)) continue; throw error; }
         const endsAt = startsAt + service.duration_minutes * 60_000;
-        const endLocal = toLocalParts(endsAt);
-        if (startsAt <= at || endLocal.date !== date || parseTime(endLocal.time).minutes !== minute + service.duration_minutes) continue;
-        if (!occupied.some((row) => row.start_at < endsAt && row.end_at > startsAt)) slots.push({ time, label: time, startsAt, endsAt });
+        const endLocal = toLocalParts(endsAt + service.buffer_after_minutes * 60_000);
+        if (startsAt <= at || startsAt < at + settings.bookingLeadMinutes * 60_000 || endLocal.date !== date || parseTime(endLocal.time).minutes !== minute + service.duration_minutes + service.buffer_after_minutes) continue;
+        if (!occupied.some((row) => row.start_at < endsAt + service.buffer_after_minutes * 60_000 && row.end_at > startsAt)) slots.push({ time, label: time, startsAt, endsAt });
       }
     }
     return { date, serviceId: id, slots };
@@ -233,22 +270,99 @@ export function createStore({ dataDir, business, now = Date.now }) {
     const slots = [];
     if (settings.closedDates.includes(date)) return { mode: 'request', date, serviceId: id, slots };
     const day = settings.openingHours.find((entry) => entry.day === weekday(date));
-    const occupied = db.prepare("SELECT start_at,end_at FROM appointments WHERE status='confirmed' AND start_at < ? AND end_at > ?").all(localDateTimeToEpoch(addDays(date, 1), '00:00'), localDateTimeToEpoch(date, '00:00'));
+    const occupied = occupiedBetween(localDateTimeToEpoch(date, '00:00'), localDateTimeToEpoch(addDays(date, 1), '00:00'));
     for (const range of day?.ranges || []) {
       const closes = parseTime(range.closes).minutes;
       for (let minute = Math.ceil(parseTime(range.opens).minutes / 15) * 15; minute < closes; minute += 15) {
         const time = minutesToTime(minute);
         let startsAt;
         try { startsAt = localDateTimeToEpoch(date, time); } catch (error) { if (error instanceof DomainError && ['invalid_local_time', 'ambiguous_local_time'].includes(error.code)) continue; throw error; }
-        if (startsAt <= at || occupied.some((row) => row.start_at <= startsAt && row.end_at > startsAt)) continue;
+        if (startsAt <= at || startsAt < at + settings.bookingLeadMinutes * 60_000 || occupied.some((row) => row.start_at <= startsAt && row.end_at > startsAt)) continue;
         slots.push({ time, label: time, startsAt, endsAt: null });
       }
     }
     return { mode: 'request', date, serviceId: id, slots };
   }
+  function slotsRange({ serviceId, from, days = 14, mode, length, buffer = 0, exceptId = '' }, at) {
+    integer(days, 'Numero giorni', 1, 14);
+    const settings = getSettings();
+    publicDate(from, at, settings);
+    const last = addDays(toLocalParts(at).date, settings.bookingDays);
+    const count = Math.min(days, (parseDate(last).utc - parseDate(from).utc) / 86_400_000 + 1);
+    const occupied = occupiedBetween(localDateTimeToEpoch(from, '00:00'), localDateTimeToEpoch(addDays(from, count), '00:00'), exceptId);
+    const dates = [];
+    for (let offset = 0; offset < count; offset++) {
+      const date = addDays(from, offset);
+      const slots = [];
+      const ranges = settings.closedDates.includes(date) ? [] : settings.openingHours.find((entry) => entry.day === weekday(date))?.ranges || [];
+      for (const range of ranges) for (let minute = Math.ceil(parseTime(range.opens).minutes / 15) * 15; mode === 'request' ? minute < parseTime(range.closes).minutes : minute + length + buffer <= parseTime(range.closes).minutes; minute += 15) {
+        const time = minutesToTime(minute);
+        let startsAt;
+        try { startsAt = localDateTimeToEpoch(date, time); } catch (error) { if (error instanceof DomainError && ['invalid_local_time', 'ambiguous_local_time'].includes(error.code)) continue; throw error; }
+        if (startsAt <= at || startsAt < at + settings.bookingLeadMinutes * 60_000) continue;
+        const endsAt = mode === 'request' ? null : startsAt + length * 60_000;
+        const occupiedEnd = endsAt === null ? startsAt + 1 : endsAt + buffer * 60_000;
+        if (endsAt !== null) {
+          const endLocal = toLocalParts(occupiedEnd);
+          if (endLocal.date !== date || parseTime(endLocal.time).minutes !== minute + length + buffer) continue;
+        }
+        if (!occupied.some((row) => row.start_at < occupiedEnd && row.end_at > startsAt)) slots.push({ time, label: time, startsAt, endsAt });
+      }
+      dates.push({ date, slots });
+    }
+    return { serviceId, mode, days: dates };
+  }
+  function getAvailabilityRange({ serviceId: id, from, days = 14 }, at = clock()) {
+    const service = getService(id, { listedOnly: true });
+    const settings = getSettings();
+    const mode = settings.bookingEnabled && service.enabled && service.duration_minutes !== null ? 'instant' : 'request';
+    if (mode === 'request' && !settings.requestEnabled) fail('request_disabled', 'Le richieste dal calendario sono momentaneamente sospese.', 409);
+    return slotsRange({ serviceId: id, from, days, mode, length: service.duration_minutes, buffer: service.buffer_after_minutes }, at);
+  }
+  function getAppointmentAvailability({ id, from, days = 14 }, at = clock()) {
+    const appointment = db.prepare('SELECT * FROM appointments WHERE id=?').get(id);
+    if (!appointment || appointment.status !== 'confirmed' || appointment.outcome !== 'scheduled') fail('appointment_not_active', 'Questo appuntamento non è modificabile.', 409);
+    return slotsRange({ serviceId: appointment.service_id, from, days, mode: 'instant', length: (appointment.end_at - appointment.start_at) / 60_000, buffer: appointment.buffer_after_minutes, exceptId: appointment.id }, at);
+  }
+  function calendarRange({ from, to } = {}, at = clock()) {
+    const today = toLocalParts(at).date;
+    from ??= addDays(today, -7); to ??= addDays(today, 7);
+    parseDate(from); parseDate(to);
+    if (from > to || parseDate(to).utc - parseDate(from).utc > 366 * 86_400_000) fail('invalid_range', 'Scegli un intervallo di massimo un anno.');
+    return { startsAt: localDateTimeToEpoch(from, '00:00'), endsAt: localDateTimeToEpoch(addDays(to, 1), '00:00') };
+  }
+  function mapBlock(row) {
+    const local = toLocalParts(row.start_at);
+    return { id: row.id, title: row.title, date: local.date, time: local.time, durationMinutes: (row.end_at - row.start_at) / 60_000, startsAt: row.start_at, endsAt: row.end_at };
+  }
+  function listBlocks(range = {}, at = clock()) {
+    const { startsAt, endsAt } = calendarRange(range, at);
+    return db.prepare('SELECT * FROM calendar_blocks WHERE start_at<? AND end_at>? ORDER BY start_at,id').all(endsAt, startsAt).map(mapBlock);
+  }
+  function createBlock(input, at = clock()) {
+    requireObject(input);
+    const title = cleanText(input.title, 'Nome della pausa', { max: 100 });
+    const start = localDateTimeToEpoch(input.date, input.time);
+    const end = start + integer(input.durationMinutes, 'Durata della pausa', 1, 10080) * 60_000;
+    toLocalParts(end);
+    return transaction(() => {
+      if (conflicts(start, end)) fail('slot_conflict', 'La pausa si sovrappone a un appuntamento o a un’altra pausa.', 409);
+      const row = { id: randomUUID(), title, start_at: start, end_at: end, created_at: at };
+      db.prepare('INSERT INTO calendar_blocks(id,title,start_at,end_at,created_at) VALUES(?,?,?,?,?)').run(...Object.values(row));
+      audit('calendar_block_created', row.id, at);
+      return mapBlock(row);
+    });
+  }
+  function deleteBlock(id, at = clock()) {
+    return transaction(() => {
+      const deleted = db.prepare('DELETE FROM calendar_blocks WHERE id=?').run(id);
+      if (deleted.changes) audit('calendar_block_removed', id, at);
+      return { ok: true };
+    });
+  }
   function mapAppointment(row) {
     const local = toLocalParts(row.start_at);
-    return { id: row.id, reference: row.reference, serviceId: row.service_id, title: row.title, name: row.name, phone: row.phone, date: local.date, time: local.time, durationMinutes: (row.end_at - row.start_at) / 60_000, status: row.status, reminderConsent: Boolean(row.reminder_consent), revision: row.revision, createdAt: row.created_at };
+    return { id: row.id, reference: row.reference, serviceId: row.service_id, title: row.title, name: row.name, phone: row.phone, date: local.date, time: local.time, startsAt: row.start_at, endsAt: row.end_at, durationMinutes: (row.end_at - row.start_at) / 60_000, bufferAfterMinutes: row.buffer_after_minutes, status: row.status, outcome: row.outcome, notes: row.notes, reminderConsent: Boolean(row.reminder_consent), revision: row.revision, createdAt: row.created_at };
   }
   function audit(event, id, at, detail = null) { db.prepare('INSERT INTO audit_log(event,resource_id,created_at,detail) VALUES(?,?,?,?)').run(event, id, at, detail); }
   function upcomingCustomerCount(phone, at) {
@@ -260,7 +374,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
     const appointment = row.appointment_id ? db.prepare('SELECT * FROM appointments WHERE id=?').get(row.appointment_id) : null;
     return {
       id: row.id, reference: row.reference, serviceId: row.service_id, serviceName: service.name, name: row.name, phone: row.phone,
-      date: local.date, time: local.time, reminderConsent: Boolean(row.reminder_consent), status: row.status, appointmentId: row.appointment_id,
+      date: local.date, time: local.time, reminderConsent: Boolean(row.reminder_consent), status: row.status, withdrawnAt: row.withdrawn_at, notes: row.notes, appointmentId: row.appointment_id,
       appointment: appointment ? mapAppointment(appointment) : null, createdAt: row.created_at,
     };
   }
@@ -268,10 +382,10 @@ export function createStore({ dataDir, business, now = Date.now }) {
     if (row.status === 'confirmed') {
       const appointment = db.prepare('SELECT * FROM appointments WHERE id=?').get(row.appointment_id);
       const local = toLocalParts(appointment.start_at);
-      return { id: row.id, reference: row.reference, status: appointment.status === 'cancelled' ? 'cancelled' : 'confirmed', serviceName: appointment.title, date: local.date, time: local.time };
+      return { id: row.id, reference: row.reference, status: appointment.status === 'cancelled' ? 'cancelled' : 'confirmed', serviceName: appointment.title, date: local.date, time: local.time, durationMinutes: (appointment.end_at - appointment.start_at) / 60_000 };
     }
     const local = toLocalParts(row.requested_start_at);
-    return { id: row.id, reference: row.reference, status: row.status, serviceName: getService(row.service_id).name, date: local.date, time: local.time };
+    return { id: row.id, reference: row.reference, status: row.withdrawn_at ? 'withdrawn' : row.status, serviceName: getService(row.service_id).name, date: local.date, time: local.time };
   }
   function createPublicRequest(input, at = clock()) {
     requireObject(input);
@@ -284,13 +398,15 @@ export function createStore({ dataDir, business, now = Date.now }) {
     const name = cleanText(input.name, 'Nome', { min: 2, max: 100 });
     const phone = normalizePhone(input.phone);
     const reminderConsent = boolean(input.reminderConsent, 'Promemoria WhatsApp');
+    const notes = noteText(input.notes);
     const service = getService(input.serviceId);
     const startsAt = localDateTimeToEpoch(input.date, input.time);
-    const payloadHash = createHash('sha256').update(JSON.stringify({ serviceId: service.id, date: input.date, time: input.time, name, phone, reminderConsent })).digest('hex');
+    const payloadHash = createHash('sha256').update(JSON.stringify({ serviceId: service.id, date: input.date, time: input.time, name, phone, reminderConsent, notes })).digest('hex');
     return transaction(() => {
       const previous = db.prepare('SELECT * FROM booking_requests WHERE client_request_id=?').get(clientRequestId);
       if (previous) {
-        if (previous.payload_hash !== payloadHash) fail('request_id_reused', 'La richiesta è stata modificata. Invia una nuova richiesta dal calendario.', 409);
+        const legacyHash = !notes && !previous.notes ? createHash('sha256').update(JSON.stringify({ serviceId: service.id, date: input.date, time: input.time, name, phone, reminderConsent })).digest('hex') : null;
+        if (previous.payload_hash !== payloadHash && previous.payload_hash !== legacyHash) fail('request_id_reused', 'La richiesta è stata modificata. Invia una nuova richiesta dal calendario.', 409);
         return publicRequestReceipt(previous);
       }
       const slots = getRequestAvailability({ serviceId: service.id, date: input.date }, at).slots;
@@ -301,7 +417,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
         service_id: service.id, name, phone, requested_start_at: startsAt, reminder_consent: Number(reminderConsent), status: 'pending',
         appointment_id: null, created_at: at, updated_at: at,
       };
-      db.prepare('INSERT INTO booking_requests(id,reference,client_request_id,payload_hash,service_id,name,phone,requested_start_at,reminder_consent,status,appointment_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(...Object.values(row));
+      db.prepare('INSERT INTO booking_requests(id,reference,client_request_id,payload_hash,service_id,name,phone,requested_start_at,reminder_consent,status,appointment_id,created_at,updated_at,notes,phone_normalized) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(...Object.values(row), notes, phone);
       audit('public_request_created', row.id, at);
       return publicRequestReceipt(row);
     });
@@ -334,14 +450,15 @@ export function createStore({ dataDir, business, now = Date.now }) {
       const settings = getSettings();
       publicDate(date, at, settings);
       const start = localDateTimeToEpoch(date, time);
-      const endLocal = toLocalParts(start + length * 60_000);
-      if (start <= at || !rangeContains(date, time, length, settings) || endLocal.date !== date || parseTime(endLocal.time).minutes !== parseTime(time).minutes + length) {
+      const endLocal = toLocalParts(start + (length + service.buffer_after_minutes) * 60_000);
+      if (start <= at || !rangeContains(date, time, length + service.buffer_after_minutes, settings) || endLocal.date !== date || parseTime(endLocal.time).minutes !== parseTime(time).minutes + length + service.buffer_after_minutes) {
         fail('slot_unavailable', 'La durata dell’appuntamento deve rientrare negli orari di apertura. Scegli un altro orario.', 409);
       }
       // This nested insert shares the outer BEGIN IMMEDIATE transaction: no
       // other connection can occupy the interval between the check and link.
-      const appointment = createAdminAppointment({ serviceId: service.id, date, time, durationMinutes: length, name: row.name, phone: row.phone, reminderConsent: Boolean(row.reminder_consent) }, at);
+      const appointment = createAdminAppointment({ serviceId: service.id, date, time, durationMinutes: length, name: row.name, phone: row.phone, reminderConsent: Boolean(row.reminder_consent), notes: row.notes }, at);
       db.prepare("UPDATE booking_requests SET status='confirmed',appointment_id=?,updated_at=? WHERE id=?").run(appointment.id, at, row.id);
+      customerAccessSync?.(appointment.id);
       audit('request_confirmed', row.id, at);
       return { request: mapRequest(getRequest(id)), appointment };
     });
@@ -380,28 +497,48 @@ export function createStore({ dataDir, business, now = Date.now }) {
     const name = cleanText(input.name, 'Nome', { min: 2, max: 100 });
     const phone = normalizePhone(input.phone);
     const consent = boolean(input.reminderConsent, 'Promemoria WhatsApp');
+    const notes = noteText(input.notes);
+    const buffer = service?.buffer_after_minutes ?? 0;
     const title = cleanText(publicBooking ? service.name : (input.title ?? service?.name ?? ''), 'Servizio', { max: 160 });
     if (publicBooking) {
       publicDate(date, at, settings);
-      if (start <= at || parseTime(time).minutes % 15 || !rangeContains(date, time, length, settings)) fail('slot_unavailable', 'Questo orario non è disponibile. Scegli un altro orario.', 409);
-      const endLocal = toLocalParts(end);
-      if (endLocal.date !== date || parseTime(endLocal.time).minutes !== parseTime(time).minutes + length) fail('slot_unavailable', 'Questo orario non è disponibile. Scegli un altro orario.', 409);
+      if (start <= at || start < at + settings.bookingLeadMinutes * 60_000 || parseTime(time).minutes % 15 || !rangeContains(date, time, length + buffer, settings)) fail('slot_unavailable', 'Questo orario non è disponibile. Scegli un altro orario.', 409);
+      const endLocal = toLocalParts(end + buffer * 60_000);
+      if (endLocal.date !== date || parseTime(endLocal.time).minutes !== parseTime(time).minutes + length + buffer) fail('slot_unavailable', 'Questo orario non è disponibile. Scegli un altro orario.', 409);
       const count = upcomingCustomerCount(phone, at);
       if (count >= 3) fail('booking_limit', 'Per altri appuntamenti contatta direttamente il salone.', 429);
     }
-    if (conflicts(start, end)) fail('slot_conflict', 'Questo orario è già occupato. Scegli un altro orario.', 409);
+    if (conflicts(start, end + buffer * 60_000)) fail('slot_conflict', 'Questo orario è già occupato. Scegli un altro orario.', 409);
     const row = { id: randomUUID(), reference: `DF-${randomBytes(5).toString('hex').toUpperCase()}`, service_id: service?.id ?? null, title, name, phone, start_at: start, end_at: end, reminder_consent: Number(consent), status: 'confirmed', revision: 1, created_at: at, updated_at: at };
     db.prepare('INSERT INTO appointments(id,reference,service_id,title,name,phone,start_at,end_at,reminder_consent,status,revision,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(...Object.values(row));
+    db.prepare('UPDATE appointments SET notes=?,buffer_after_minutes=?,phone_normalized=? WHERE id=?').run(notes, buffer, phone, row.id);
+    Object.assign(row, { notes, buffer_after_minutes: buffer, outcome: 'scheduled', phone_normalized: phone });
     planReminder(row, at);
     audit(publicBooking ? 'public_booking_created' : 'appointment_created', row.id, at);
     return row;
   }
   function createPublicBooking(input, at = clock()) {
     return transaction(() => {
+      let clientRequestId;
+      let payloadHash;
+      if (input.clientRequestId !== undefined) {
+        if (typeof input.clientRequestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.clientRequestId)) fail('invalid_request_id', 'Riprova dal calendario.');
+        clientRequestId = input.clientRequestId.toLowerCase();
+        payloadHash = createHash('sha256').update(JSON.stringify({ serviceId: input.serviceId, date: input.date, time: input.time, name: cleanText(input.name, 'Nome', { min: 2, max: 100 }), phone: normalizePhone(input.phone), reminderConsent: boolean(input.reminderConsent, 'Promemoria WhatsApp'), notes: noteText(input.notes) })).digest('hex');
+        const prior = db.prepare('SELECT * FROM booking_idempotency WHERE client_request_id=?').get(clientRequestId);
+        if (prior) {
+          if (prior.payload_hash !== payloadHash) fail('request_id_reused', 'La prenotazione è stata modificata. Invia una nuova richiesta dal calendario.', 409);
+          return publicBookingReceipt(db.prepare('SELECT * FROM appointments WHERE id=?').get(prior.appointment_id));
+        }
+      }
       const row = insertAppointment(input, at, true);
-      const appointment = mapAppointment(row);
-      return { id: row.id, reference: row.reference, status: 'confirmed', serviceName: row.title, date: appointment.date, time: appointment.time, durationMinutes: appointment.durationMinutes };
+      if (clientRequestId) db.prepare('INSERT INTO booking_idempotency(client_request_id,payload_hash,appointment_id) VALUES(?,?,?)').run(clientRequestId, payloadHash, row.id);
+      return publicBookingReceipt(row);
     });
+  }
+  function publicBookingReceipt(row) {
+    const appointment = mapAppointment(row);
+    return { id: row.id, reference: row.reference, status: row.status, serviceName: row.title, date: appointment.date, time: appointment.time, durationMinutes: appointment.durationMinutes, startsAt: row.start_at, endsAt: row.end_at };
   }
   function createAdminAppointment(input, at = clock()) { return transaction(() => mapAppointment(insertAppointment(input, at, false))); }
   function listCustomers({ query = '', limit = 100 } = {}, at = clock()) {
@@ -454,15 +591,27 @@ export function createStore({ dataDir, business, now = Date.now }) {
   function getCustomerHistory(inputPhone, { limit = 30 } = {}) {
     const phone = normalizePhone(inputPhone);
     integer(limit, 'Numero elementi nello storico', 1, 100);
-    const belongsToCustomer = (row) => {
-      try { return normalizePhone(row.phone) === phone; }
-      catch (error) { if (error instanceof DomainError && error.code === 'invalid_phone') return false; throw error; }
-    };
-    const appointments = db.prepare('SELECT * FROM appointments ORDER BY start_at DESC,created_at DESC,id').all()
-      .filter(belongsToCustomer).slice(0, limit).map((row) => ({ ...mapAppointment(row), phone }));
-    const requests = db.prepare('SELECT * FROM booking_requests ORDER BY requested_start_at DESC,created_at DESC,id').all()
-      .filter(belongsToCustomer).slice(0, limit).map((row) => ({ ...mapRequest(row), phone }));
+    const appointments = db.prepare('SELECT * FROM appointments WHERE phone_normalized=? ORDER BY start_at DESC,created_at DESC,id LIMIT ?').all(phone, limit).map((row) => ({ ...mapAppointment(row), phone }));
+    const requests = db.prepare('SELECT * FROM booking_requests WHERE phone_normalized=? ORDER BY requested_start_at DESC,created_at DESC,id LIMIT ?').all(phone, limit).map((row) => ({ ...mapRequest(row), phone }));
     return { appointments, requests };
+  }
+  function getCustomerProfile(inputPhone) {
+    const phone = normalizePhone(inputPhone);
+    if (!db.prepare('SELECT id FROM appointments WHERE phone_normalized=? UNION ALL SELECT id FROM booking_requests WHERE phone_normalized=? LIMIT 1').get(phone, phone)) fail('customer_not_found', 'Cliente non presente nella rubrica.', 404);
+    const profile = db.prepare('SELECT * FROM customer_profiles WHERE phone=?').get(phone);
+    return { phone, notes: profile?.notes || '', updatedAt: profile?.updated_at ?? null, version: profile?.version ?? 0 };
+  }
+  function updateCustomerProfile(input, at = clock()) {
+    requireObject(input);
+    const notes = noteText(input.notes, 2000);
+    integer(input.version, 'Versione della scheda', 0, Number.MAX_SAFE_INTEGER - 1);
+    return transaction(() => {
+      const current = getCustomerProfile(input.phone);
+      if (current.version !== input.version) fail('profile_changed', 'Le note sono state modificate. Ricarica la scheda senza perdere la tua bozza.', 409);
+      db.prepare('INSERT INTO customer_profiles(phone,notes,updated_at,version) VALUES(?,?,?,?) ON CONFLICT(phone) DO UPDATE SET notes=excluded.notes,updated_at=excluded.updated_at,version=excluded.version').run(current.phone, notes, at, current.version + 1);
+      audit('customer_profile_updated', null, at);
+      return getCustomerProfile(current.phone);
+    });
   }
   function listAppointments({ from, to } = {}, at = clock()) {
     const today = toLocalParts(at).date;
@@ -470,7 +619,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
     to ??= addDays(today, 7);
     parseDate(from); parseDate(to);
     if (from > to || parseDate(to).utc - parseDate(from).utc > 366 * 86_400_000) fail('invalid_range', 'Scegli un intervallo di date valido, fino a un anno.');
-    return db.prepare('SELECT * FROM appointments WHERE start_at >= ? AND start_at < ? ORDER BY start_at,id').all(localDateTimeToEpoch(from, '00:00'), localDateTimeToEpoch(addDays(to, 1), '00:00')).map(mapAppointment);
+    return db.prepare('SELECT * FROM appointments WHERE end_at+buffer_after_minutes*60000 > ? AND start_at < ? ORDER BY start_at,id').all(localDateTimeToEpoch(from, '00:00'), localDateTimeToEpoch(addDays(to, 1), '00:00')).map(mapAppointment);
   }
   function updateAppointment(id, patch, at = clock()) {
     requireObject(patch);
@@ -484,22 +633,28 @@ export function createStore({ dataDir, business, now = Date.now }) {
       const end = start + length * 60_000;
       const status = patch.status ?? row.status;
       if (!['confirmed', 'cancelled'].includes(status)) fail('invalid_status', 'Stato appuntamento non valido.');
+      const outcome = patch.outcome ?? row.outcome;
+      if (!['scheduled', 'completed', 'no_show'].includes(outcome) || (outcome !== 'scheduled' && (status !== 'confirmed' || start > at))) fail('invalid_outcome', 'Puoi registrare l’esito soltanto per un appuntamento iniziato e non annullato.');
+      const buffer = Object.hasOwn(patch, 'serviceId') && service?.id !== row.service_id ? (service?.buffer_after_minutes ?? 0) : row.buffer_after_minutes;
       const changed = {
         ...row, service_id: service?.id ?? null, title: Object.hasOwn(patch, 'title') ? cleanText(patch.title, 'Servizio', { max: 160 }) : (Object.hasOwn(patch, 'serviceId') && service ? service.name : row.title),
         name: Object.hasOwn(patch, 'name') ? cleanText(patch.name, 'Nome', { min: 2, max: 100 }) : row.name,
         phone: Object.hasOwn(patch, 'phone') ? normalizePhone(patch.phone) : row.phone,
         reminder_consent: Object.hasOwn(patch, 'reminderConsent') ? Number(boolean(patch.reminderConsent, 'Promemoria WhatsApp')) : row.reminder_consent,
-        start_at: start, end_at: end, status, updated_at: at,
+        start_at: start, end_at: end, status, outcome, notes: Object.hasOwn(patch, 'notes') ? noteText(patch.notes) : row.notes, buffer_after_minutes: buffer, updated_at: at,
       };
-      if (status === 'confirmed' && conflicts(start, end, id)) fail('slot_conflict', 'Questo orario è già occupato. Scegli un altro orario.', 409);
+      if (status === 'confirmed' && conflicts(start, end + buffer * 60_000, id)) fail('slot_conflict', 'Questo orario è già occupato. Scegli un altro orario.', 409);
       const relevant = ['start_at', 'end_at', 'phone', 'reminder_consent', 'status'].some((key) => changed[key] !== row[key]);
       if (relevant) changed.revision++;
       db.prepare('UPDATE appointments SET service_id=?,title=?,name=?,phone=?,start_at=?,end_at=?,reminder_consent=?,status=?,revision=?,updated_at=? WHERE id=?').run(changed.service_id, changed.title, changed.name, changed.phone, start, end, changed.reminder_consent, status, changed.revision, at, id);
+      db.prepare('UPDATE appointments SET notes=?,outcome=?,buffer_after_minutes=?,phone_normalized=? WHERE id=?').run(changed.notes, outcome, buffer, normalizePhone(changed.phone), id);
       if (relevant) {
         invalidateUnsent(id, at, status === 'cancelled' ? 'appointment_cancelled' : 'appointment_changed');
         planReminder(changed, at);
       }
+      if (outcome !== 'scheduled') invalidateUnsent(id, at, 'appointment_completed');
       audit(status === 'cancelled' ? 'appointment_cancelled' : 'appointment_updated', id, at);
+      customerAccessSync?.(id, { ownershipChanged: normalizePhone(changed.phone) !== normalizePhone(row.phone) });
       return mapAppointment(changed);
     });
   }
@@ -517,11 +672,16 @@ export function createStore({ dataDir, business, now = Date.now }) {
       uniqueServiceName(name);
       const length = input.durationMinutes === undefined || input.durationMinutes === null ? null : duration(input.durationMinutes);
       const listed = Object.hasOwn(input, 'listed') ? boolean(input.listed, 'Visibile nel calendario') : true;
+      const description = noteText(input.description, 1000);
+      const priceCents = input.priceCents === undefined || input.priceCents === null ? null : integer(input.priceCents, 'Prezzo in centesimi', 0, 1000000);
+      const priceFrom = input.priceFrom === undefined ? false : boolean(input.priceFrom, 'Prezzo a partire da');
+      const buffer = input.bufferAfterMinutes === undefined ? 0 : integer(input.bufferAfterMinutes, 'Tempo dopo il servizio', 0, 120);
       const enabled = Object.hasOwn(input, 'enabled') ? boolean(input.enabled, 'Conferma immediata') : false;
       if (listed && enabled && length === null) fail('duration_required', 'Imposta una durata prima di attivare il servizio.');
       const id = randomUUID();
       const sortOrder = (db.prepare('SELECT MAX(sort_order) AS last FROM services').get().last ?? -1) + 1;
       db.prepare('INSERT INTO services(id,name,duration_minutes,enabled,sort_order,listed) VALUES(?,?,?,?,?,?)').run(id, name, length, Number(listed && enabled), sortOrder, Number(listed));
+      db.prepare('UPDATE services SET description=?,price_cents=?,price_from=?,buffer_after_minutes=? WHERE id=?').run(description, priceCents, Number(priceFrom), buffer, id);
       audit('service_created', id, at);
       return mapService(getService(id));
     });
@@ -535,8 +695,13 @@ export function createStore({ dataDir, business, now = Date.now }) {
       const length = Object.hasOwn(patch, 'durationMinutes') ? (patch.durationMinutes === null ? null : duration(patch.durationMinutes)) : service.duration_minutes;
       const enabled = Object.hasOwn(patch, 'enabled') ? boolean(patch.enabled, 'Servizio attivo') : Boolean(service.enabled);
       const listed = Object.hasOwn(patch, 'listed') ? boolean(patch.listed, 'Visibile nel calendario') : Boolean(service.listed);
+      const description = Object.hasOwn(patch, 'description') ? noteText(patch.description, 1000) : service.description;
+      const priceCents = Object.hasOwn(patch, 'priceCents') ? (patch.priceCents === null ? null : integer(patch.priceCents, 'Prezzo in centesimi', 0, 1000000)) : service.price_cents;
+      const priceFrom = Object.hasOwn(patch, 'priceFrom') ? boolean(patch.priceFrom, 'Prezzo a partire da') : Boolean(service.price_from);
+      const buffer = Object.hasOwn(patch, 'bufferAfterMinutes') ? integer(patch.bufferAfterMinutes, 'Tempo dopo il servizio', 0, 120) : service.buffer_after_minutes;
       if (listed && patch.enabled === true && length === null) fail('duration_required', 'Imposta una durata prima di attivare il servizio.');
       db.prepare('UPDATE services SET name=?,duration_minutes=?,enabled=?,listed=? WHERE id=?').run(name, length, Number(listed && enabled && length !== null), Number(listed), id);
+      db.prepare('UPDATE services SET description=?,price_cents=?,price_from=?,buffer_after_minutes=? WHERE id=?').run(description, priceCents, Number(priceFrom), buffer, id);
       if (!activeServices().length) setting('bookingEnabled', false);
       audit('service_updated', id, at);
       return mapService(db.prepare('SELECT * FROM services WHERE id=?').get(id));
@@ -551,6 +716,9 @@ export function createStore({ dataDir, business, now = Date.now }) {
       boolean(next.bookingEnabled, 'Prenotazioni online');
       boolean(next.requestEnabled, 'Richieste dal calendario');
       boolean(next.economyMode, 'Modalità risparmio');
+      boolean(next.customerChangesEnabled, 'Modifiche da parte della cliente');
+      integer(next.bookingLeadMinutes, 'Preavviso di prenotazione', 0, 10080);
+      integer(next.customerChangeNoticeHours, 'Preavviso per modifiche', 0, 168);
       parseTime(next.reminderTime);
       integer(next.bookingDays, 'Periodo prenotabile', 1, 365);
       integer(next.dailyReminderLimit, 'Limite giornaliero', 0, 1000);
@@ -642,5 +810,5 @@ export function createStore({ dataDir, business, now = Date.now }) {
     await Promise.all(copies.slice(7).map((file) => unlink(resolve(backupDirectory, file))));
     return destination;
   }
-  return { db, transaction, close: () => db.close(), getPublicConfig, getAvailability, getRequestAvailability, createPublicBooking, createPublicRequest, listRequests, confirmRequest, declineRequest, listAppointments, createAdminAppointment, updateAppointment, listCustomers, getCustomerHistory, listServices, createService, updateService, getSettings, updateSettings, listReminders, markReminderManual, getStats, backup };
+  return { db, transaction, setCustomerAccessSync: (callback) => { customerAccessSync = callback; }, close: () => db.close(), getPublicConfig, getAvailability, getRequestAvailability, getAvailabilityRange, getAppointmentAvailability, createPublicBooking, createPublicRequest, listRequests, confirmRequest, declineRequest, listAppointments, createAdminAppointment, updateAppointment, listBlocks, createBlock, deleteBlock, listCustomers, getCustomerHistory, getCustomerProfile, updateCustomerProfile, listServices, createService, updateService, getSettings, updateSettings, listReminders, markReminderManual, getStats, backup };
 }

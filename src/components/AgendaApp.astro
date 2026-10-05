@@ -66,6 +66,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       <section data-panel="overview" aria-labelledby="overview-title">
         <div class="agenda-section-head"><h2 id="overview-title" tabindex="-1">Il salone, oggi</h2><div class="button-group"><button class="agenda-button" type="button" data-open-panel="requests">Controlla le richieste</button><button class="agenda-button secondary" type="button" data-open-calendar>Inserisci un appuntamento</button></div></div>
         <section class="agenda-stats" aria-label="Riepilogo dell’agenda" data-stats></section>
+        <div class="overview-grid operational-overview"><section class="agenda-card"><h3>Il prossimo appuntamento</h3><div data-next-appointment></div></section><section class="agenda-card"><h3>Disponibilità di oggi</h3><div data-today-capacity></div></section></div>
         <div class="overview-grid">
           <section class="agenda-card"><h3>Configura il tuo salone</h3><p class="agenda-note">Le richieste delle clienti sono già disponibili. Scegli tu se confermarle dopo aver controllato l’agenda oppure attivare la conferma automatica per i servizi con durata impostata.</p><ul class="setup-checklist" data-checklist></ul></section>
           <section class="agenda-card"><h3>Come lavorare ogni giorno</h3><ol class="daily-guide"><li>Apri <strong>Richieste</strong>, controlla la durata e conferma l’orario.</li><li>Aggiungi in <strong>Appuntamenti</strong> anche le prenotazioni ricevute per telefono o in salone.</li><li>Usa <strong>Clienti</strong> per ritrovare rapidamente contatti e appuntamenti.</li><li>Collega WhatsApp e imposta orario e limiti dei promemoria quando sei pronta.</li></ol></section>
@@ -73,18 +74,23 @@ import CustomerDirectory from './CustomerDirectory.astro';
       </section>
 
       <section data-panel="calendar" hidden aria-labelledby="calendar-title">
-        <div class="agenda-section-head"><h2 id="calendar-title" tabindex="-1">I tuoi appuntamenti</h2><button type="button" class="agenda-button" data-new>Nuovo appuntamento</button></div>
+        <div class="agenda-section-head"><h2 id="calendar-title" tabindex="-1">I tuoi appuntamenti</h2><div class="button-group"><button type="button" class="agenda-button" data-new>Nuovo appuntamento</button><button type="button" class="agenda-button secondary" data-new-block>Aggiungi pausa</button></div></div>
         <div class="agenda-card calendar-toolbar">
           <div class="button-group"><button type="button" class="agenda-button secondary" data-date-prev aria-label="Periodo precedente">←</button><button type="button" class="agenda-button secondary" data-today>Oggi</button><button type="button" class="agenda-button secondary" data-date-next aria-label="Periodo successivo">→</button></div>
           <label>Data<input type="date" data-calendar-date required /></label>
           <div class="button-group" aria-label="Vista calendario"><button type="button" class="agenda-button" data-view="day" aria-pressed="true">Giorno</button><button type="button" class="agenda-button secondary" data-view="week" aria-pressed="false">Settimana</button></div>
           <button type="button" class="agenda-button secondary" data-refresh>Aggiorna</button>
         </div>
+        <div class="agenda-card calendar-filters"><label>Cerca nel periodo visualizzato<input type="search" data-calendar-search placeholder="Cliente, telefono o servizio" autocomplete="off" /></label><label>Mostra<select data-calendar-status><option value="active">Appuntamenti confermati</option><option value="all">Tutti, anche annullati</option><option value="cancelled">Solo annullati</option></select></label></div>
+        <p class="agenda-note" data-calendar-summary></p>
         <p class="agenda-note">Gli orari sono quelli del salone, in Italia. Gli appuntamenti annullati restano visibili nello storico.</p>
         <div class="calendar-days" data-calendar aria-live="polite"></div>
 
+        <section class="agenda-card block-editor" data-block-editor hidden aria-labelledby="block-editor-title"><div class="agenda-section-head"><h2 id="block-editor-title" tabindex="-1">Aggiungi una pausa</h2><button type="button" class="agenda-button secondary" data-block-close>Chiudi</button></div><form data-block-form><div class="form-grid"><label>Descrizione<input name="title" value="Pausa" maxlength="100" required /></label><label>Giorno<input type="date" name="date" required /></label><label>Ora<input type="time" name="time" required /></label><label>Durata, in minuti<input type="number" name="durationMinutes" min="5" max="480" step="1" required /></label></div><p class="agenda-note">La pausa impedisce nuove prenotazioni e richieste. Non può sovrapporsi a un appuntamento confermato.</p><button type="submit" class="agenda-button">Salva pausa</button></form></section>
+
         <section class="agenda-card appointment-editor" data-editor hidden aria-labelledby="editor-title">
           <div class="agenda-section-head"><h2 id="editor-title" tabindex="-1">Nuovo appuntamento</h2><button type="button" class="agenda-button secondary" data-editor-close>Chiudi</button></div>
+          <div class="agenda-notice" data-editor-guard hidden><p>Hai modifiche non salvate. Vuoi continuare a modificarle oppure lasciarle per proseguire?</p><div class="button-group"><button type="button" class="agenda-button" data-editor-keep>Continua a modificare</button><button type="button" class="agenda-button secondary" data-editor-discard>Lascia le modifiche e continua</button></div></div>
           <form data-appointment-form>
             <div class="form-grid">
               <label>Servizio<select name="serviceId" data-appointment-services><option value="">Altro appuntamento</option></select></label>
@@ -96,6 +102,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
               <label>Telefono con prefisso internazionale<input type="tel" name="phone" autocomplete="tel" placeholder="+39…" required /></label>
               <label data-status-field hidden>Stato<select name="status"><option value="confirmed">Confermato</option><option value="cancelled">Annullato</option></select></label>
             </div>
+            <label>Note dell’appuntamento<textarea name="notes" maxlength="500" rows="3" placeholder="Dettagli utili per il servizio" /></label><small>Dettagli utili per questa visita. Le annotazioni che riguardano più appuntamenti si gestiscono nella rubrica.</small>
             <label class="checkbox-label"><input type="checkbox" name="reminderConsent" />La cliente ha accettato il promemoria su WhatsApp.</label>
             <p class="agenda-note">Indica la durata effettiva per occupare il tempo corretto. Il promemoria viene pianificato per la sera prima: gli appuntamenti inseriti dopo quell’orario non generano un invio tardivo.</p>
             <div class="button-group"><button type="submit" class="agenda-button">Salva appuntamento</button><button type="button" class="agenda-button secondary" data-editor-close>Lascia senza salvare</button></div>
@@ -115,7 +122,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
         <h2 id="services-title" tabindex="-1">I servizi del salone</h2>
         <p class="agenda-note">Scegli quali servizi mostrare nel calendario, imposta i nomi e le durate reali. Nascondere un servizio conserva gli appuntamenti e le richieste già ricevute.</p>
         <form class="agenda-card service-create-form" data-service-create>
-          <h3>Aggiungi un servizio</h3><div class="form-grid"><label>Nome<input name="name" maxlength="100" minlength="2" required placeholder="Nome del servizio" /></label><label>Durata, in minuti<input name="durationMinutes" type="number" min="5" max="480" step="1" placeholder="Puoi impostarla in seguito" /></label></div>
+          <h3>Aggiungi un servizio</h3><div class="form-grid"><label>Nome<input name="name" maxlength="100" minlength="2" required placeholder="Nome del servizio" /></label><label>Durata del trattamento, in minuti<input name="durationMinutes" type="number" min="5" max="480" step="1" placeholder="Puoi impostarla in seguito" /></label><label>Prezzo, in euro<input name="price" type="number" min="0" max="10000" step="0.01" placeholder="Su richiesta se lasciato vuoto" /></label><label>Tempo di riordino dopo il servizio, in minuti<input name="bufferAfterMinutes" type="number" min="0" max="120" step="1" value="0" required /></label></div>
+          <label>Descrizione per le clienti<textarea name="description" maxlength="1000" rows="3" /></label><label class="checkbox-label"><input name="priceFrom" type="checkbox" />Il prezzo indicato è un prezzo “a partire da”</label>
           <label class="checkbox-label"><input name="listed" type="checkbox" checked />Mostra il servizio nel calendario delle clienti</label>
           <label class="checkbox-label"><input name="enabled" type="checkbox" />Abilita la conferma automatica per questo servizio</label>
           <button class="agenda-button" type="submit">Aggiungi servizio</button>
@@ -135,6 +143,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
           <label class="checkbox-label"><input type="checkbox" name="bookingEnabled" />Conferma automaticamente i servizi configurati.</label>
           <p class="agenda-note" data-booking-help>Per la conferma automatica servono almeno un servizio abilitato e la sua durata.</p>
           <label>Giorni prenotabili in anticipo<input type="number" name="bookingDays" min="1" max="365" required /></label>
+          <label>Preavviso minimo per prenotare o richiedere, in minuti<input type="number" name="bookingLeadMinutes" min="0" max="10080" required /></label><p class="agenda-note">Con 0 non aggiungi un preavviso minimo. Questa regola riguarda le clienti; puoi inserire appuntamenti manualmente anche con meno preavviso.</p>
+          <h3>Gestione dell’appuntamento da parte delle clienti</h3><label class="checkbox-label"><input name="customerChangesEnabled" type="checkbox" />Consenti spostamento e annullamento dal link personale</label><label>Preavviso per spostare o annullare, in ore<input name="customerChangeNoticeHours" type="number" min="0" max="168" required /></label><p class="agenda-note">Con 0 la cliente può modificare fino all’inizio dell’appuntamento. Le modifiche rispettano disponibilità, durate e pause dell’agenda.</p>
           <h3>Orari di disponibilità</h3>
           <p class="agenda-note">Indica quando il salone è aperto. Puoi aggiungere più fasce nello stesso giorno, per esempio mattina e pomeriggio.</p>
           <div class="hours-grid" data-hours></div>
@@ -187,15 +197,16 @@ import CustomerDirectory from './CustomerDirectory.astro';
 <script>
   import { whatsappHref } from '../lib/contact';
 
-  type Appointment = { id: string; reference: string; serviceId?: string | null; title: string; name: string; phone: string; date: string; time: string; durationMinutes: number; status: string; reminderConsent: boolean };
-  type BookingRequest = { id: string; reference: string; serviceId: string; serviceName: string; name: string; phone: string; date: string; time: string; reminderConsent: boolean; status: 'pending' | 'confirmed' | 'declined'; appointmentId?: string | null; createdAt: number; appointment?: Pick<Appointment, 'id' | 'date' | 'time' | 'durationMinutes' | 'status' | 'title'> | null };
-  type Service = { id: string; name: string; durationMinutes: number | null; enabled: boolean; listed: boolean };
+  type Appointment = { id: string; reference: string; serviceId?: string | null; title: string; name: string; phone: string; date: string; time: string; startsAt?: number; endsAt?: number; durationMinutes: number; bufferAfterMinutes?: number; status: string; outcome?: 'scheduled' | 'completed' | 'no_show'; notes?: string; reminderConsent: boolean };
+  type Block = { id: string; title: string; date: string; time: string; durationMinutes: number; startsAt: number; endsAt: number };
+  type BookingRequest = { id: string; reference: string; serviceId: string; serviceName: string; name: string; phone: string; date: string; time: string; reminderConsent: boolean; status: 'pending' | 'confirmed' | 'declined'; notes?: string; withdrawnAt?: number | null; appointmentId?: string | null; createdAt: number; appointment?: Pick<Appointment, 'id' | 'date' | 'time' | 'durationMinutes' | 'status' | 'title'> | null };
+  type Service = { id: string; name: string; description: string; durationMinutes: number | null; enabled: boolean; listed: boolean; priceCents: number | null; priceFrom: boolean; bufferAfterMinutes: number };
   type OpeningHour = { day: string; label: string; ranges: { opens: string; closes: string }[] };
-  type Settings = { requestEnabled: boolean; bookingEnabled: boolean; bookingDays: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; economyMode: boolean; dailyReminderLimit: number; monthlyReminderLimit: number };
+  type Settings = { requestEnabled: boolean; bookingEnabled: boolean; bookingDays: number; bookingLeadMinutes: number; customerChangesEnabled: boolean; customerChangeNoticeHours: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; economyMode: boolean; dailyReminderLimit: number; monthlyReminderLimit: number };
   type Reminder = { id: string; appointmentId: string; name: string; phone: string; date: string; time: string; status: string; dueAt: number; attemptCount: number; errorCode?: string; errorText?: string; manualSentAt?: number | null; providerMessageId?: string | null; staleRevision?: boolean };
   type Session = { authenticated: boolean; setupRequired?: boolean; email?: string; csrfToken?: string; whatsappConfigured?: boolean };
   type Automation = { configured: boolean; enabled?: boolean; webhookConfigured?: boolean; missing: string[]; economyMode: boolean; dailyLimit: number; monthlyLimit: number; configuredDailyLimit: number; configuredMonthlyLimit: number; sentThisMonth: number; remainingToday: number; remainingThisMonth: number };
-  type ServiceDraft = { name: string; duration: string; listed: boolean; enabled: boolean };
+  type ServiceDraft = { name: string; description: string; duration: string; price: string; priceFrom: boolean; buffer: string; listed: boolean; enabled: boolean };
   const reminderLabels: Record<string, string> = { pending: 'In attesa', sending: 'Invio in corso', accepted: 'Accettato da WhatsApp', delivered: 'Consegnato', read: 'Letto', failed: 'Invio non riuscito', skipped: 'Non inviato', needs_review: 'Da controllare' };
   let activeRoot: HTMLElement | null = null;
   let dispose: (() => void) | undefined;
@@ -213,6 +224,11 @@ import CustomerDirectory from './CustomerDirectory.astro';
     let session: Session = { authenticated: false };
     let services: Service[] = [];
     let appointments: Appointment[] = [];
+    let blocks: Block[] = [];
+    let operationAppointments: Appointment[] = [];
+    let operationBlocks: Block[] = [];
+    let calendarSearch = '';
+    let calendarStatus = 'active';
     let requests: BookingRequest[] = [];
     let requestStatus = 'pending';
     let reminders: Reminder[] = [];
@@ -225,6 +241,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
     const serviceDrafts = new Map<string, ServiceDraft>();
     let editingId = '';
     let editorOpener: HTMLElement | null = null;
+    let editorBaseline = '';
+    let pendingEditorTransition: (() => void) | null = null;
     let view = 'day';
     let selectedDate = today();
     let busy = false;
@@ -241,6 +259,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
     const backupForm = el<HTMLFormElement>('[data-backup-form]');
     const exportForm = el<HTMLFormElement>('[data-export-form]');
     const createServiceForm = el<HTMLFormElement>('[data-service-create]');
+    const blockForm = el<HTMLFormElement>('[data-block-form]');
     const input = <T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement = HTMLInputElement>(form: HTMLFormElement, name: string) => form.elements.namedItem(name) as T;
     const on = (target: EventTarget, event: string, handler: EventListener) => target.addEventListener(event, handler, { signal: lifetime.signal });
     const textNode = (tag: string, text: string, className = '') => { const node = document.createElement(tag); node.textContent = text; if (className) node.className = className; return node; };
@@ -252,6 +271,27 @@ import CustomerDirectory from './CustomerDirectory.astro';
     function prettyDate(date: string, weekday = true) { return new Intl.DateTimeFormat('it-IT', { timeZone: 'UTC', ...(weekday ? { weekday: 'long' as const } : {}), day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(date + 'T12:00:00Z')); }
     function weekStart(date: string) { const day = new Date(date + 'T12:00:00Z').getUTCDay(); return addDays(date, -((day + 6) % 7)); }
     function period() { const from = view === 'week' ? weekStart(selectedDate) : selectedDate; return { from, to: view === 'week' ? addDays(from, 6) : from }; }
+    function romeEpoch(date: string, time: string) {
+      const [year, month, day] = date.split('-').map(Number); const [hour, minute] = time.split(':').map(Number);
+      const target = Date.UTC(year, month - 1, day, hour, minute); let instant = target;
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+      for (let attempt = 0; attempt < 3; attempt++) { const values = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value])); const actual = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute)); instant += target - actual; }
+      return instant;
+    }
+    function timeAt(instant: number) { return new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(instant)); }
+    function appointmentInterval(item: Appointment) { const start = item.startsAt ?? romeEpoch(item.date, item.time); const end = item.endsAt ?? start + item.durationMinutes * 60_000; return { start, end, occupiedEnd: end + (item.bufferAfterMinutes || 0) * 60_000 }; }
+    function openingIntervals(date: string) {
+      if (!settings || settings.closedDates.includes(date)) return [];
+      const day = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(new Date(date + 'T12:00:00Z'));
+      return (settings.openingHours.find(item => item.day === day)?.ranges || []).map(range => ({ start: romeEpoch(date, range.opens), end: romeEpoch(date, range.closes) }));
+    }
+    function capacityFor(date: string, entries: Appointment[], pauses: Block[], notBefore = 0) {
+      const open = openingIntervals(date).map(item => ({ start: Math.max(item.start, notBefore), end: item.end })).filter(item => item.start < item.end); const occupied = [...entries.filter(item => item.status === 'confirmed').map(item => { const interval = appointmentInterval(item); return { start: interval.start, end: interval.occupiedEnd }; }), ...pauses.map(item => ({ start: item.startsAt, end: item.endsAt }))];
+      let openMinutes = 0; let occupiedMinutes = 0;
+      for (const range of open) { openMinutes += (range.end - range.start) / 60_000; const clipped = occupied.map(item => ({ start: Math.max(item.start, range.start), end: Math.min(item.end, range.end) })).filter(item => item.start < item.end).sort((a, b) => a.start - b.start); let current: {start: number; end: number} | undefined; for (const item of clipped) { if (!current) current = { ...item }; else if (item.start <= current.end) current.end = Math.max(current.end, item.end); else { occupiedMinutes += (current.end - current.start) / 60_000; current = { ...item }; } } if (current) occupiedMinutes += (current.end - current.start) / 60_000; }
+      return { openMinutes, occupiedMinutes, freeMinutes: Math.max(0, openMinutes - occupiedMinutes) };
+    }
+    function minutesLabel(value: number) { const minutes = Math.round(value); return minutes >= 60 ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ''}` : `${minutes} min`; }
 
     async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
       const requestSession = session;
@@ -271,11 +311,14 @@ import CustomerDirectory from './CustomerDirectory.astro';
       busy = true;
       inform('Operazione in corso…');
       const buttons = form ? Array.from(form.querySelectorAll<HTMLButtonElement>('button')) : [];
+      const fields = form === appointmentForm ? Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')) : [];
       const previous = buttons.map(button => button.disabled);
+      const priorFields = fields.map(field => field.disabled);
       buttons.forEach(button => { button.disabled = true; });
+      fields.forEach(field => { field.disabled = true; });
       form?.setAttribute('aria-busy', 'true');
       try { await task(); } catch (error) { if (!lifetime.signal.aborted && !(error instanceof Error && error.name === 'AbortError')) inform(error instanceof Error ? error.message : 'Si è verificato un problema. Riprova.', true); }
-      finally { busy = false; buttons.forEach((button, index) => { button.disabled = previous[index]; }); form?.removeAttribute('aria-busy'); }
+      finally { busy = false; buttons.forEach((button, index) => { button.disabled = previous[index]; }); fields.forEach((field, index) => { field.disabled = priorFields[index]; }); form?.removeAttribute('aria-busy'); }
     }
 
     function showAccess(next: Session) {
@@ -287,7 +330,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
       if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; input(accountForm, 'email').value = next.email || ''; document.dispatchEvent(new CustomEvent('agenda:authenticated', { detail: { email: next.email, csrfToken } })); return; }
       document.dispatchEvent(new CustomEvent('agenda:logout'));
       automation = undefined; closedDatesDraft = []; settingsDirty = false; serviceDrafts.clear(); reminderPeriod = 'today'; el<HTMLSelectElement>('[data-reminder-period]').value = 'today'; el('[data-reminder-summary]').textContent = ''; showPanel('overview', false);
-      services = []; appointments = []; requests = []; reminders = []; settings = undefined; requestStatus = 'pending'; el<HTMLSelectElement>('[data-request-status]').value = requestStatus;
+      services = []; appointments = []; blocks = []; operationAppointments = []; operationBlocks = []; requests = []; reminders = []; settings = undefined; requestStatus = 'pending'; el<HTMLSelectElement>('[data-request-status]').value = requestStatus;
+      calendarSearch = ''; calendarStatus = 'active'; el<HTMLInputElement>('[data-calendar-search]').value = ''; el<HTMLSelectElement>('[data-calendar-status]').value = 'active'; el('[data-next-appointment]').replaceChildren(); el('[data-today-capacity]').replaceChildren(); el('[data-calendar-summary]').textContent = ''; pendingEditorTransition = null; editorBaseline = ''; blockForm.reset(); el('[data-block-editor]').hidden = true; el('[data-editor-guard]').hidden = true;
       el('[data-calendar]').replaceChildren(); el('[data-services]').replaceChildren(); el('[data-reminders]').replaceChildren(); el('[data-stats]').replaceChildren(); el('[data-automation]').replaceChildren();
       el('[data-requests]').replaceChildren(); el('[data-request-result]').replaceChildren(); el('[data-request-result]').hidden = true; el('[data-request-count]').textContent = '0';
       appointmentForm.reset(); passwordForm.reset(); accountForm.reset(); backupForm.reset(); settingsForm.reset(); createServiceForm.reset(); el('[data-hours]').replaceChildren(); el('[data-closed-dates]').replaceChildren(); el('[data-checklist]').replaceChildren(); el('[data-editor]').hidden = true;
@@ -300,9 +344,17 @@ import CustomerDirectory from './CustomerDirectory.astro';
 
     async function loadCalendar() {
       const { from, to } = period();
-      const result = await api<{ items: Appointment[] }>(`/api/admin/appointments?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      const query = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const [result, pauses] = await Promise.all([api<{ items: Appointment[] }>(`/api/admin/appointments?${query}`), api<{ items: Block[] }>(`/api/admin/blocks?${query}`)]);
       if (!session.authenticated || lifetime.signal.aborted) return;
-      appointments = result.items; renderCalendar();
+      appointments = result.items; blocks = pauses.items; renderCalendar();
+    }
+
+    async function loadOperations() {
+      const date = today(); const query = `from=${encodeURIComponent(date)}&to=${encodeURIComponent(addDays(date, 366))}`;
+      const [result, pauses] = await Promise.all([api<{ items: Appointment[] }>(`/api/admin/appointments?${query}`), api<{ items: Block[] }>(`/api/admin/blocks?from=${date}&to=${date}`)]);
+      if (!session.authenticated || lifetime.signal.aborted) return;
+      operationAppointments = result.items; operationBlocks = pauses.items; renderOperations();
     }
 
     async function loadRequests() {
@@ -328,7 +380,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       if (!session.authenticated || lifetime.signal.aborted) return;
       services = serviceData.items; settings = settingsData; automation = automationData; reminders = reminderData.items; requests = requestData.items;
       renderServices(); renderSettings(); renderReminders(); renderStats(stats); renderAutomation(automationData); renderOverview(); renderRequests(); populateServiceSelect();
-      await loadCalendar();
+      await Promise.all([loadCalendar(), loadOperations()]);
     }
 
     async function refreshIncomingRequests() {
@@ -391,8 +443,10 @@ import CustomerDirectory from './CustomerDirectory.astro';
       list.replaceChildren(...requests.map(request => {
         const card = textNode('article', '', 'agenda-card request-card'); card.dataset.requestId = request.id;
         const heading = textNode('div', '', 'appointment-top');
-        heading.append(textNode('h3', request.name), textNode('span', request.status === 'pending' ? 'Da confermare' : request.status === 'confirmed' ? 'Confermata' : 'Non accettata', 'status-badge')); card.append(heading);
+        heading.append(textNode('h3', request.name), textNode('span', request.withdrawnAt ? 'Ritirata dalla cliente' : request.status === 'pending' ? 'Da confermare' : request.status === 'confirmed' ? 'Confermata' : 'Non accettata', 'status-badge')); card.append(heading);
         card.append(textNode('p', request.serviceName), textNode('p', `Orario desiderato: ${prettyDate(request.date)} alle ${request.time}`), textNode('p', request.phone, 'agenda-note'), textNode('small', `Riferimento ${request.reference}`));
+        if (request.notes) card.append(textNode('p', `Note della richiesta: ${request.notes}`, 'agenda-note'));
+        if (request.status === 'pending' || (request.status === 'confirmed' && request.appointment?.status !== 'cancelled')) card.append(customerLinkControls('requests', request.id));
         if (request.status !== 'pending') {
           if (request.appointment) {
             const appointment = request.appointment;
@@ -444,47 +498,132 @@ import CustomerDirectory from './CustomerDirectory.astro';
       }));
     }
 
+    function inlineAction(container: HTMLElement, opener: HTMLButtonElement, copy: string, label: string, task: () => Promise<void>) {
+      const existing = container.querySelector('[data-inline-action]'); existing?.remove();
+      const box = textNode('div', '', 'inline-action'); box.dataset.inlineAction = ''; const heading = textNode('p', copy); heading.tabIndex = -1;
+      const actions = textNode('div', '', 'button-group'); const save = textNode('button', label, 'agenda-button') as HTMLButtonElement; save.type = 'button';
+      const cancel = textNode('button', 'Lascia invariato', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button';
+      on(cancel, 'click', () => { box.remove(); opener.focus({ preventScroll: true }); });
+      on(save, 'click', () => { void act(null, async () => { save.disabled = true; cancel.disabled = true; try { await task(); } finally { if (box.isConnected) { save.disabled = false; cancel.disabled = false; } } }); });
+      actions.append(save, cancel); box.append(heading, actions); container.append(box); heading.focus({ preventScroll: true });
+    }
+
+    function customerLinkControls(kind: 'appointments' | 'requests', id: string) {
+      const wrapper = textNode('div', '', 'customer-link-controls');
+      const regenerate = () => { const button = textNode('button', 'Rigenera link', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; on(button, 'click', () => { if (busy) return; inlineAction(wrapper, button, 'Vuoi creare un nuovo link personale? Il link precedente non funzionerà più. Condividi il nuovo link soltanto con questa cliente.', 'Rigenera e invalida il precedente', () => prepare(true)); }); return button; };
+      async function prepare(rotate: boolean) {
+        const result = await api<{ managementPath: string | null; expiresAt: number }>(`/api/admin/${kind}/${encodeURIComponent(id)}/customer-link`, 'POST', { rotate });
+        if (!result.managementPath) throw new Error('Il link personale non è ancora disponibile. L’appuntamento resta in agenda.');
+        const url = new URL(result.managementPath, window.location.origin); if (url.origin !== window.location.origin || !/\/appuntamento\/?$/.test(url.pathname)) throw new Error('Il link ricevuto non è valido. Riprova.');
+        const field = document.createElement('input'); field.type = 'text'; field.value = url.href; field.readOnly = true; field.setAttribute('aria-label', 'Link personale da condividere con questa cliente');
+        const note = textNode('p', 'Questo link permette alla cliente di vedere e gestire la propria prenotazione. Condividilo soltanto con lei: nessun messaggio viene inviato da questo comando.', 'agenda-note');
+        const actions = textNode('div', '', 'button-group'); const copy = textNode('button', 'Copia link', 'agenda-button secondary') as HTMLButtonElement; copy.type = 'button';
+        on(copy, 'click', () => { if (busy) return; void (async () => { try { await navigator.clipboard.writeText(field.value); inform('Link copiato. Puoi incollarlo nel messaggio alla cliente.'); } catch { field.focus(); field.select(); inform('Copia il link selezionato e incollalo nel messaggio alla cliente.'); } })(); }); actions.append(copy);
+        if (navigator.share) { const share = textNode('button', 'Prepara condivisione', 'agenda-button secondary') as HTMLButtonElement; share.type = 'button'; on(share, 'click', () => { if (busy) return; void navigator.share({ title: 'La tua prenotazione', text: 'Ecco il link personale per consultare e gestire la tua prenotazione.', url: field.value }).catch(() => {}); }); actions.append(share); }
+        actions.append(regenerate()); wrapper.replaceChildren(note, field, actions); inform(rotate ? 'Nuovo link preparato. Quello precedente è stato invalidato; condividi il nuovo link con la cliente.' : 'Link personale preparato. Scegli tu come condividerlo.');
+      }
+      const button = textNode('button', 'Link personale della cliente', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; on(button, 'click', () => { void act(null, () => prepare(false)); }); wrapper.append(button, regenerate()); return wrapper;
+    }
+
+    function appointmentCard(item: Appointment) {
+      const card = textNode('article', '', `appointment-card${item.status === 'cancelled' ? ' is-cancelled' : ''}`); card.dataset.appointmentId = item.id;
+      const labels = { scheduled: 'Confermato', completed: 'Terminato', no_show: 'Non si è presentata' };
+      const interval = appointmentInterval(item); const top = textNode('div', '', 'appointment-top'); top.append(textNode('strong', `${item.time}–${timeAt(interval.end)} · ${item.durationMinutes} min`), textNode('span', item.status === 'cancelled' ? 'Annullato' : labels[item.outcome || 'scheduled'], 'status-badge')); card.append(top);
+      card.append(textNode('h4', item.name), textNode('p', item.title || services.find(service => service.id === item.serviceId)?.name || 'Appuntamento'), textNode('p', item.phone, 'agenda-note'), textNode('small', `Riferimento ${item.reference}`));
+      if (interval.end > romeEpoch(addDays(item.date, 1), '00:00')) card.append(textNode('p', `Inizia il ${prettyDate(item.date, false)} e prosegue nel giorno successivo.`, 'agenda-note'));
+      if (item.notes) card.append(textNode('p', `Note: ${item.notes}`, 'agenda-note'));
+      const actions = textNode('div', '', 'button-group'); const edit = textNode('button', 'Modifica', 'agenda-button secondary') as HTMLButtonElement; edit.type = 'button'; on(edit, 'click', () => openEditor(item, edit)); actions.append(edit);
+      if (item.status !== 'cancelled' && (item.outcome || 'scheduled') === 'scheduled') {
+        const move = textNode('button', 'Sposta', 'agenda-button secondary') as HTMLButtonElement; move.type = 'button'; on(move, 'click', () => openEditor(item, move, undefined, true)); actions.append(move);
+        const cancel = textNode('button', 'Annulla', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button'; on(cancel, 'click', () => inlineAction(card, cancel, `Vuoi annullare l’appuntamento di ${item.name}? I promemoria ancora da inviare verranno fermati.`, 'Conferma annullamento', async () => { await api(`/api/admin/appointments/${encodeURIComponent(item.id)}`, 'PATCH', { status: 'cancelled' }); await loadAll(); inform('Appuntamento annullato. Avvisa la cliente se necessario.'); focus('#calendar-title'); })); actions.append(cancel);
+      }
+      if (item.status === 'confirmed') {
+        if ((item.outcome || 'scheduled') !== 'scheduled') { const reopen = textNode('button', 'Riapri appuntamento', 'agenda-button secondary') as HTMLButtonElement; reopen.type = 'button'; on(reopen, 'click', () => inlineAction(card, reopen, 'Vuoi correggere l’esito e riaprire questo appuntamento? Non verrà inviato un nuovo promemoria da questa azione.', 'Conferma riapertura', async () => { await api(`/api/admin/appointments/${encodeURIComponent(item.id)}`, 'PATCH', { outcome: 'scheduled' }); await loadAll(); inform('Appuntamento riaperto. Puoi modificarlo o annullarlo.'); focus('#calendar-title'); })); actions.append(reopen); }
+        if (interval.start <= Date.now()) for (const [outcome, label] of [['completed', 'Segna terminato'], ['no_show', 'Segna assente']] as const) { if (item.outcome === outcome) continue; const button = textNode('button', label, 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; on(button, 'click', () => inlineAction(card, button, outcome === 'completed' ? `Confermi che l’appuntamento di ${item.name} è stato svolto?` : `Confermi che ${item.name} non si è presentata?`, 'Conferma esito', async () => { await api(`/api/admin/appointments/${encodeURIComponent(item.id)}`, 'PATCH', { outcome }); await loadAll(); inform('Esito dell’appuntamento aggiornato.'); focus('#calendar-title'); })); actions.append(button); }
+      }
+      const rebook = textNode('button', 'Riprenota', 'agenda-button secondary') as HTMLButtonElement; rebook.type = 'button'; on(rebook, 'click', () => openEditor(undefined, rebook, { name: item.name, phone: item.phone, serviceId: item.serviceId, title: item.title, durationMinutes: item.durationMinutes, date: '' })); actions.append(rebook);
+      card.append(actions);
+      if (item.status === 'confirmed' && (item.outcome || 'scheduled') === 'scheduled' && interval.start > Date.now()) card.append(customerLinkControls('appointments', item.id));
+      return card;
+    }
+
+    function renderOperations() {
+      const now = Date.now(); const entries = operationAppointments.filter(item => item.status === 'confirmed' && (item.outcome || 'scheduled') === 'scheduled').sort((a, b) => appointmentInterval(a).start - appointmentInterval(b).start);
+      const current = entries.find(item => { const range = appointmentInterval(item); return range.start <= now && range.end > now; }); const next = current || entries.find(item => appointmentInterval(item).start > now);
+      const target = el('[data-next-appointment]');
+      if (next) { const button = textNode('button', 'Apri nell’agenda', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; on(button, 'click', () => { void act(null, async () => { selectedDate = next.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; await loadCalendar(); showPanel('calendar'); inform('Appuntamento aperto nell’agenda.'); }); }); target.replaceChildren(textNode('p', current ? 'In corso' : 'In programma', 'agenda-note'), textNode('strong', next.name), textNode('p', next.title), textNode('p', `${prettyDate(next.date)} alle ${next.time} · ${next.durationMinutes} minuti`, 'agenda-note'), button); }
+      else target.replaceChildren(textNode('p', 'Non risultano appuntamenti da svolgere nei prossimi 12 mesi.', 'agenda-note'));
+      const capacity = capacityFor(today(), operationAppointments, operationBlocks); const remaining = capacityFor(today(), operationAppointments, operationBlocks, now); const summary = el('[data-today-capacity]');
+      summary.replaceChildren(textNode('p', capacity.openMinutes ? `${minutesLabel(remaining.freeMinutes)} ancora liberi da ora, negli orari del salone` : 'Per oggi il salone risulta chiuso.', 'capacity-headline'), textNode('p', `${minutesLabel(capacity.occupiedMinutes)} occupati su ${minutesLabel(capacity.openMinutes)} di apertura.`, 'agenda-note'), textNode('p', 'Il conteggio considera appuntamenti confermati, tempo di riordino e pause dentro gli orari di apertura. Le richieste in attesa non occupano tempo.', 'agenda-note'));
+    }
+
     function renderCalendar() {
-      const { from, to } = period();
-      const days: HTMLElement[] = [];
+      const { from, to } = period(); const query = calendarSearch.trim().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT');
+      const matches = (item: Appointment) => (!query || `${item.name} ${item.phone} ${item.title}`.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').includes(query)) && (calendarStatus === 'all' || (calendarStatus === 'cancelled' ? item.status === 'cancelled' : item.status === 'confirmed'));
+      const visible = appointments.filter(matches); const days: HTMLElement[] = []; const filterOn = Boolean(query) || calendarStatus !== 'active';
+      el('[data-calendar-summary]').textContent = `${prettyDate(from, false)}${from === to ? '' : ` – ${prettyDate(to, false)}`} · ${visible.length} appuntamenti trovati. La ricerca riguarda questo periodo; la disponibilità considera sempre tutti gli impegni.`;
       for (let date = from; date <= to; date = addDays(date, 1)) {
-        const section = textNode('section', '', 'calendar-day');
-        const title = textNode('h3', prettyDate(date)); section.append(title);
-        const items = appointments.filter(item => item.date === date).sort((a, b) => a.time.localeCompare(b.time));
-        if (!items.length) section.append(textNode('p', 'Nessun appuntamento in questo giorno.', 'agenda-note empty-day'));
-        for (const item of items) {
-          const card = textNode('article', '', `appointment-card${item.status === 'cancelled' ? ' is-cancelled' : ''}`);
-          const top = textNode('div', '', 'appointment-top'); top.append(textNode('strong', `${item.time} · ${item.durationMinutes} min`), textNode('span', item.status === 'cancelled' ? 'Annullato' : 'Confermato', 'status-badge')); card.append(top);
-          card.append(textNode('h4', item.name), textNode('p', item.title || services.find(service => service.id === item.serviceId)?.name || 'Appuntamento'), textNode('p', item.phone, 'agenda-note'));
-          const reference = textNode('small', `Riferimento ${item.reference}`); card.append(reference);
-          const actions = textNode('div', '', 'button-group'); const edit = textNode('button', 'Modifica', 'agenda-button secondary') as HTMLButtonElement; edit.type = 'button'; on(edit, 'click', () => openEditor(item, edit)); actions.append(edit);
-          if (item.status !== 'cancelled') actions.append(manualLink(item)); card.append(actions); section.append(card);
+        const start = romeEpoch(date, '00:00'); const end = romeEpoch(addDays(date, 1), '00:00'); const open = openingIntervals(date);
+        const all = appointments.filter(item => { const interval = appointmentInterval(item); return interval.start < end && interval.occupiedEnd > start; });
+        const pauses = blocks.filter(item => item.startsAt < end && item.endsAt > start); const items = visible.filter(item => { const interval = appointmentInterval(item); return interval.start < end && interval.occupiedEnd > start; });
+        const section = textNode('section', '', 'calendar-day'); section.dataset.calendarDay = date; const capacity = capacityFor(date, all, pauses); section.append(textNode('h3', prettyDate(date)), textNode('p', open.length ? `${minutesLabel(capacity.freeMinutes)} liberi · ${minutesLabel(capacity.occupiedMinutes)} occupati negli orari di apertura` : 'Salone chiuso secondo gli orari impostati', 'agenda-note'));
+        const busyIntervals: {start: number; end: number; kind: string; id: string; item?: Appointment; block?: Block}[] = [];
+        for (const item of all.filter(item => item.status === 'confirmed')) { const interval = appointmentInterval(item); busyIntervals.push({ start: Math.max(start, interval.start), end: Math.min(end, interval.end), kind: 'appointment', id: item.id, item }); if (interval.occupiedEnd > interval.end) busyIntervals.push({ start: Math.max(start, interval.end), end: Math.min(end, interval.occupiedEnd), kind: 'buffer', id: item.id, item }); }
+        for (const block of pauses) busyIntervals.push({ start: Math.max(start, block.startsAt), end: Math.min(end, block.endsAt), kind: 'block', id: block.id, block });
+        const meaningful = [...open, ...busyIntervals.filter(item => item.start < item.end)];
+        if (!meaningful.length) section.append(textNode('p', 'Nessun appuntamento o pausa in questo giorno.', 'agenda-note empty-day'));
+        else {
+          const min = Math.max(start, Math.min(...meaningful.map(item => item.start))); const max = Math.min(end, Math.max(...meaningful.map(item => item.end)));
+          const points = [...new Set([min, max, ...open.flatMap(item => [item.start, item.end]), ...busyIntervals.flatMap(item => [item.start, item.end])].filter(value => value >= min && value <= max))].sort((a, b) => a - b);
+          const spans: {start: number; end: number; kind: string; id: string; item?: Appointment; block?: Block}[] = [];
+          for (let i = 0; i < points.length - 1; i++) { const segmentStart = points[i]; const segmentEnd = points[i + 1]; if (segmentStart >= segmentEnd) continue; const busyItem = busyIntervals.find(item => item.start < segmentEnd && item.end > segmentStart); const kind = busyItem?.kind || (open.some(item => segmentStart >= item.start && segmentEnd <= item.end) ? 'free' : 'closed'); const segment = { ...busyItem, start: segmentStart, end: segmentEnd, kind, id: busyItem?.id || kind }; const prior = spans[spans.length - 1]; if (prior && prior.id === segment.id && prior.kind === segment.kind && prior.end === segment.start) prior.end = segment.end; else spans.push(segment); }
+          const timeline = textNode('div', '', 'agenda-timeline');
+          for (const span of spans) {
+            const row = textNode('div', '', `timeline-row timeline-${span.kind}`); const times = textNode('div', `${timeAt(span.start)}–${span.end === end ? '24:00' : timeAt(span.end)}`, 'timeline-time'); const content = textNode('div', '', 'timeline-content');
+            if (span.kind === 'appointment' && span.item) { if (items.some(item => item.id === span.item!.id)) content.append(appointmentCard(span.item)); else content.append(textNode('p', 'Appuntamento occupato, escluso dai filtri correnti.', 'agenda-note')); }
+            else if (span.kind === 'buffer') content.append(textNode('p', `Tempo di riordino · ${minutesLabel((span.end - span.start) / 60_000)}`, 'agenda-note'));
+            else if (span.kind === 'block' && span.block) { content.append(textNode('strong', span.block.title), textNode('p', `${minutesLabel((span.end - span.start) / 60_000)} non prenotabili`, 'agenda-note')); const remove = textNode('button', 'Rimuovi pausa', 'agenda-button secondary') as HTMLButtonElement; remove.type = 'button'; on(remove, 'click', () => inlineAction(content, remove, 'Vuoi rimuovere questa pausa e rendere nuovamente disponibile il periodo?', 'Rimuovi pausa', async () => { await api(`/api/admin/blocks/${encodeURIComponent(span.block!.id)}`, 'DELETE'); await loadAll(); inform('Pausa rimossa.'); focus('#calendar-title'); })); content.append(remove); }
+            else if (span.kind === 'free') { content.append(textNode('strong', `Tempo libero · ${minutesLabel((span.end - span.start) / 60_000)}`)); const choose = textNode('button', 'Inserisci qui', 'agenda-button secondary') as HTMLButtonElement; choose.type = 'button'; choose.setAttribute('aria-label', `Nuovo appuntamento il ${prettyDate(date)} alle ${timeAt(span.start)}`); on(choose, 'click', () => openEditor(undefined, choose, { date, time: timeAt(span.start) })); content.append(choose); }
+            else content.append(textNode('p', 'Salone chiuso', 'agenda-note'));
+            row.append(times, content); timeline.append(row);
+          }
+          section.append(timeline);
         }
+        const cancelled = items.filter(item => item.status === 'cancelled'); if (cancelled.length) { const archive = textNode('div', '', 'cancelled-appointments'); archive.append(textNode('h4', 'Appuntamenti annullati'), ...cancelled.map(appointmentCard)); section.append(archive); }
+        if (filterOn && !items.length) section.append(textNode('p', 'Nessun appuntamento corrisponde ai filtri in questo giorno.', 'agenda-note'));
         days.push(section);
       }
       el('[data-calendar]').replaceChildren(...days);
     }
 
-    function populateServiceSelect() {
-      const select = input<HTMLSelectElement>(appointmentForm, 'serviceId'); const current = select.value;
-      select.replaceChildren(new Option('Altro appuntamento', ''), ...services.filter(service => service.listed !== false || service.id === current).map(service => new Option(service.name + (service.durationMinutes ? ` · ${service.durationMinutes} min` : ' · durata da impostare'), service.id)));
+    function populateServiceSelect(selectedId?: string) {
+      const select = input<HTMLSelectElement>(appointmentForm, 'serviceId'); const current = selectedId ?? select.value;
+      select.replaceChildren(new Option('Altro appuntamento', ''), ...services.filter(service => service.listed !== false || service.id === current).map(service => new Option(service.name + (service.listed === false ? ' · archiviato' : '') + (service.durationMinutes ? ` · ${service.durationMinutes} min` : ' · durata da impostare'), service.id)));
       select.value = current;
     }
-
-    function openEditor(item?: Appointment, opener?: HTMLElement) {
-      editingId = item?.id || ''; editorOpener = opener || null;
-      appointmentForm.reset(); populateServiceSelect();
-      el('#editor-title').textContent = item ? 'Modifica appuntamento' : 'Nuovo appuntamento';
-      input(appointmentForm, 'date').value = item?.date || selectedDate; input(appointmentForm, 'time').value = item?.time || '';
-      input<HTMLSelectElement>(appointmentForm, 'serviceId').value = item?.serviceId || '';
-      input(appointmentForm, 'title').value = item?.title || ''; input(appointmentForm, 'durationMinutes').value = item ? String(item.durationMinutes) : '';
-      input(appointmentForm, 'name').value = item?.name || ''; input(appointmentForm, 'phone').value = item?.phone || '';
-      input(appointmentForm, 'reminderConsent').checked = Boolean(item?.reminderConsent); input<HTMLSelectElement>(appointmentForm, 'status').value = item?.status || 'confirmed';
-      el('[data-status-field]').hidden = !item; el('[data-editor]').hidden = false;
-      el('[data-editor]').scrollIntoView({ behavior: 'auto', block: 'start' }); focus('#editor-title');
+    function editorSignature() { return JSON.stringify(Array.from(new FormData(appointmentForm).entries())); }
+    function editorTransition(task: () => void) {
+      if (!el('[data-editor]').hidden && editorSignature() !== editorBaseline) { pendingEditorTransition = task; el('[data-editor-guard]').hidden = false; el('[data-editor]').scrollIntoView({ behavior: 'auto', block: 'start' }); focus('[data-editor-keep]'); return; }
+      task();
     }
-
-    function closeEditor() { el('[data-editor]').hidden = true; editingId = ''; appointmentForm.reset(); editorOpener?.focus({ preventScroll: true }); }
+    function openEditor(item?: Appointment, opener?: HTMLElement, prefill?: Partial<Appointment>, moveOnly = false) {
+      if (busy) return;
+      editorTransition(() => {
+        editingId = item?.id || ''; editorOpener = opener || null; appointmentForm.reset();
+        const value = item || prefill; populateServiceSelect(value?.serviceId || '');
+        el('#editor-title').textContent = item ? (moveOnly ? 'Sposta appuntamento' : 'Modifica appuntamento') : 'Nuovo appuntamento';
+        input(appointmentForm, 'date').value = value?.date ?? selectedDate; input(appointmentForm, 'time').value = value?.time || '';
+        input(appointmentForm, 'title').value = value?.title || ''; input(appointmentForm, 'durationMinutes').value = value?.durationMinutes ? String(value.durationMinutes) : '';
+        input(appointmentForm, 'name').value = value?.name || ''; input(appointmentForm, 'phone').value = value?.phone || ''; input<HTMLTextAreaElement>(appointmentForm, 'notes').value = item?.notes || '';
+        input(appointmentForm, 'reminderConsent').checked = item ? Boolean(item.reminderConsent) : false; input<HTMLSelectElement>(appointmentForm, 'status').value = item?.status || 'confirmed';
+        el('[data-status-field]').hidden = !item || (item.outcome || 'scheduled') !== 'scheduled'; el('[data-editor]').hidden = false; el('[data-editor-guard]').hidden = true; pendingEditorTransition = null; editorBaseline = editorSignature();
+        el('[data-editor]').scrollIntoView({ behavior: 'auto', block: 'start' }); if (moveOnly || prefill?.name) input(appointmentForm, 'date').focus(); else focus('#editor-title');
+      });
+    }
+    function closeEditor(force = false) {
+      const close = () => { el('[data-editor]').hidden = true; el('[data-editor-guard]').hidden = true; pendingEditorTransition = null; editingId = ''; appointmentForm.reset(); editorBaseline = ''; editorOpener?.focus({ preventScroll: true }); };
+      if (force) close(); else if (!busy) editorTransition(close);
+    }
 
     function showPanel(panel: string, moveFocus = true) {
       activePanel = panel;
@@ -524,15 +663,19 @@ import CustomerDirectory from './CustomerDirectory.astro';
         const top = textNode('div', '', 'appointment-top'); top.append(textNode('h3', service.name), textNode('span', service.listed !== false ? 'Visibile alle clienti' : 'Nascosto', 'status-badge')); form.append(top);
         const nameLabel = textNode('label', 'Nome del servizio'); const name = document.createElement('input'); name.name = 'name'; name.required = true; name.minLength = 2; name.maxLength = 100; name.value = draft?.name ?? service.name; nameLabel.append(name);
         const durationLabel = textNode('label', 'Durata, in minuti'); const duration = document.createElement('input'); duration.type = 'number'; duration.min = '5'; duration.max = '480'; duration.step = '1'; duration.name = 'durationMinutes'; duration.value = draft?.duration ?? (service.durationMinutes ? String(service.durationMinutes) : ''); duration.placeholder = 'Durata reale del servizio'; durationLabel.append(duration);
+        const descriptionLabel = textNode('label', 'Descrizione per le clienti'); const description = document.createElement('textarea'); description.name = 'description'; description.maxLength = 1000; description.rows = 3; description.value = draft?.description ?? service.description ?? ''; descriptionLabel.append(description);
+        const priceLabel = textNode('label', 'Prezzo, in euro'); const price = document.createElement('input'); price.name = 'price'; price.type = 'number'; price.min = '0'; price.max = '10000'; price.step = '0.01'; price.placeholder = 'Su richiesta se lasciato vuoto'; price.value = draft?.price ?? (service.priceCents === null || service.priceCents === undefined ? '' : (service.priceCents / 100).toFixed(2)); priceLabel.append(price);
+        const priceFromLabel = textNode('label', '', 'checkbox-label'); const priceFrom = document.createElement('input'); priceFrom.type = 'checkbox'; priceFrom.name = 'priceFrom'; priceFrom.checked = draft?.priceFrom ?? Boolean(service.priceFrom); priceFromLabel.append(priceFrom, document.createTextNode('Prezzo “a partire da”'));
+        const bufferLabel = textNode('label', 'Tempo di riordino dopo il servizio, in minuti'); const buffer = document.createElement('input'); buffer.name = 'bufferAfterMinutes'; buffer.type = 'number'; buffer.min = '0'; buffer.max = '120'; buffer.step = '1'; buffer.required = true; buffer.value = draft?.buffer ?? String(service.bufferAfterMinutes || 0); bufferLabel.append(buffer);
         const listedLabel = textNode('label', '', 'checkbox-label'); const listed = document.createElement('input'); listed.type = 'checkbox'; listed.name = 'listed'; listed.checked = draft?.listed ?? (service.listed !== false); listedLabel.append(listed, document.createTextNode('Mostra nel calendario delle clienti'));
         const enabledLabel = textNode('label', '', 'checkbox-label'); const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.name = 'enabled'; enabled.checked = draft?.enabled ?? Boolean(service.enabled); enabled.disabled = !listed.checked; enabledLabel.append(enabled, document.createTextNode('Abilita la conferma automatica per questo servizio'));
         on(listed, 'change', () => { enabled.disabled = !listed.checked; if (!listed.checked) enabled.checked = false; });
-        const rememberDraft = () => { serviceDrafts.set(service.id, { name: name.value, duration: duration.value, listed: listed.checked, enabled: listed.checked && enabled.checked }); };
+        const rememberDraft = () => { serviceDrafts.set(service.id, { name: name.value, description: description.value, duration: duration.value, price: price.value, priceFrom: priceFrom.checked, buffer: buffer.value, listed: listed.checked, enabled: listed.checked && enabled.checked }); };
         on(form, 'input', rememberDraft); on(form, 'change', rememberDraft);
-        const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit'; form.append(nameLabel, durationLabel, listedLabel, enabledLabel, textNode('small', 'Senza durata impostata, Jessica controlla e conferma le richieste. La conferma automatica richiede anche l’attivazione nelle impostazioni.'), save);
+        const save = textNode('button', 'Salva servizio', 'agenda-button secondary') as HTMLButtonElement; save.type = 'submit'; form.append(nameLabel, descriptionLabel, durationLabel, priceLabel, priceFromLabel, bufferLabel, textNode('small', 'Il tempo di riordino blocca l’agenda dopo il trattamento. Le nuove durate e i tempi di riordino non cambiano gli appuntamenti già salvati.'), listedLabel, enabledLabel, textNode('small', 'Senza durata impostata, Jessica controlla e conferma le richieste. La conferma automatica richiede anche l’attivazione nelle impostazioni.'), save);
         on(form, 'submit', event => { event.preventDefault(); void act(form, async () => {
           if (enabled.checked && !duration.value) { duration.focus(); throw new Error('Imposta la durata prima di abilitare la conferma automatica.'); }
-          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', { name: name.value.trim(), durationMinutes: duration.value ? Number(duration.value) : null, listed: listed.checked, enabled: listed.checked && enabled.checked }); serviceDrafts.delete(service.id); await loadAll(); inform(`Servizio ${name.value.trim()} salvato.`); focus('#services-title');
+          await api(`/api/admin/services/${encodeURIComponent(service.id)}`, 'PATCH', { name: name.value.trim(), description: description.value.trim(), priceCents: price.value === '' ? null : Math.round(Number(price.value) * 100), priceFrom: priceFrom.checked, bufferAfterMinutes: Number(buffer.value), durationMinutes: duration.value ? Number(duration.value) : null, listed: listed.checked, enabled: listed.checked && enabled.checked }); serviceDrafts.delete(service.id); await loadAll(); inform(`Servizio ${name.value.trim()} salvato.`); focus('#services-title');
         }); }); return form;
       }));
     }
@@ -552,7 +695,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       input(settingsForm, 'requestEnabled').checked = settings.requestEnabled !== false;
       input(settingsForm, 'bookingEnabled').checked = settings.bookingEnabled;
       input(settingsForm, 'economyMode').checked = settings.economyMode !== false;
-      input(settingsForm, 'bookingDays').value = String(settings.bookingDays); input(settingsForm, 'reminderTime').value = settings.reminderTime;
+      input(settingsForm, 'bookingDays').value = String(settings.bookingDays); input(settingsForm, 'bookingLeadMinutes').value = String(settings.bookingLeadMinutes ?? 0); input(settingsForm, 'customerChangesEnabled').checked = settings.customerChangesEnabled !== false; input(settingsForm, 'customerChangeNoticeHours').value = String(settings.customerChangeNoticeHours ?? 0); input(settingsForm, 'reminderTime').value = settings.reminderTime;
       input(settingsForm, 'dailyReminderLimit').value = String(settings.dailyReminderLimit); input(settingsForm, 'monthlyReminderLimit').value = String(settings.monthlyReminderLimit);
       renderCostPreview();
       closedDatesDraft = [...settings.closedDates]; renderClosedDates();
@@ -648,11 +791,18 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim() })); activationToken = ''; setupForm.reset(); await loadAll(); showPanel('overview'); inform('Area privata attivata. Le richieste del calendario sono nella sezione Richieste.'); }); });
     on(el('[data-logout]'), 'click', () => { void act(null, async () => { await api('/api/auth/logout', 'POST', {}); activationToken = ''; showAccess({ authenticated: false, setupRequired: false }); loginForm.reset(); input(loginForm, 'email').value = root.dataset.ownerEmail || ''; inform('Sei uscita dall’agenda.'); input(loginForm, 'email').focus(); }); });
     on(el('[data-new]'), 'click', () => openEditor(undefined, el('[data-new]')));
-    root.querySelectorAll<HTMLElement>('[data-editor-close]').forEach(button => on(button, 'click', closeEditor));
+    on(el('[data-editor-keep]'), 'click', () => { if (busy) return; pendingEditorTransition = null; el('[data-editor-guard]').hidden = true; focus('#editor-title'); });
+    on(el('[data-editor-discard]'), 'click', () => { if (busy) return; const next = pendingEditorTransition; pendingEditorTransition = null; el('[data-editor-guard]').hidden = true; next?.(); });
+    on(el('[data-new-block]'), 'click', () => { if (busy) return; if (!input(blockForm, 'date').value) input(blockForm, 'date').value = selectedDate; el('[data-block-editor]').hidden = false; el('[data-block-editor]').scrollIntoView({ behavior: 'auto', block: 'start' }); focus('#block-editor-title'); });
+    on(el('[data-block-close]'), 'click', () => { if (busy) return; el('[data-block-editor]').hidden = true; focus('[data-new-block]'); });
+    on(blockForm, 'submit', event => { event.preventDefault(); void act(blockForm, async () => { const result = await api<Block>('/api/admin/blocks', 'POST', { title: input(blockForm, 'title').value.trim(), date: input(blockForm, 'date').value, time: input(blockForm, 'time').value, durationMinutes: Number(input(blockForm, 'durationMinutes').value) }); selectedDate = result.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; el('[data-block-editor]').hidden = true; blockForm.reset(); await loadAll(); inform('Pausa aggiunta. Questo periodo non è prenotabile dalle clienti.'); focus('#calendar-title'); }); });
+    on(el('[data-calendar-search]'), 'input', () => { calendarSearch = el<HTMLInputElement>('[data-calendar-search]').value; renderCalendar(); });
+    on(el('[data-calendar-status]'), 'change', () => { calendarStatus = el<HTMLSelectElement>('[data-calendar-status]').value; renderCalendar(); });
+    root.querySelectorAll<HTMLElement>('[data-editor-close]').forEach(button => on(button, 'click', () => closeEditor()));
     on(input<HTMLSelectElement>(appointmentForm, 'serviceId'), 'change', () => { const service = services.find(item => item.id === input<HTMLSelectElement>(appointmentForm, 'serviceId').value); input(appointmentForm, 'title').value = service?.name || ''; input(appointmentForm, 'durationMinutes').value = service?.durationMinutes ? String(service.durationMinutes) : ''; });
     on(appointmentForm, 'submit', event => { event.preventDefault(); void act(appointmentForm, async () => {
-      const body = { serviceId: input<HTMLSelectElement>(appointmentForm, 'serviceId').value || null, title: input(appointmentForm, 'title').value.trim(), date: input(appointmentForm, 'date').value, time: input(appointmentForm, 'time').value, durationMinutes: Number(input(appointmentForm, 'durationMinutes').value), name: input(appointmentForm, 'name').value.trim(), phone: input(appointmentForm, 'phone').value.trim(), reminderConsent: input(appointmentForm, 'reminderConsent').checked, ...(editingId ? { status: input<HTMLSelectElement>(appointmentForm, 'status').value } : {}) };
-      const appointment = await api<Appointment>(editingId ? `/api/admin/appointments/${encodeURIComponent(editingId)}` : '/api/admin/appointments', editingId ? 'PATCH' : 'POST', body); selectedDate = appointment.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; closeEditor(); await loadAll(); inform(appointment.status === 'cancelled' ? 'Appuntamento annullato. I promemoria ancora da inviare sono stati fermati.' : 'Appuntamento salvato.'); focus('#calendar-title');
+      const body = { serviceId: input<HTMLSelectElement>(appointmentForm, 'serviceId').value || null, title: input(appointmentForm, 'title').value.trim(), date: input(appointmentForm, 'date').value, time: input(appointmentForm, 'time').value, durationMinutes: Number(input(appointmentForm, 'durationMinutes').value), name: input(appointmentForm, 'name').value.trim(), phone: input(appointmentForm, 'phone').value.trim(), notes: input<HTMLTextAreaElement>(appointmentForm, 'notes').value.trim(), reminderConsent: input(appointmentForm, 'reminderConsent').checked, ...(editingId ? { status: input<HTMLSelectElement>(appointmentForm, 'status').value } : {}) };
+      const appointment = await api<Appointment>(editingId ? `/api/admin/appointments/${encodeURIComponent(editingId)}` : '/api/admin/appointments', editingId ? 'PATCH' : 'POST', body); selectedDate = appointment.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; closeEditor(true); await loadAll(); inform(appointment.status === 'cancelled' ? 'Appuntamento annullato. I promemoria ancora da inviare sono stati fermati.' : 'Appuntamento salvato.'); focus('#calendar-title');
     }); });
     on(settingsForm, 'submit', event => { event.preventDefault(); void act(settingsForm, async () => {
       if (!settings) return;
@@ -665,7 +815,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
         }) : []; return { day: day.day, label: day.label, ranges };
       });
       const closedDates = [...closedDatesDraft];
-      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, economyMode: input(settingsForm, 'economyMode').checked, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); settingsDirty = false; await loadAll(); inform('Impostazioni salvate.');
+      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), bookingLeadMinutes: Number(input(settingsForm, 'bookingLeadMinutes').value), customerChangesEnabled: input(settingsForm, 'customerChangesEnabled').checked, customerChangeNoticeHours: Number(input(settingsForm, 'customerChangeNoticeHours').value), openingHours, closedDates, economyMode: input(settingsForm, 'economyMode').checked, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); settingsDirty = false; await loadAll(); inform('Impostazioni salvate.');
     }); });
     on(passwordForm, 'submit', event => { event.preventDefault(); void act(passwordForm, async () => { const password = input(passwordForm, 'password').value; if (password !== input(passwordForm, 'confirmation').value) { input(passwordForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const result = await api<Session>('/api/admin/password', 'POST', { currentPassword: input(passwordForm, 'currentPassword').value, password }); if (result.csrfToken) showAccess(result); else showAccess(await api<Session>('/api/auth/session')); passwordForm.reset(); inform('Password aggiornata. Gli altri accessi sono stati chiusi.'); }); });
 
@@ -674,13 +824,13 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(el('[data-open-calendar]'), 'click', () => { showPanel('calendar', false); openEditor(undefined, el('[data-open-calendar]')); });
     on(document, 'agenda:authentication-expired', () => { if (!session.authenticated) return; showAccess({ authenticated: false, setupRequired: false }); inform('L’accesso è scaduto. Accedi di nuovo per continuare.', true); input(loginForm, 'email').focus(); });
     on(document, 'agenda:configuration-changed', () => { if (!session.authenticated) return; void api<Automation>('/api/admin/automation').then(next => { if (!session.authenticated || lifetime.signal.aborted) return; automation = next; renderAutomation(next); renderOverview(); }).catch(() => {}); });
-    on(document, 'agenda:new-appointment', event => { if (!session.authenticated || busy) return; const detail = (event as CustomEvent<{ name: string; phone: string }>).detail; if (!detail || typeof detail.name !== 'string' || typeof detail.phone !== 'string') return; showPanel('calendar', false); openEditor(); input(appointmentForm, 'name').value = detail.name; input(appointmentForm, 'phone').value = detail.phone; input(appointmentForm, 'date').focus(); });
+    on(document, 'agenda:new-appointment', event => { if (!session.authenticated || busy) return; const detail = (event as CustomEvent<{ name: string; phone: string; serviceId?: string; title?: string; durationMinutes?: number }>).detail; if (!detail || typeof detail.name !== 'string' || typeof detail.phone !== 'string') return; const serviceId = typeof detail.serviceId === 'string' && services.some(service => service.id === detail.serviceId) ? detail.serviceId : ''; const title = typeof detail.title === 'string' ? detail.title.slice(0, 100) : ''; const durationMinutes = Number.isInteger(detail.durationMinutes) && detail.durationMinutes! >= 5 && detail.durationMinutes! <= 480 ? detail.durationMinutes : undefined; showPanel('calendar', false); openEditor(undefined, undefined, { name: detail.name.slice(0, 100), phone: detail.phone, serviceId, title, durationMinutes, date: '' }); });
     on(settingsForm, 'input', () => { settingsDirty = true; renderCostPreview(); }); on(settingsForm, 'change', () => { settingsDirty = true; renderCostPreview(); });
     on(accountForm, 'submit', event => { event.preventDefault(); void act(accountForm, async () => { const next = await api<Session>('/api/admin/account', 'PATCH', { email: input(accountForm, 'email').value.trim(), currentPassword: input(accountForm, 'currentPassword').value }); accountForm.reset(); showAccess(next); document.dispatchEvent(new CustomEvent('agenda:panel', { detail: { panel: activePanel } })); inform('Email aggiornata. Gli altri accessi sono stati chiusi.'); }); });
     on(createServiceForm, 'submit', event => { event.preventDefault(); void act(createServiceForm, async () => {
       const duration = input(createServiceForm, 'durationMinutes'); const enabled = input(createServiceForm, 'enabled').checked; const listed = input(createServiceForm, 'listed').checked;
       if (enabled && (!listed || !duration.value)) { duration.focus(); throw new Error('Per la conferma automatica, mostra il servizio e indica la durata reale.'); }
-      await api('/api/admin/services', 'POST', { name: input(createServiceForm, 'name').value.trim(), durationMinutes: duration.value ? Number(duration.value) : null, enabled, listed }); createServiceForm.reset(); await loadAll(); inform('Nuovo servizio aggiunto.'); focus('#services-title');
+      await api('/api/admin/services', 'POST', { name: input(createServiceForm, 'name').value.trim(), description: input<HTMLTextAreaElement>(createServiceForm, 'description').value.trim(), priceCents: input(createServiceForm, 'price').value === '' ? null : Math.round(Number(input(createServiceForm, 'price').value) * 100), priceFrom: input(createServiceForm, 'priceFrom').checked, bufferAfterMinutes: Number(input(createServiceForm, 'bufferAfterMinutes').value), durationMinutes: duration.value ? Number(duration.value) : null, enabled, listed }); createServiceForm.reset(); await loadAll(); inform('Nuovo servizio aggiunto.'); focus('#services-title');
     }); });
     on(el('[data-closure-add]'), 'click', () => {
       const control = el<HTMLInputElement>('[data-closure-date]'); if (!control.value || !/^\d{4}-\d{2}-\d{2}$/.test(control.value)) { control.focus(); inform('Scegli il giorno di chiusura.', true); return; }
@@ -718,7 +868,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
 
     const incomingInterval = window.setInterval(() => { void refreshIncomingRequests(); }, 60_000);
     on(document, 'visibilitychange', () => { if (!document.hidden) void refreshIncomingRequests(); });
-    dispose = () => { window.clearInterval(incomingInterval); lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; requests = []; reminders = []; settings = undefined; activeRoot = null; };
+    dispose = () => { window.clearInterval(incomingInterval); lifetime.abort(); activationToken = ''; csrfToken = ''; session = { authenticated: false }; services = []; appointments = []; blocks = []; operationAppointments = []; operationBlocks = []; requests = []; reminders = []; settings = undefined; automation = undefined; serviceDrafts.clear(); closedDatesDraft = []; pendingEditorTransition = null; editorBaseline = ''; activeRoot = null; };
     void act(null, async () => { showAccess(await api<Session>('/api/auth/session')); if (session.authenticated) { await loadAll(); showPanel('overview', false); inform('La tua area privata è pronta.'); } else inform(session.setupRequired ? 'Il primo accesso è riservato a Jessica.' : 'Accedi per vedere e gestire gli appuntamenti.'); });
   }
 
@@ -766,6 +916,29 @@ import CustomerDirectory from './CustomerDirectory.astro';
   .agenda-section-head { margin-block: 0 1.2rem; }
   .calendar-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
   .calendar-toolbar label { flex: 1 1 10rem; }
+  .calendar-filters { display: grid; gap: .8rem; margin-top: 1rem; }
+  .calendar-filters label { min-width: 0; }
+  .operational-overview { margin-bottom: 1rem; }
+  .operational-overview [data-next-appointment] { display: grid; gap: .55rem; margin-top: .8rem; }
+  .operational-overview [data-next-appointment] > .agenda-button { justify-self: start; }
+  .capacity-headline { font-weight: 650; font-size: 1rem; margin-top: .8rem; }
+  .agenda-timeline { display: grid; gap: .7rem; margin-top: .9rem; }
+  .timeline-row { display: grid; grid-template-columns: 6.7rem minmax(0, 1fr); align-items: start; gap: .8rem; }
+  .timeline-time { font-size: .75rem; font-weight: 650; line-height: 1.7; color: #495775; padding-top: .7rem; font-variant-numeric: tabular-nums; }
+  .timeline-content { min-width: 0; padding: .8rem; border: 1px solid #e0e7f2; border-radius: .8rem; background: #f8faff; }
+  .timeline-content > .appointment-card { margin: 0; padding: 0; border: 0; background: transparent; }
+  .timeline-appointment .timeline-content { border-color: #b7cef0; background: #f0f6ff; border-left: 3px solid #2e6be6; }
+  .timeline-free .timeline-content { background: #f4faf6; border-color: #c9e3d1; }
+  .timeline-free .timeline-content strong { display: block; font-size: .8rem; margin-bottom: .5rem; color: #2d6542; }
+  .timeline-buffer .timeline-content, .timeline-block .timeline-content { background: #f3f0fb; border-color: #d9ceed; }
+  .timeline-closed .timeline-content { padding-block: .4rem; background: #f6f6f8; border-style: dashed; }
+  .timeline-content .agenda-note { margin: .35rem 0 .65rem; }
+  .timeline-content .agenda-button { min-height: 42px; font-size: .76rem; padding: .55rem .7rem; }
+  .inline-action, .customer-link-controls { padding-top: .85rem; margin-top: .85rem; border-top: 1px solid #d4dfef; display: grid; gap: .75rem; }
+  .customer-link-controls > input { font-size: .75rem; }
+  .cancelled-appointments { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid #d9e1ee; }
+  .block-editor { margin-top: 1.5rem; }
+  [data-editor-guard] .button-group { margin-top: .9rem; }
   .button-group { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
   .calendar-days { display: grid; gap: 1rem; }
   .calendar-day h3 { text-transform: capitalize; margin-bottom: 1rem; }
@@ -818,6 +991,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
   .agenda [data-panel=account] .agenda-card { margin-top: 1.2rem; }
   .agenda [data-panel=account] .security-card form { margin-top: 1rem; }
   @media (min-width: 960px) { .overview-grid { grid-template-columns: 1.3fr 1fr; } }
+  @media (min-width: 640px) { .calendar-filters { grid-template-columns: 1.4fr 1fr; } }
+  @media (max-width: 600px) { .timeline-row { grid-template-columns: minmax(0, 1fr); gap: .25rem; } .timeline-time { padding-top: .1rem; } .timeline-content { padding: .8rem; } }
   @media (min-width: 640px) { .agenda .form-grid, .agenda .hours-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .service-settings, .reminder-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (min-width: 960px) { .agenda-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); } .calendar-days, .request-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .calendar-day:only-child { grid-column: 1 / -1; } }
   @media (max-width: 360px) { .agenda-button { padding-inline: .7rem; } .agenda-tabs .agenda-button { flex: 1 1 calc(50% - .5rem); } .calendar-toolbar .button-group { gap: .35rem; } }

@@ -44,7 +44,7 @@ export default defineConfig({
   trailingSlash: 'ignore',
   integrations: [
     sitemap({
-      filter: (page) => !/\/(admin|agenda|404)(?:\.html)?\/?$/.test(new URL(page).pathname),
+      filter: (page) => !/\/(admin|agenda|appuntamento|404)(?:\.html)?\/?$/.test(new URL(page).pathname),
       changefreq: 'weekly',
       lastmod: new Date(),
       serialize(item) {

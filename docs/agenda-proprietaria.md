@@ -29,13 +29,48 @@ L’agenda permette inserimento, modifica, spostamento, cancellazione, vista gio
 e settimanale ed esportazione CSV. Le clienti non creano un account; la conferma
 sul sito include un riferimento e distingue **Richiesta ricevuta** da
 **Appuntamento confermato**. Retry identici di una richiesta restituiscono lo
-stesso riferimento, senza creare duplicati. In caso di modifica o
-cancellazione, contattano il salone. Non sono previsti pagamenti sul sito.
+stesso riferimento, senza creare duplicati. Anche la conferma immediata dal
+calendario usa un identificatore di invio: riprovare lo stesso invio non crea un
+secondo appuntamento. Non sono previsti pagamenti sul sito.
+
+## Percorso cliente
+
+Le schede dei servizi aprono il calendario con il servizio già scelto. Una ricerca
+di massimo 14 giorni mostra il primo orario disponibile o il primo orario da
+richiedere, senza confondere richiesta e conferma. Il riepilogo accompagna la scelta;
+nome, telefono e nota facoltativa vengono richiesti soltanto per inviare la prenotazione.
+La galleria permette di filtrare i lavori e ingrandire le foto già pubblicate.
+
+La ricevuta può includere un collegamento personale `/appuntamento/#chiave=…`:
+la cliente lo conserva per ritrovare lo stato senza creare un account. Una richiesta
+pendente può essere ritirata; quando Jessica la conferma, lo stesso collegamento
+mostra l’appuntamento. Un appuntamento può essere annullato o spostato su un orario
+realmente disponibile entro le regole impostate dal salone. Uno spostamento conserva
+durata e tempo di preparazione dell’appuntamento, anche se il catalogo viene modificato.
+Le modifiche concorrenti vengono rilevate prima di salvare.
+
+Il link è personale e scade sette giorni dopo la fine dell’appuntamento, o dopo
+l’orario richiesto finché la richiesta è pendente. Il token non viene messo nelle query HTTP,
+nei log applicativi o nel browser storage; la pagina lo usa in memoria e lo rimuove
+subito dalla barra dell’indirizzo. La chiave di accesso viene derivata, con un dominio
+separato, dalla chiave server `WHATSAPP_CONFIG_KEY`: conservarla privatamente serve
+anche a mantenere questi collegamenti dopo un ripristino. In installazioni senza
+chiave server l’agenda funziona e rimane disponibile l’assistenza del salone.
+Il portale permette di copiare il collegamento per una cliente; nessuna API invia
+automaticamente quel link. Sostituire un collegamento invalida quello precedente;
+cambiare il numero della cliente revoca anche l’accesso precedente. La pagina
+personale permette di copiare il collegamento prima di chiuderla: ricaricare
+l’indirizzo senza la chiave non recupera l’accesso.
+
+Solo gli appuntamenti confermati e ancora programmati hanno il download calendario `.ics`, con orari
+effettivi e indirizzo. Il file non contiene token, nome, numero cliente o note.
+Il download non attiva una sincronizzazione: dopo uno spostamento occorre aggiornare
+l’evento nel proprio calendario.
 
 ## Promemoria e costi
 
 - Il consenso WhatsApp è facoltativo e inizialmente non selezionato. Nessun marketing.
-- Orario iniziale: 18:00 Europe/Rome, la sera precedente; modificabile in agenda.
+- Orario: 18:00 Europe/Rome, la sera precedente. Questa versione mantiene un orario fisso.
 - Un solo promemoria automatico per appuntamento, anche se viene spostato dopo
   un invio già accettato o dall’esito incerto. In quel caso Jessica comunica
   manualmente il nuovo orario; l’agenda lo indica. Nessun invio automatico di conferma.
@@ -151,10 +186,19 @@ da paese, categoria e regole applicabili; non è stato fissato un prezzo italian
 
 ## Servizi, clienti e disponibilità
 
-In **Servizi**, Jessica può aggiungere e rinominare i servizi, impostare le durate
-reali, abilitarne la conferma automatica e scegliere se mostrarli nel calendario.
+In **Servizi**, Jessica può aggiungere e rinominare i servizi, impostare descrizione,
+durata reale, prezzo facoltativo fisso o “da”, tempo di preparazione dopo il servizio,
+conferma automatica e visibilità. I campi non compilati non generano prezzi o durate
+inventati. Il catalogo pubblico legge le impostazioni salvate quando l’API è disponibile;
+su Pages resta il contenuto statico confermato come fallback.
 Nascondere un servizio non cancella appuntamenti o richieste preesistenti; può essere
 ripristinato. Le durate non vengono precompilate senza una decisione della titolare.
+
+Il tempo di preparazione impedisce una prenotazione consecutiva troppo ravvicinata,
+ma non allunga la durata del trattamento mostrata alla cliente. Parte da 0 minuti;
+una modifica del servizio si applica ai nuovi appuntamenti, senza modificare quelli
+già salvati. L’agenda mostra i tempi occupati e le pause; le richieste pendenti non
+occupano capacità. Il riepilogo della giornata usa soltanto gli intervalli reali.
 
 **Orari e impostazioni** usa campi ora per ogni giorno e un calendario per aggiungere
 le chiusure straordinarie. Le fasce aggiornano il calendario clienti e, con JavaScript,
@@ -162,10 +206,21 @@ gli orari pubblici in Contatti e nel footer; il contenuto statico confermato res
 fallback su Pages e quando non si raggiunge l’API. Le modifiche non annullano appuntamenti
 già confermati. Il calendario e il server usano Europe/Rome.
 
+Il preavviso minimo di prenotazione e quello per le modifiche cliente partono da 0,
+per conservare il comportamento attuale: Jessica può aumentare i valori e sospendere
+le modifiche autonome. In Appuntamenti può inserire pause o altri blocchi con orario
+e durata. I blocchi escludono quegli intervalli dal calendario clienti; il sistema
+impedisce di sovrapporli ad appuntamenti già confermati.
+
 **Clienti** permette ricerca per nome o telefono e consultazione dello storico. La
 rubrica deriva soltanto dai dati già raccolti per appuntamenti e richieste. I conteggi
 includono i record annullati/rifiutati, mentre ultima e prossima data riguardano
-appuntamenti confermati. Non vengono memorizzati profili sanitari o dati aggiuntivi.
+appuntamenti confermati. Le preferenze possono essere annotate privatamente nella
+scheda: non vengono mostrate alle clienti o inviate a Meta. Le modifiche concorrenti
+alle note richiedono una nuova verifica, senza sovrascrivere una bozza. **Riprenota**
+riporta nome, telefono, servizio e durata effettiva dello storico; Jessica sceglie
+la nuova data e verifica di nuovo il consenso al promemoria. Gli esiti **Completato**
+e **Assente** vengono registrati esplicitamente, mai dedotti dal solo passare del tempo.
 
 **Accesso e backup** consente di modificare email e password; gli altri accessi vengono
 revocati. Il CSV esporta gli appuntamenti nell’intervallo scelto, fino a un anno per file. Il backup completo scarica uno snapshot

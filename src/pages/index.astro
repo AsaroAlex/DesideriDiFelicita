@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
-import ServiceCard from '../components/ServiceCard.astro';
+import RuntimeServiceCatalog from '../components/RuntimeServiceCatalog.astro';
 import Gallery from '../components/Gallery.astro';
 import MapEmbed from '../components/MapEmbed.astro';
 import ContactDetails from '../components/ContactDetails.astro';
@@ -14,9 +14,6 @@ import { withBase } from '../lib/href';
 import { galleryImages, teamImages } from '../data/images';
 
 const featuredGallery = galleryImages.filter((image) => image.featured);
-const homeServices = site.services
-  .filter((service) => service.name !== 'Cura del riccio')
-  .slice(0, 6);
 const jessicaImage = teamImages[1];
 const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? galleryImages[1];
 ---
@@ -116,21 +113,7 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
           pagina dedicata.
         </p>
       </div>
-      <div class="grid grid--3 services-preview">
-        {
-          homeServices.map((s, i) => (
-            <Reveal style={`--reveal-delay:${(i % 3) * 70}ms`}>
-              <ServiceCard
-                index={i + 1}
-                name={s.name}
-                description={s.description}
-                variant="line"
-                showPrice={false}
-              />
-            </Reveal>
-          ))
-        }
-      </div>
+      <RuntimeServiceCatalog variant="line" max={6} excludeNames={['Cura del riccio']} />
       <p class="section__cta">
         <a class="btn btn--outline" href={withBase('/servizi')}>Tutti i servizi</a>
       </p>
@@ -263,9 +246,6 @@ const ricciImage = galleryImages.find((image) => image.category === 'Ricci') ?? 
       padding-block: var(--space-3xl);
       padding-inline: clamp(2rem, 4vw, 4.5rem) var(--gutter);
     }
-  }
-  .services-preview {
-    row-gap: var(--space-xl);
   }
   .testimonials-band {
     background: var(--color-bg);

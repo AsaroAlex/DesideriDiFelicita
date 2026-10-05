@@ -35,6 +35,7 @@ test('fresh and newly created services are visible requests without invented dur
   assert.equal(service.durationMinutes, null);
   assert.deepEqual(store.getPublicConfig().requestServices.at(-1), {
     id: service.id, name: service.name, durationMinutes: null, instantBooking: false,
+    description: '', priceCents: null, priceFrom: false, bufferAfterMinutes: 0, listed: true,
   });
   const saved = store.createPublicRequest(request({ serviceId: service.id }));
   assert.equal(saved.serviceName, 'Consulenza ricci');

@@ -6,10 +6,12 @@
  *
  * Dati anagrafici/contatti CONFERMATI dall'Instagram ufficiale del salone
  * (@desideri.di.felicita) e dal biglietto da visita del brand.
- * Restano "da confermare" solo: ORARI di apertura, COORDINATE GPS esatte,
- * PREZZI. Finché i relativi flag in `confirmed` sono false:
+ * Restano "da confermare" le COORDINATE GPS esatte e i PREZZI statici.
+ * Le durate e i prezzi operativi configurati dalla titolare sono nel catalogo
+ * privato dell'agenda; i contenuti statici sono il fallback senza API.
+ * Finché i relativi flag in `confirmed` sono false:
  *   - il dato non entra nel JSON-LD;
- *   - in pagina compare il badge "da confermare" (orari) o "su richiesta" (prezzi).
+ *   - in pagina compare "su richiesta" per i prezzi non configurati.
  */
 
 export interface Address {
@@ -144,6 +146,10 @@ export const site = {
       a: 'Taglio donna, uomo e bambino, colore, balayage e schiariture, cura e taglio dei capelli ricci, pieghe e styling, oltre a trattamenti professionali di cura e anti-caduta.',
     },
     {
+      q: 'Come posso modificare o annullare un appuntamento?',
+      a: 'Se la ricevuta include il collegamento personale, conservalo: puoi consultare lo stato, ritirare una richiesta ancora da confermare o gestire un appuntamento entro le regole indicate nella pagina. Per uno spostamento scegli uno degli orari disponibili. Se il collegamento non è disponibile o è trascorso il preavviso, contatta il salone.',
+    },
+    {
       q: 'Siete specializzati nei capelli ricci?',
       a: 'Sì: la cura del capello riccio e mosso è una delle nostre specialità, con tagli e consigli dedicati per esaltare la definizione e il volume naturali.',
     },
@@ -184,7 +190,7 @@ export const site = {
 
   /**
    * STATO DI CONFERMA dei dati sensibili (alimenta JSON-LD, mappa e badge UI).
-   * Confermati dall'Instagram ufficiale; restano da confermare orari, GPS, prezzi.
+   * Confermati dall'Instagram ufficiale e dalla scheda attività; restano GPS e prezzi statici.
    */
   confirmed: {
     ownerName: true,

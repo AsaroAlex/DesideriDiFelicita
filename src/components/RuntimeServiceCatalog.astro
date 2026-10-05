@@ -1,0 +1,153 @@
+---
+import ServiceCard from './ServiceCard.astro';
+import { site } from '../data/site';
+import { withBase } from '../lib/href';
+
+interface Props {
+  variant?: 'card' | 'line';
+  headingLevel?: 'h2' | 'h3';
+  max?: number;
+  excludeNames?: string[];
+}
+
+const { variant = 'card', headingLevel = 'h3', max = 0, excludeNames = [] } = Astro.props;
+const fallbackServices = site.services
+  .filter((service) => !excludeNames.includes(service.name))
+  .slice(0, max > 0 ? max : undefined);
+---
+
+<div
+  class="service-catalog"
+  data-service-catalog
+  data-api={withBase('/api/public/config')}
+  data-booking-path={withBase('/prenota')}
+  data-max={max}
+  data-exclude={JSON.stringify(excludeNames)}
+>
+  <div class:list={['grid', 'grid--3', 'service-catalog__list', variant === 'line' && 'service-catalog__list--lines']} data-service-list>
+    {fallbackServices.map((service, index) => (
+      <ServiceCard
+        index={index + 1}
+        name={service.name}
+        description={service.description}
+        variant={variant}
+        headingLevel={headingLevel}
+      />
+    ))}
+  </div>
+  <p class="note" data-service-empty hidden>
+    I servizi disponibili saranno aggiornati a breve. Contattaci per scegliere il trattamento insieme.
+  </p>
+  <template data-service-template>
+    <ServiceCard name="" description="" index={1} variant={variant} headingLevel={headingLevel} />
+  </template>
+</div>
+
+<script>
+  interface PublicService {
+    id: string;
+    name: string;
+    description: string;
+    durationMinutes: number | null;
+    priceCents: number | null;
+    priceFrom: boolean;
+    listed: boolean;
+  }
+  const activeCatalogRequests = new Set<AbortController>();
+
+  function normalizeCatalog(value: unknown): PublicService[] | null {
+    if (!Array.isArray(value)) return null;
+    const result: PublicService[] = [];
+    const ids = new Set<string>();
+    for (const item of value) {
+      if (!item || typeof item !== 'object' || typeof item.id !== 'string' || !item.id.trim()
+        || typeof item.name !== 'string' || !item.name.trim() || typeof item.listed !== 'boolean'
+        || ids.has(item.id)) return null;
+      ids.add(item.id);
+      result.push({
+        id: item.id,
+        name: item.name,
+        description: typeof item.description === 'string' ? item.description : '',
+        durationMinutes: Number.isInteger(item.durationMinutes) && item.durationMinutes > 0
+          ? item.durationMinutes : null,
+        priceCents: Number.isSafeInteger(item.priceCents) && item.priceCents >= 0 ? item.priceCents : null,
+        priceFrom: item.priceFrom === true,
+        listed: item.listed,
+      });
+    }
+    return result;
+  }
+
+  async function updateCatalog(root: HTMLElement) {
+    if (root.dataset.initialized) return;
+    root.dataset.initialized = 'true';
+    const list = root.querySelector<HTMLElement>('[data-service-list]');
+    const template = root.querySelector<HTMLTemplateElement>('[data-service-template]');
+    const empty = root.querySelector<HTMLElement>('[data-service-empty]');
+    if (!list || !template || !empty || !root.dataset.api) return;
+    const controller = new AbortController();
+    activeCatalogRequests.add(controller);
+    try {
+      const response = await fetch(root.dataset.api, {
+        headers: { Accept: 'application/json' }, cache: 'no-store', signal: controller.signal,
+      });
+      if (!response.ok) return;
+      const config = await response.json();
+      const catalog = normalizeCatalog(config.catalog);
+      if (!catalog || !root.isConnected) return;
+      const excluded: string[] = JSON.parse(root.dataset.exclude || '[]');
+      const max = Number(root.dataset.max) || 0;
+      const services = catalog.filter((service) => service.listed && !excluded.includes(service.name))
+        .slice(0, max > 0 ? max : undefined);
+      const fragment = document.createDocumentFragment();
+      const currency = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+      services.forEach((service, index) => {
+        const clone = template.content.cloneNode(true) as DocumentFragment;
+        const name = clone.querySelector<HTMLElement>('[data-service-name]');
+        const description = clone.querySelector<HTMLElement>('[data-service-description]');
+        const number = clone.querySelector<HTMLElement>('[data-service-number]');
+        const duration = clone.querySelector<HTMLElement>('[data-service-duration]');
+        const price = clone.querySelector<HTMLElement>('[data-service-price]');
+        const booking = clone.querySelector<HTMLAnchorElement>('[data-service-booking]');
+        if (!name || !description || !number || !duration || !price || !booking) return;
+        name.textContent = service.name;
+        description.textContent = service.description;
+        description.hidden = !service.description;
+        number.textContent = String(index + 1).padStart(2, '0');
+        duration.hidden = service.durationMinutes === null;
+        duration.textContent = service.durationMinutes === null ? '' : `Durata: ${service.durationMinutes} minuti`;
+        price.textContent = service.priceCents === null ? 'Prezzo su richiesta'
+          : `${service.priceFrom ? 'Da ' : ''}${currency.format(service.priceCents / 100)}`;
+        booking.href = `${root.dataset.bookingPath}?servizio=${encodeURIComponent(service.id)}`;
+        booking.setAttribute('aria-label', `Prenota: ${service.name}`);
+        fragment.append(clone);
+      });
+      list.replaceChildren(fragment);
+      empty.hidden = services.length > 0;
+    } catch {
+      // La vetrina statica resta leggibile anche su Pages o con API non raggiungibile.
+    } finally {
+      activeCatalogRequests.delete(controller);
+    }
+  }
+
+  function initializeCatalogs() {
+    document.querySelectorAll<HTMLElement>('[data-service-catalog]').forEach((root) => void updateCatalog(root));
+  }
+  document.addEventListener('astro:page-load', initializeCatalogs);
+  document.addEventListener('astro:before-swap', () => {
+    activeCatalogRequests.forEach((controller) => controller.abort());
+    activeCatalogRequests.clear();
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeCatalogs, { once: true });
+  else initializeCatalogs();
+</script>
+
+<style>
+  .service-catalog__list--lines {
+    row-gap: var(--space-xl);
+  }
+  .service-catalog [hidden] {
+    display: none;
+  }
+</style>

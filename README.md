@@ -6,7 +6,8 @@
 Sito del salone di parrucchiera **Desideri di Felicità** di **Jessica Asaro**
 a Galliera (BO). Specialità: **cura del capello riccio**, oltre a taglio, colore,
 balayage, styling e trattamenti. Include **calendario di prenotazione**, **agenda
-privata** e motore proprietario per i **promemoria WhatsApp**, senza un gestionale
+privata**, schede clienti e collegamenti personali per gestire gli appuntamenti,
+oltre al motore proprietario per i **promemoria WhatsApp**, senza un gestionale
 SaaS. Design editoriale e mobile-first; nessun e-commerce.
 
 Online su Railway: <https://desideri-di-felicita-production.up.railway.app/>
@@ -44,8 +45,8 @@ src/
   lib/                  href.ts (withBase), contact.ts (tel/WhatsApp), structured-data.ts (JSON-LD).
   components/*.astro     Header, Hero, Gallery, ServiceCard, Testimonials, Faq, Footer,
                         WhatsappButton, MapEmbed, Breadcrumbs, Logo, Seo, StructuredData.
-  layouts/BaseLayout.astro
-  pages/*.astro          index, chi-siamo, servizi, galleria, contatti, privacy, 404, robots.txt.ts
+  layouts/               BaseLayout, AdminLayout e CustomerLayout.
+  pages/*.astro          Vetrina, prenota, appuntamento, admin/agenda, privacy e robots.
   styles/tokens.css      Design token (palette, tipografia, spaziature) — punto unico per il look.
   styles/global.css      Stili base, bottoni, card, accessibilità, reveal.
 server/                  API, autenticazione, SQLite, scheduler e adapter Meta.
@@ -78,6 +79,11 @@ Le foto selezionate dalla cartella Drive sono registrate in `docs/foto-drive.jso
 con file di origine e asset del sito. I JPEG (compresi gli HEIC convertiti) vengono
 ottimizzati da Astro in varianti responsive; i provini con watermark restano esclusi
 dalle pagine. La selezione in home usa il flag `featured` nel manifest immagini.
+
+La galleria ha filtri e foto ingrandibili con navigazione da tastiera. Le schede
+dei servizi leggono il catalogo pubblicato dall’agenda: descrizioni, prezzi e
+durate sono configurabili; i valori mancanti restano su richiesta. Il collegamento
+dalla scheda apre la prenotazione con il servizio già selezionato.
 
 La mappa Google si carica automaticamente dopo il consenso nel banner «Cookie e
 mappa». La scelta dura al massimo 180 giorni e si può cambiare da «Preferenze
@@ -131,6 +137,9 @@ Per attivazione iniziale, configurazione Meta, limiti di costo, backup e recuper
 leggere [la guida dell’agenda](docs/agenda-proprietaria.md). Le durate dei servizi
 devono essere impostate da Jessica per la conferma immediata. Il calendario
 riceve già richieste con giorno e orario desiderati senza inventare durate.
+La stessa guida descrive pause, tempi di preparazione, note private, riprenotazione
+e collegamenti personali con scadenza e revoca. Il confronto funzionale con Fresha,
+Treatwell, Booksy e Phorest è in [ottimizzazioni competitor](docs/ottimizzazioni-competitor.md).
 
 ### GitHub Pages
 

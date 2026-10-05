@@ -1,0 +1,54 @@
+---
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/manrope';
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import { site } from '../data/site';
+import { withBase } from '../lib/href';
+
+interface Props { title?: string; description?: string; }
+const { title = 'Il tuo appuntamento', description = 'Consulta e gestisci il tuo appuntamento con il collegamento personale del salone.' } = Astro.props;
+---
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#2e6be6" />
+    <title>{title} · {site.businessName}</title>
+    <link rel="icon" href={withBase('favicon.svg')} type="image/svg+xml" />
+    <ClientRouter />
+  </head>
+  <body class="customer-shell">
+    <a class="skip-link" href="#main">Salta al contenuto</a>
+    <header class="customer-topbar">
+      <div class="container">
+        <a class="customer-brand" href={withBase('/')}>{site.businessName}<span>Il tuo appuntamento</span></a>
+        <a class="customer-back" href={withBase('/')}>Il salone ↗</a>
+      </div>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="customer-footer">
+      <div class="container">
+        <p>Questo collegamento è personale. Conservalo per ritrovare il tuo appuntamento.</p>
+        <a href={withBase('/privacy')}>Privacy</a>
+      </div>
+    </footer>
+  </body>
+</html>
+<style is:global>
+  .customer-shell { background: #f4f8ff; }
+  .customer-shell::before { display: none; }
+  .customer-topbar { background: #fff; border-bottom: 1px solid #dbe3f1; }
+  .customer-topbar > .container { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-block: 1rem; }
+  .customer-brand { color: #173a79; text-decoration: none; font-weight: 700; line-height: 1.4; }
+  .customer-brand span { display: block; color: #59657c; font-weight: 500; font-size: .8rem; }
+  .customer-back { color: #2459a9; display: inline-flex; align-items: center; min-height: 44px; font-size: .85rem; text-underline-offset: .2rem; white-space: nowrap; }
+  .customer-footer { padding-block: 1.5rem; color: #59657c; font-size: .82rem; }
+  .customer-footer > .container { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1.5rem; }
+  .customer-footer a { color: #2459a9; min-height: 44px; display: inline-flex; align-items: center; }
+  .customer-shell :is(button,a,input,select,textarea):focus-visible { outline: 3px solid #2e6be6; outline-offset: 3px; }
+</style>

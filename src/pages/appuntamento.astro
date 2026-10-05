@@ -1,0 +1,13 @@
+---
+import CustomerLayout from '../layouts/CustomerLayout.astro';
+import CustomerAppointment from '../components/CustomerAppointment.astro';
+---
+<CustomerLayout title="Il tuo appuntamento" description="Controlla lo stato del tuo appuntamento e gestiscilo con il collegamento personale del salone.">
+  <section class="customer-page">
+    <div class="container"><CustomerAppointment /></div>
+  </section>
+</CustomerLayout>
+<style>
+  .customer-page { padding-block: clamp(1.5rem, 4vw, 3rem); }
+  .customer-page > .container { max-width: 54rem; }
+</style>
