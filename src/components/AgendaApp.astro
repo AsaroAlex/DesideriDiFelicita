@@ -919,15 +919,14 @@ import CustomerDirectory from './CustomerDirectory.astro';
         actions.append(manualLink(item), acknowledge); card.append(actions);
         const form = document.createElement('form'); form.className = 'manual-confirm-form'; form.hidden = true; form.dataset.manualConfirm = item.id;
         const heading = textNode('h4', 'Registra l’invio manuale'); heading.tabIndex = -1;
-        const label = textNode('label', '', 'checkbox-label'); const declaration = document.createElement('input'); declaration.type = 'checkbox'; declaration.required = true; label.append(declaration, document.createTextNode(`Confermo di avere già inviato questo promemoria a ${item.name}.`));
-        const confirm = textNode('button', 'Conferma invio manuale', 'agenda-button') as HTMLButtonElement; confirm.type = 'submit';
-        const cancel = textNode('button', 'Torna al promemoria', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button';
+        const confirm = textNode('button', 'Sì, l’ho inviato', 'agenda-button') as HTMLButtonElement; confirm.type = 'submit';
+        const cancel = textNode('button', 'Non ancora', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button';
         const formActions = textNode('div', '', 'button-group'); formActions.append(confirm, cancel);
-        form.append(heading, textNode('p', 'Registra l’invio solo dopo aver premuto Invia in WhatsApp. Questo comando non invia messaggi e ferma altri promemoria automatici per lo stesso appuntamento.', 'agenda-note'), label, formActions); card.append(form);
+        form.append(heading, textNode('p', `Hai premuto Invia su WhatsApp per ${item.name}? Registrandolo, l’agenda non manderà un altro promemoria automatico per questo appuntamento.`, 'agenda-note'), formActions); card.append(form);
         on(acknowledge, 'click', () => { actions.hidden = true; form.hidden = false; heading.focus({ preventScroll: true }); });
-        on(cancel, 'click', () => { form.hidden = true; actions.hidden = false; declaration.checked = false; acknowledge.focus({ preventScroll: true }); });
-        on(form, 'submit', event => { event.preventDefault(); if (!declaration.checked) { declaration.focus(); return; } void act(form, async () => {
-          await api<Reminder>(`/api/admin/reminders/${encodeURIComponent(item.id)}/manual`, 'POST', {}); await loadAll(); inform('Invio manuale registrato. Non è stato inviato alcun messaggio da questo comando.'); focus('#reminders-title');
+        on(cancel, 'click', () => { form.hidden = true; actions.hidden = false; acknowledge.focus({ preventScroll: true }); });
+        on(form, 'submit', event => { event.preventDefault(); void act(form, async () => {
+          await api<Reminder>(`/api/admin/reminders/${encodeURIComponent(item.id)}/manual`, 'POST', {}); await loadAll(); inform('Promemoria registrato come inviato.'); focus('#reminders-title');
         }); });
         return card;
       }));

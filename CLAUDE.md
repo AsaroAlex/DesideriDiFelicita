@@ -47,9 +47,9 @@ OG, performance); 3) design premium editoriale; 4) rifinitura "Awwwards-like".
 - Motion leggero: View Transitions native (`ClientRouter`), reveal via
   IntersectionObserver (`astro:page-load`, fallback `html.js`), barra scroll CSS,
   tutto con `prefers-reduced-motion`.
-- Deploy: **GitHub Pages** via GitHub Actions (workflow su branch corrente + `main`).
-  È disponibile anche il deploy **Railway** dal ramo `codex/railway-deploy`, con
-  build statico e server di produzione (`npm start`, `0.0.0.0:$PORT`).
+- Deploy: **Railway** dal branch **`main`** (unico branch del repository): build statico +
+  server Node (`node server/index.mjs`, `0.0.0.0:$PORT`). GitHub Pages pubblica solo i
+  reindirizzamenti dal vecchio indirizzo al sito ufficiale (`scripts/pages-redirect.mjs`).
 
 ## 5. Link ufficiali
 
@@ -114,8 +114,9 @@ la mappa è attiva, niente badge "da confermare".
 - **Fase 1** (base solida): completata e pubblicata.
 - **Fase 2** (elevazione Awwwards + SEO): in corso — palette brand, font editoriali,
   hero, sezioni editoriali, sezione scura, FAQ, breadcrumb, view transitions.
-- Sito **già online** su GitHub Pages: https://asaroalex.github.io/DesideriDiFelicita/
-  (workflow ora configurato su `main`; Railway segue `codex/railway-deploy`).
+- Sito ufficiale su Railway: https://desideri-di-felicita-production.up.railway.app/
+  (deploy automatico da `main`). Il vecchio https://asaroalex.github.io/DesideriDiFelicita/
+  reindirizza alla stessa pagina del sito ufficiale.
 - Da fare: logo definitivo, prezzi; valutare dominio personalizzato + email
   professionale (ricerca hosting in corso); eventuale migrazione a una nuova major Astro.
 
@@ -154,7 +155,7 @@ la mappa è attiva, niente badge "da confermare".
 - Progetto: `DesideriDiFelicita`; servizio: `desideri-di-felicita`; ambiente:
   `production`; regione europea `europe-west4-drams3a`.
 - URL pubblico: https://desideri-di-felicita-production.up.railway.app/
-- Ramo dedicato: `codex/railway-deploy`; il workflow GitHub Pages rimane su `main`.
+- Ramo: `main` (dal 2026-10-05 unico branch; prima era `codex/railway-deploy`).
 - Installazione riproducibile: `npm ci`; build: `npm run build`; output: `dist/`.
 - `railway.json` usa Railpack, avvio `npm start` e healthcheck `/`. Il server
   statico di produzione ascolta su `0.0.0.0` alla porta `PORT` assegnata da Railway
@@ -355,3 +356,31 @@ la mappa è attiva, niente badge "da confermare".
   descrizione e visibilità seguono il catalogo pubblicato, anche nei dati strutturati.
   Il catalogo e gli altri dati pubblici condividono la lettura config per pagina,
   solo in memoria; nessun nuovo servizio o dipendenza a pagamento.
+
+## 21. Rilascio e consolidamento — 2026-10-05
+
+- Richiesta utente: «rendila funzionante al 100% e pronta al rilascio, facile da usare»;
+  scelta esplicita: lavorare sull'agenda (ex PR #1) e **mantenere un solo branch** (`main`),
+  eliminando gli altri. Railway segue `main`.
+- Sicurezza: limiti di frequenza per cliente **prima** di quelli globali (un IP non può
+  bloccare prenotazioni o login); handler HTTP protetto da rifiuti non gestiti.
+- Accesso Jessica: `npm run link-accesso` genera token+scadenza da mettere su Railway. Lo
+  stesso link attiva l'agenda o, se già attiva, **reimposta la password** (una volta sola,
+  impronte dei link usati in `settings.owner_access_links_used`; il link originale non
+  diventa mai di ripristino). «Resta collegata» = sessione 30 giorni (opt-in), default 12 h.
+- Portale: sezioni principali **Oggi · Richieste · Agenda · Clienti**; «Configura:» per
+  servizi, orari/chiusure, promemoria, WhatsApp automatico, password/backup. Chiama/WhatsApp
+  su richieste e appuntamenti, messaggio pronto dopo un rifiuto, toast in basso per i
+  messaggi fuori schermo, input a 16px (iOS), numeri italiani senza +39 accettati,
+  chiusure salvate subito, agenda aggiornata in background, promemoria manuale in 2 tocchi.
+  Configurazione Meta in sezione chiusa «per chi gestisce il sito»; salvare credenziali
+  non spegne i promemoria attivi.
+- Clienti: banner cookie **solo nelle pagine con la mappa** (resta il popup voluto
+  dall'utente), «Prenota» sempre visibile nell'header mobile, errori di invio visibili,
+  link personale conservato nella sola scheda (`sessionStorage`), giorni prenotabili
+  riconoscibili, fallback WhatsApp/telefono se l'API non risponde.
+- CSV per Excel italiano (`;`, stati in italiano, date gg/mm/aaaa). Icone PNG, favicon.ico,
+  `admin.webmanifest` per aggiungere l'agenda alla schermata Home.
+- CI `.github/workflows/ci.yml`: test, `astro check`, build. Guida non tecnica:
+  `docs/guida-jessica.md`.
+

@@ -6,11 +6,13 @@ e l’eventuale costo dei messaggi stabilito da Meta.
 
 ## Prima apertura
 
-1. Aprire il collegamento privato `/admin#attiva=…` fornito alla titolare.
-   Il token è forte, ha una scadenza e può creare un solo account; viene rimosso
+1. Aprire il collegamento privato `/admin#attiva=…` fornito alla titolare
+   (si genera con `npm run link-accesso`, vedi «Password dimenticata»).
+   Il token è forte, ha una scadenza e funziona una sola volta; viene rimosso
    subito dalla barra dell’indirizzo. Non condividerlo né inserirlo nel repository.
 2. Scegliere email e password di almeno 12 caratteri. I dati clienti sono visibili
-   solo dopo l’accesso. La sessione scade dopo 12 ore; logout revoca il cookie.
+   solo dopo l’accesso. La sessione scade dopo 12 ore, oppure dopo 30 giorni se la
+   titolare sceglie «Resta collegata su questo dispositivo»; logout revoca il cookie.
 3. Il calendario pubblico riceve già richieste con servizio, giorno e orario
    desiderato, anche senza durate configurate. In **Richieste**, Jessica verifica
    data, ora e durata effettiva e conferma o rifiuta. Una richiesta ancora pendente
@@ -51,8 +53,10 @@ Le modifiche concorrenti vengono rilevate prima di salvare.
 
 Il link è personale e scade sette giorni dopo la fine dell’appuntamento, o dopo
 l’orario richiesto finché la richiesta è pendente. Il token non viene messo nelle query HTTP,
-nei log applicativi o nel browser storage; la pagina lo usa in memoria e lo rimuove
-subito dalla barra dell’indirizzo. La chiave di accesso viene derivata, con un dominio
+nei log applicativi o in cookie e memoria persistente del browser: la pagina lo rimuove
+subito dalla barra dell’indirizzo e lo tiene solo nel `sessionStorage` della scheda,
+così un ricaricamento (o «apri nel browser» da WhatsApp) non fa perdere l’accesso;
+chiudendo la scheda la copia sparisce. La chiave di accesso viene derivata, con un dominio
 separato, dalla chiave server `WHATSAPP_CONFIG_KEY`: conservarla privatamente serve
 anche a mantenere questi collegamenti dopo un ripristino. In installazioni senza
 chiave server l’agenda funziona e rimane disponibile l’assistenza del salone.
@@ -92,7 +96,7 @@ l’evento nel proprio calendario.
 - La sezione Promemoria mostra inizialmente quelli previsti oggi, con filtri per
   domani o lo storico. Il pulsante manuale apre WhatsApp con testo preparato: la
   titolare deve premere **Invia** nell’app. Aprire il link non registra un invio.
-  Dopo averlo effettivamente inviato, può confermare **Ho inviato il promemoria**:
+  Dopo averlo effettivamente inviato, può confermare **Ho inviato il promemoria** → **Sì, l’ho inviato**:
   il sistema registra la dichiarazione della titolare e blocca ulteriori invii API
   per quell’appuntamento. Non simula una consegna Meta, non costa una chiamata API
   e non libera la quota già consumata da un eventuale invio dall’esito incerto.
@@ -136,12 +140,13 @@ e un template **utility approvato**. La logica proprietaria usa esclusivamente l
 Le credenziali non sono disponibili in questa sessione: il software è predisposto,
 ma non dichiara attivo l’invio finché mancano.
 
-Jessica può configurare il collegamento dalla sezione **Collega WhatsApp** del portale,
+Il collegamento si configura dalla sezione **WhatsApp automatico** del portale, nella parte
+«Configurazione tecnica · per chi gestisce il sito»,
 confermando con la propria password. I segreti non vengono mai restituiti dal server: un
 campo vuoto mantiene il valore salvato. Il token di verifica si genera e si copia prima
-del salvataggio, per usarlo anche nel pannello Meta. Salvare le credenziali mantiene
-gli invii sospesi; il comando **Attiva promemoria automatici** è separato e protetto
-dalla password. Il salvataggio non verifica l’approvazione del modello e non invia test.
+del salvataggio, per usarlo anche nel pannello Meta. Salvare le credenziali non cambia
+lo stato degli invii (sospesi restano sospesi, attivi restano attivi); il comando
+**Attiva/Sospendi promemoria automatici** è separato e protetto dalla password. Il salvataggio non verifica l’approvazione del modello e non invia test.
 
 I dati vengono cifrati con AES-256-GCM nel database persistente; `WHATSAPP_CONFIG_KEY`,
 chiave casuale di 32 byte in base64, resta nelle variabili server Railway, fuori dal
@@ -240,7 +245,8 @@ la nuova data e verifica di nuovo il consenso al promemoria. Gli esiti **Complet
 e **Assente** vengono registrati esplicitamente, mai dedotti dal solo passare del tempo.
 
 **Accesso e backup** consente di modificare email e password; gli altri accessi vengono
-revocati. Il CSV esporta gli appuntamenti nell’intervallo scelto, fino a un anno per file. Il backup completo scarica uno snapshot
+revocati. Il CSV esporta gli appuntamenti nell’intervallo scelto, fino a un anno per file,
+con separatore «;», stati in italiano e date gg/mm/aaaa, pronto per Excel in italiano. Il backup completo scarica uno snapshot
 SQLite coerente dopo verifica della password, senza pubblicare file accessibili sul sito.
 Contiene dati clienti, hash password, sessioni e configurazione: va conservato privatamente.
 Il ripristino resta un’operazione tecnica e non carica o sostituisce dati dal browser.
@@ -262,10 +268,13 @@ Il ripristino resta un’operazione tecnica e non carica o sostituisce dati dal 
   `/data/agenda.sqlite` con lo snapshot scelto; rimuovere solo i sidecar WAL/SHM
   riferiti al database fermo. Riavviare e verificare prima l’agenda e i promemoria.
   Non forzare a pending lavori già inviati o dall’esito incerto.
-- In caso di perdita della password non cancellare il database: il token iniziale
-  non ricrea un secondo proprietario. Recuperare l’accesso con manutenzione privata,
-  derivando una nuova password con lo stesso modulo auth e revocando tutte le sessioni.
-  Non implementare un endpoint pubblico di reset privo di verifica.
+- **Password dimenticata:** non cancellare il database. Eseguire `npm run link-accesso`,
+  impostare su Railway le due variabili stampate (`ADMIN_BOOTSTRAP_TOKEN`,
+  `ADMIN_BOOTSTRAP_EXPIRES_AT`), attendere il riavvio e inviare a Jessica il link.
+  Con l’agenda già attiva il link permette di scegliere una nuova password e chiude
+  tutte le altre sessioni. Ogni link vale una volta sola (l’impronta dei link usati è
+  salvata nel database) e il link della prima attivazione non può mai diventare un
+  link di ripristino. Non esiste un reset pubblico: serve l’accesso alle variabili Railway.
 
 ## Verifiche
 
