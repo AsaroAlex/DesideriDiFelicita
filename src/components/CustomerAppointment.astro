@@ -14,6 +14,8 @@ const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerN
     // ricaricamento della pagina e si cancella quando la scheda viene chiusa.
     try {
       if (/^[A-Za-z0-9_-]{43}$/.test(value)) sessionStorage.setItem('desideri-appuntamento', value);
+      // Un collegamento incompleto non deve riaprire un appuntamento visto prima.
+      else if (fragment.has('chiave')) { sessionStorage.removeItem('desideri-appuntamento'); value = ''; }
       else value = sessionStorage.getItem('desideri-appuntamento') || '';
     } catch { /* Storage non disponibile: resta valido il collegamento nell'indirizzo. */ }
     if (/^[A-Za-z0-9_-]{43}$/.test(value)) window.__desideriCustomerToken = value;

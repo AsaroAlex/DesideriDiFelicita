@@ -134,6 +134,7 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
       <p class="booking__help" data-receipt-action-status role="status" aria-live="polite" hidden></p>
     </div>
     <a class="booking__support-link" data-change-link href={fallbackHref} target="_blank" rel="noopener">Contatta il salone</a>
+    <a class="booking__support-link" href={withBase('prenota/')} data-astro-reload>Prenota un altro appuntamento</a>
   </section>
 
   <p class="booking__support" data-booking-support>
@@ -1305,6 +1306,12 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
   }
   .booking__confirmation > * + * {
     margin-top: var(--space-md);
+  }
+  .booking__confirmation > .booking__support-link {
+    display: block;
+    width: fit-content;
+    min-height: 44px;
+    padding-block: 0.6rem;
   }
   .booking__confirmation-recap {
     font-size: var(--fs-300);
