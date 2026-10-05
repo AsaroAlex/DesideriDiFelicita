@@ -36,10 +36,16 @@ cancellazione, contattano il salone. Non sono previsti pagamenti sul sito.
 
 - Il consenso WhatsApp è facoltativo e inizialmente non selezionato. Nessun marketing.
 - Orario iniziale: 18:00 Europe/Rome, la sera precedente; modificabile in agenda.
-- Un solo promemoria per appuntamento; nessun messaggio automatico di conferma.
-- Quote iniziali: 20 invii/giorno e 200/mese, modificabili, anche a 0 per sospendere.
-  Le quote contano prudentemente anche invii dall’esito incerto e non sono un tetto
-  di spesa in euro: la tariffa applicabile la determina Meta.
+- Un solo promemoria automatico per appuntamento, anche se viene spostato dopo
+  un invio già accettato o dall’esito incerto. In quel caso Jessica comunica
+  manualmente il nuovo orario; l’agenda lo indica. Nessun invio automatico di conferma.
+- **Modalità risparmio attiva inizialmente:** massimo 10 invii al giorno e 60 al mese.
+  Le quote configurate preesistenti restano conservate, ma il limite effettivo usa
+  il minore fra la quota scelta e il tetto della modalità risparmio. Un limite 0
+  continua a sospendere gli invii. Jessica può modificare le quote e la modalità
+  nelle Impostazioni: l’agenda mostra i limiti effettivi e la quota ancora disponibile.
+  Gli esiti incerti consumano quota prudentemente. I conteggi non sono una fattura
+  né un tetto di spesa in euro: la tariffa applicabile la determina Meta.
 - Cancellazioni e spostamenti invalidano i lavori ancora da inviare. Il sistema
   controlla ancora l’appuntamento prima di contattare Meta e registra il suo ID.
 - Solo un rifiuto esplicito 429 può essere riprovato, con attesa e massimo 3 tentativi.
@@ -48,11 +54,44 @@ cancellazione, contattano il salone. Non sono previsti pagamenti sul sito.
 - I riavvii conservano la coda. Non vengono recuperati messaggi dopo la fine del
   giorno precedente all’appuntamento. Limiti raggiunti possono lasciare un promemoria
   sospeso fino a quella scadenza; l’agenda mostra lo stato senza inventare consegne.
-- Il pulsante manuale apre WhatsApp con testo preparato: la titolare deve premere
-  **Invia**. Non cambia lo stato in “inviato” e non avvia chiamate API a pagamento.
+- La sezione Promemoria mostra inizialmente quelli previsti oggi, con filtri per
+  domani o lo storico. Il pulsante manuale apre WhatsApp con testo preparato: la
+  titolare deve premere **Invia** nell’app. Aprire il link non registra un invio.
+  Dopo averlo effettivamente inviato, può confermare **Ho inviato il promemoria**:
+  il sistema registra la dichiarazione della titolare e blocca ulteriori invii API
+  per quell’appuntamento. Non simula una consegna Meta, non costa una chiamata API
+  e non libera la quota già consumata da un eventuale invio dall’esito incerto.
 
 Le limitazioni sono deliberate per ridurre traffico, reinvii e servizi separati.
 Non garantiscono consegna se numero, connessione o fornitore non sono disponibili.
+
+## Scelta economica
+
+Il software mantiene gli invii automatici attraverso la Cloud API diretta di Meta,
+con il modello utility approvato, senza canoni o maggiorazioni di intermediari.
+Finché il collegamento non è configurato e attivato, il software non avvia invii API;
+Jessica può lavorare con calendario, agenda e promemoria manuali dall’app esistente.
+
+Le condizioni Meta vanno verificate sulle
+[regole di tariffazione](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/non-template-messages/)
+e sulle [FAQ ufficiali](https://business.whatsapp.com/resources/faq/). Al 5 ottobre 2026
+la documentazione sviluppatori indica tariffazione anche per i template utility nella
+finestra di assistenza dal 1 ottobre. La logica quindi non presume gratuità delle 24 ore
+né applica ai template la quota gratuita dei messaggi di servizio. Non è stata verificata
+una tariffa italiana del conto; tutti gli invii sono conteggiati prudentemente nei limiti.
+
+Railway ospita un solo processo e SQLite sul volume esistente. Le
+[tariffe del piano](https://docs.railway.com/pricing/plans) prevedono per Hobby un minimo
+di $5 al mese con $5 di consumi inclusi: ridurre un consumo già sotto il minimo non
+riduce quel minimo. I consumi osservati non rappresentano una fattura o una garanzia
+dei mesi successivi; piano attivo, altri progetti, traffico e imposte possono incidere.
+Le build sono gratuite; non sono stati creati database o worker aggiuntivi.
+
+Lo [spegnimento automatico](https://docs.railway.com/deployments/serverless) fermerebbe
+i timer dei promemoria e non viene abilitato. Il worker evita transazioni di scrittura
+quando è sospeso o non ha lavori scaduti, mantenendo recupero sicuro e controllo minuto
+per minuto. Non si abbassano limiti RAM solo per dichiarare un risparmio: la memoria
+è misurata sul consumo effettivo.
 
 ## Attivare WhatsApp automatico
 

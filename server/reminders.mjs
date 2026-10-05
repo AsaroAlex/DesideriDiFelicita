@@ -1,10 +1,10 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
-import { addDays, localDateTimeToEpoch, toLocalParts } from './time.mjs';
+import { addDays, toLocalParts } from './time.mjs';
+import { conservativeReminderCount, effectiveReminderLimits, reminderBlockReason, reminderQuotaPeriod } from './db.mjs';
 import { sendAppointmentReminder, whatsappConfiguration } from './whatsapp.mjs';
 
 const MAX_ATTEMPTS = 3;
 const LEASE_MS = 60_000;
-const SEND_STATUSES = ['sending', 'accepted', 'delivered', 'read', 'needs_review'];
 const STATUS_RANK = { pending: 0, sending: 0, needs_review: 0, accepted: 1, failed: 1, delivered: 2, read: 3 };
 const STATUS_TEXT = {
   REQUEST_TIMEOUT: 'Esito dell’invio incerto: controllare WhatsApp prima di inviare di nuovo.',
@@ -18,19 +18,6 @@ function errorText(code, status) {
   return STATUS_TEXT[code] || (status === 'needs_review'
     ? 'Esito dell’invio incerto: controllare WhatsApp prima di inviare di nuovo.'
     : 'Meta ha rifiutato il promemoria. Controllare la configurazione e il numero.');
-}
-
-function quotaPeriod(now) {
-  const { date } = toLocalParts(now);
-  const year = Number(date.slice(0, 4));
-  const month = Number(date.slice(5, 7));
-  const nextMonth = `${month === 12 ? year + 1 : year}-${String(month === 12 ? 1 : month + 1).padStart(2, '0')}-01`;
-  return {
-    dayStart: localDateTimeToEpoch(date, '00:00'),
-    dayEnd: localDateTimeToEpoch(addDays(date, 1), '00:00'),
-    monthStart: localDateTimeToEpoch(`${date.slice(0, 7)}-01`, '00:00'),
-    monthEnd: localDateTimeToEpoch(nextMonth, '00:00'),
-  };
 }
 
 function safePhone(value) {
@@ -55,26 +42,32 @@ export function createReminderRunner({ store, config, getWhatsappConfig = () => 
   let activeTick;
   let stopped = false;
 
-  // Immutable audit timestamps prevent delivery/read callbacks moving a send
-  // into another day or month. An uncertain send consumes quota conservatively.
-  const countQuota = (from, to) => Number(db.prepare(`
-    SELECT COUNT(DISTINCT r.id) AS count
-    FROM reminders r JOIN audit_log a ON a.resource_id = r.id
-    WHERE a.event = 'whatsapp_send_claimed' AND a.created_at >= ? AND a.created_at < ?
-      AND (r.status IN (${SEND_STATUSES.map(() => '?').join(',')}) OR r.provider_message_id IS NOT NULL)
-  `).get(from, to, ...SEND_STATUSES).count);
+  const countQuota = (from, to) => conservativeReminderCount(db, from, to);
+  const recoveryNeeded = db.prepare(`SELECT id FROM reminders
+    WHERE (status='sending' AND (lease_until IS NULL OR lease_until<=?))
+      OR (status='pending' AND provider_message_id IS NOT NULL) LIMIT 1`);
+  const dueCandidate = db.prepare(`SELECT id FROM reminders WHERE status='pending' AND provider_message_id IS NULL
+    AND due_at<=? AND COALESCE(next_attempt_at,due_at)<=? LIMIT 1`);
+  const dueRows = db.prepare(`SELECT r.id AS reminder_id, r.appointment_revision, r.attempt_count,
+    a.* FROM reminders r JOIN appointments a ON a.id=r.appointment_id
+    WHERE r.status='pending' AND r.provider_message_id IS NULL
+      AND r.due_at<=? AND COALESCE(r.next_attempt_at,r.due_at)<=?
+    ORDER BY r.due_at, a.start_at, r.id LIMIT 100`);
 
   function getStatus() {
     const whatsapp = getWhatsappConfig();
     const settings = store.getSettings();
-    const period = quotaPeriod(now());
+    const period = reminderQuotaPeriod(now());
+    const limits = effectiveReminderLimits(settings);
+    const sentThisMonth = countQuota(period.monthStart, period.monthEnd);
+    const sentToday = countQuota(period.dayStart, period.dayEnd);
     return {
       ...whatsappConfiguration(whatsapp),
       enabled: whatsapp.enabled !== false && whatsappConfiguration(whatsapp).configured,
       webhookConfigured: Boolean(whatsapp.appSecret && whatsapp.verifyToken),
-      dailyLimit: settings.dailyReminderLimit ?? 20,
-      monthlyLimit: settings.monthlyReminderLimit ?? 200,
-      sentThisMonth: countQuota(period.monthStart, period.monthEnd),
+      ...limits, sentThisMonth,
+      remainingToday: Math.max(0, limits.dailyLimit - sentToday),
+      remainingThisMonth: Math.max(0, limits.monthlyLimit - sentThisMonth),
     };
   }
 
@@ -84,14 +77,21 @@ export function createReminderRunner({ store, config, getWhatsappConfig = () => 
   }
 
   function skip(id, reason, instant) {
-    db.prepare(`UPDATE reminders SET status='skipped', error_code=?, error_text=NULL,
-      lease_until=NULL, updated_at=? WHERE id=? AND status='pending'`).run(reason, instant, id);
+    const explanation = {
+      already_reminded: 'Un promemoria è già stato inviato. Comunica manualmente eventuali cambi di orario.',
+      prior_send_uncertain: 'Un precedente invio ha esito incerto. Verifica WhatsApp e comunica manualmente eventuali cambi.',
+      manual_sent: 'Promemoria segnato come inviato da Jessica. Nessun altro invio automatico.',
+    }[reason] || null;
+    db.prepare(`UPDATE reminders SET status='skipped', error_code=?, error_text=?,
+      lease_until=NULL, updated_at=? WHERE id=? AND status='pending'`).run(reason, explanation, instant, id);
   }
 
   function claim() {
     const whatsapp = getWhatsappConfig();
     const instant = now();
-    return store.transaction(() => {
+    // Paused or empty calendars do not acquire a SQLite writer lock each minute.
+    // Only actual stale leases need cleanup, including while automation is paused.
+    if (recoveryNeeded.get(instant)) store.transaction(() => {
       // A lease is never returned to pending: after a crash its result is unknown.
       db.prepare(`UPDATE reminders SET status='needs_review', lease_until=NULL,
         error_code='INTERRUPTED_SEND', error_text=?, updated_at=?
@@ -100,14 +100,10 @@ export function createReminderRunner({ store, config, getWhatsappConfig = () => 
       db.prepare(`UPDATE reminders SET status='needs_review', error_code='EXISTING_PROVIDER_ID',
         error_text=?,updated_at=? WHERE status='pending' AND provider_message_id IS NOT NULL`)
         .run('Invio già registrato da Meta: verificare il promemoria.', instant);
-      if (whatsapp.enabled === false || !whatsappConfiguration(whatsapp).configured) return null;
-      const rows = db.prepare(`
-        SELECT r.id AS reminder_id, r.appointment_revision, r.attempt_count,
-          a.* FROM reminders r JOIN appointments a ON a.id=r.appointment_id
-        WHERE r.status='pending' AND r.provider_message_id IS NULL
-          AND r.due_at<=? AND COALESCE(r.next_attempt_at,r.due_at)<=?
-        ORDER BY r.due_at, a.start_at, r.id LIMIT 100
-      `).all(instant, instant);
+    });
+    if (whatsapp.enabled === false || !whatsappConfiguration(whatsapp).configured || !dueCandidate.get(instant, instant)) return null;
+    return store.transaction(() => {
+      const rows = dueRows.all(instant, instant);
       for (const row of rows) {
         if (row.status !== 'confirmed') { skip(row.reminder_id, 'cancelled', instant); continue; }
         if (!row.reminder_consent) { skip(row.reminder_id, 'no_consent', instant); continue; }
@@ -119,10 +115,12 @@ export function createReminderRunner({ store, config, getWhatsappConfig = () => 
           skip(row.reminder_id, 'after_cutoff', instant); continue;
         }
         if (row.attempt_count >= MAX_ATTEMPTS) { skip(row.reminder_id, 'attempt_limit', instant); continue; }
-        const period = quotaPeriod(instant);
-        const settings = store.getSettings();
-        if (countQuota(period.dayStart, period.dayEnd) >= (settings.dailyReminderLimit ?? 20)
-          || countQuota(period.monthStart, period.monthEnd) >= (settings.monthlyReminderLimit ?? 200)) return null;
+        const blocked = reminderBlockReason(db, row.id, row.reminder_id);
+        if (blocked) { skip(row.reminder_id, blocked, instant); continue; }
+        const period = reminderQuotaPeriod(instant);
+        const limits = effectiveReminderLimits(store.getSettings());
+        if (countQuota(period.dayStart, period.dayEnd) >= limits.dailyLimit
+          || countQuota(period.monthStart, period.monthEnd) >= limits.monthlyLimit) return null;
         const result = db.prepare(`UPDATE reminders SET status='sending', attempt_count=attempt_count+1,
           lease_until=?, updated_at=? WHERE id=? AND status='pending'`)
           .run(instant + LEASE_MS, instant, row.reminder_id);

@@ -164,6 +164,11 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       dailyLimit: status.dailyLimit,
       monthlyLimit: status.monthlyLimit,
       sentThisMonth: status.sentThisMonth,
+      economyMode: status.economyMode === true,
+      configuredDailyLimit: status.configuredDailyLimit,
+      configuredMonthlyLimit: status.configuredMonthlyLimit,
+      remainingToday: status.remainingToday,
+      remainingThisMonth: status.remainingThisMonth,
     };
   };
   const sessionResult = (session) => ({ ...auth.sessionShape(session), ...(session ? { whatsappConfigured: automationStatus().configured } : {}) });
@@ -301,7 +306,12 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       if (method === 'GET' && path === '/api/admin/reminders') {
         const count = url.searchParams.get('limit') || '100';
         if (!/^\d+$/.test(count) || Number(count) < 1 || Number(count) > 500) throw new DomainError(400, 'invalid_limit', 'Il numero di promemoria richiesti non è valido.');
-        return json(response, 200, { items: store.listReminders({ limit: Number(count) }) });
+        return json(response, 200, { items: store.listReminders({ limit: Number(count), date: url.searchParams.get('date') ?? undefined }) });
+      }
+      const manualReminderMatch = path.match(/^\/api\/admin\/reminders\/([^/]+)\/manual$/);
+      if (method === 'POST' && manualReminderMatch) {
+        await jsonBody(request);
+        return json(response, 200, store.markReminderManual(resourceId(manualReminderMatch[1]), now()));
       }
       if (method === 'GET' && path === '/api/admin/stats') return json(response, 200, store.getStats(now()));
       if (method === 'GET' && path === '/api/admin/automation') return json(response, 200, automationStatus());

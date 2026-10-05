@@ -142,12 +142,15 @@ import CustomerDirectory from './CustomerDirectory.astro';
           <ul class="closed-date-list" data-closed-dates></ul>
           <small>Le chiusure impediscono nuove prenotazioni e richieste. Non annullano gli appuntamenti già confermati.</small>
           <h3>Promemoria del giorno prima</h3>
+          <label class="checkbox-label"><input type="checkbox" name="economyMode" />Modalità risparmio: massimo 10 invii al giorno e 60 al mese</label>
+          <p class="agenda-note">La modalità risparmio mantiene i limiti che hai scelto e applica il valore più basso. Un limite a 0 sospende gli invii.</p>
           <div class="form-grid">
             <label>Ora di invio<input type="time" name="reminderTime" required /></label>
-            <label>Massimo invii al giorno<input type="number" name="dailyReminderLimit" min="0" max="1000" required /></label>
-            <label>Massimo invii al mese<input type="number" name="monthlyReminderLimit" min="0" max="10000" required /></label>
+            <label>Limite impostato al giorno<input type="number" name="dailyReminderLimit" min="0" max="1000" required /></label>
+            <label>Limite impostato al mese<input type="number" name="monthlyReminderLimit" min="0" max="10000" required /></label>
           </div>
-          <p class="agenda-note">I limiti contengono gli invii automatici. Un valore pari a 0 li sospende. Si invia un solo promemoria per appuntamento, senza messaggi promozionali.</p>
+          <p class="agenda-note" data-effective-limits></p>
+          <p class="agenda-note">I limiti contengono i tentativi automatici, compresi quelli con esito incerto. Il costo dei messaggi dipende da Meta: questi numeri non sono una fattura. Dopo un invio già effettuato o incerto, un cambio di orario non genera un secondo promemoria automatico.</p>
           <button type="submit" class="agenda-button">Salva impostazioni</button>
         </form>
       </section>
@@ -173,6 +176,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
         <h2 id="reminders-title" tabindex="-1">Promemoria WhatsApp</h2>
         <div class="agenda-card" data-automation></div>
         <p class="agenda-note">“Apri WhatsApp” prepara un messaggio manuale: controllalo e premi Invia nell’app. Non parte alcun messaggio automatico da quel pulsante.</p>
+        <div class="agenda-card reminder-toolbar"><label>Promemoria previsti<select data-reminder-period><option value="today">Oggi</option><option value="tomorrow">Domani</option><option value="all">Tutti</option></select></label><button type="button" class="agenda-button secondary" data-reminders-refresh>Aggiorna elenco</button></div>
+        <p class="agenda-note" data-reminder-summary></p>
         <div class="reminder-list" data-reminders></div>
       </section>
     </div>
@@ -186,10 +191,10 @@ import CustomerDirectory from './CustomerDirectory.astro';
   type BookingRequest = { id: string; reference: string; serviceId: string; serviceName: string; name: string; phone: string; date: string; time: string; reminderConsent: boolean; status: 'pending' | 'confirmed' | 'declined'; appointmentId?: string | null; createdAt: number; appointment?: Pick<Appointment, 'id' | 'date' | 'time' | 'durationMinutes' | 'status' | 'title'> | null };
   type Service = { id: string; name: string; durationMinutes: number | null; enabled: boolean; listed: boolean };
   type OpeningHour = { day: string; label: string; ranges: { opens: string; closes: string }[] };
-  type Settings = { requestEnabled: boolean; bookingEnabled: boolean; bookingDays: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; dailyReminderLimit: number; monthlyReminderLimit: number };
-  type Reminder = { id: string; appointmentId: string; name: string; phone: string; date: string; time: string; status: string; dueAt: number; attemptCount: number; errorCode?: string; errorText?: string };
+  type Settings = { requestEnabled: boolean; bookingEnabled: boolean; bookingDays: number; reminderTime: string; openingHours: OpeningHour[]; closedDates: string[]; economyMode: boolean; dailyReminderLimit: number; monthlyReminderLimit: number };
+  type Reminder = { id: string; appointmentId: string; name: string; phone: string; date: string; time: string; status: string; dueAt: number; attemptCount: number; errorCode?: string; errorText?: string; manualSentAt?: number | null; providerMessageId?: string | null; staleRevision?: boolean };
   type Session = { authenticated: boolean; setupRequired?: boolean; email?: string; csrfToken?: string; whatsappConfigured?: boolean };
-  type Automation = { configured: boolean; enabled?: boolean; webhookConfigured?: boolean; missing: string[]; dailyLimit: number; monthlyLimit: number; sentThisMonth: number };
+  type Automation = { configured: boolean; enabled?: boolean; webhookConfigured?: boolean; missing: string[]; economyMode: boolean; dailyLimit: number; monthlyLimit: number; configuredDailyLimit: number; configuredMonthlyLimit: number; sentThisMonth: number; remainingToday: number; remainingThisMonth: number };
   type ServiceDraft = { name: string; duration: string; listed: boolean; enabled: boolean };
   const reminderLabels: Record<string, string> = { pending: 'In attesa', sending: 'Invio in corso', accepted: 'Accettato da WhatsApp', delivered: 'Consegnato', read: 'Letto', failed: 'Invio non riuscito', skipped: 'Non inviato', needs_review: 'Da controllare' };
   let activeRoot: HTMLElement | null = null;
@@ -211,6 +216,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
     let requests: BookingRequest[] = [];
     let requestStatus = 'pending';
     let reminders: Reminder[] = [];
+    let reminderPeriod = 'today';
     let settings: Settings | undefined;
     let automation: Automation | undefined;
     let closedDatesDraft: string[] = [];
@@ -280,7 +286,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       el('[data-auth]').hidden = next.authenticated;
       if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; input(accountForm, 'email').value = next.email || ''; document.dispatchEvent(new CustomEvent('agenda:authenticated', { detail: { email: next.email, csrfToken } })); return; }
       document.dispatchEvent(new CustomEvent('agenda:logout'));
-      automation = undefined; closedDatesDraft = []; settingsDirty = false; serviceDrafts.clear(); showPanel('overview', false);
+      automation = undefined; closedDatesDraft = []; settingsDirty = false; serviceDrafts.clear(); reminderPeriod = 'today'; el<HTMLSelectElement>('[data-reminder-period]').value = 'today'; el('[data-reminder-summary]').textContent = ''; showPanel('overview', false);
       services = []; appointments = []; requests = []; reminders = []; settings = undefined; requestStatus = 'pending'; el<HTMLSelectElement>('[data-request-status]').value = requestStatus;
       el('[data-calendar]').replaceChildren(); el('[data-services]').replaceChildren(); el('[data-reminders]').replaceChildren(); el('[data-stats]').replaceChildren(); el('[data-automation]').replaceChildren();
       el('[data-requests]').replaceChildren(); el('[data-request-result]').replaceChildren(); el('[data-request-result]').hidden = true; el('[data-request-count]').textContent = '0';
@@ -305,9 +311,17 @@ import CustomerDirectory from './CustomerDirectory.astro';
       requests = result.items; renderRequests();
     }
 
+    function reminderPath() { const date = reminderPeriod === 'all' ? '' : addDays(today(), reminderPeriod === 'tomorrow' ? 1 : 0); return `/api/admin/reminders?limit=100${date ? `&date=${encodeURIComponent(date)}` : ''}`; }
+    async function loadReminders() {
+      const path = reminderPath();
+      const result = await api<{ items: Reminder[] }>(path);
+      if (!session.authenticated || lifetime.signal.aborted || path !== reminderPath()) return;
+      reminders = result.items; renderReminders();
+    }
+
     async function loadAll() {
       const [serviceData, settingsData, reminderData, stats, automationData, requestData] = await Promise.all([
-        api<{ items: Service[] }>('/api/admin/services'), api<Settings>('/api/admin/settings'), api<{ items: Reminder[] }>('/api/admin/reminders'),
+        api<{ items: Service[] }>('/api/admin/services'), api<Settings>('/api/admin/settings'), api<{ items: Reminder[] }>(reminderPath()),
         api<Record<string, number>>('/api/admin/stats'), api<Automation>('/api/admin/automation'),
         api<{ items: BookingRequest[] }>(`/api/admin/requests?status=${encodeURIComponent(requestStatus)}&limit=100`),
       ]);
@@ -341,7 +355,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
     }
 
     function renderStats(stats: Record<string, number>) {
-      const labels = [['pendingRequests', 'Richieste da confermare'], ['todayAppointments', 'Appuntamenti oggi'], ['upcomingAppointments', 'In programma'], ['pendingReminders', 'Promemoria in attesa'], ['sentThisMonth', 'Invii questo mese']];
+      const labels = [['pendingRequests', 'Richieste da confermare'], ['todayAppointments', 'Appuntamenti oggi'], ['upcomingAppointments', 'In programma'], ['pendingReminders', 'Promemoria in attesa'], ['sentThisMonth', 'Tentativi conteggiati questo mese']];
       el('[data-stats]').replaceChildren(...labels.map(([key, label]) => { const card = textNode('div', '', 'stat-card'); card.append(textNode('strong', String(stats[key] ?? 0)), textNode('span', label)); return card; }));
       el('[data-request-count]').textContent = String(stats.pendingRequests ?? 0);
     }
@@ -479,6 +493,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       document.dispatchEvent(new CustomEvent('agenda:panel', { detail: { panel } }));
       if (moveFocus) focus(`#${panel}-title`);
       if (panel === 'requests') void refreshIncomingRequests();
+      if (panel === 'reminders' && session.authenticated) void act(null, async () => { await loadReminders(); inform('Elenco dei promemoria aggiornato.'); });
     }
 
     function renderOverview() {
@@ -536,8 +551,10 @@ import CustomerDirectory from './CustomerDirectory.astro';
       if (!settings || settingsDirty) return;
       input(settingsForm, 'requestEnabled').checked = settings.requestEnabled !== false;
       input(settingsForm, 'bookingEnabled').checked = settings.bookingEnabled;
+      input(settingsForm, 'economyMode').checked = settings.economyMode !== false;
       input(settingsForm, 'bookingDays').value = String(settings.bookingDays); input(settingsForm, 'reminderTime').value = settings.reminderTime;
       input(settingsForm, 'dailyReminderLimit').value = String(settings.dailyReminderLimit); input(settingsForm, 'monthlyReminderLimit').value = String(settings.monthlyReminderLimit);
+      renderCostPreview();
       closedDatesDraft = [...settings.closedDates]; renderClosedDates();
       el<HTMLInputElement>('[data-closure-date]').value = '';
       el('[data-booking-help]').textContent = services.some(service => service.listed !== false && service.enabled && service.durationMinutes) ? 'I servizi abilitati vengono confermati solo negli orari effettivamente liberi. Gli altri servizi ricevono richieste, se abilitate.' : 'Prima di attivare la conferma automatica, abilita almeno un servizio e imposta la sua durata nella sezione Servizi. Puoi già ricevere richieste dal calendario.';
@@ -559,27 +576,70 @@ import CustomerDirectory from './CustomerDirectory.astro';
       }));
     }
 
+    function renderCostPreview() {
+      const economy = input(settingsForm, 'economyMode').checked;
+      const daily = Number(input(settingsForm, 'dailyReminderLimit').value);
+      const monthly = Number(input(settingsForm, 'monthlyReminderLimit').value);
+      el('[data-effective-limits]').textContent = Number.isFinite(daily) && Number.isFinite(monthly) ? `Con queste impostazioni: massimo ${economy ? Math.min(daily, 10) : daily} tentativi al giorno e ${economy ? Math.min(monthly, 60) : monthly} al mese. Le modifiche si applicano dopo il salvataggio.` : 'Completa i limiti per vedere i valori effettivi.';
+    }
+
     function renderAutomation(next: Automation) {
       const active = next.configured && next.enabled !== false && next.webhookConfigured !== false;
       const card = el('[data-automation]'); const title = textNode('h3', active ? 'Invii automatici abilitati' : next.configured ? 'Collegamento salvato, invii sospesi' : 'Invio automatico da collegare');
       const copy = textNode('p', active ? 'I promemoria con consenso vengono inviati la sera prima, secondo orario e limiti. Il modello deve essere approvato da Meta e il collegamento deve avere credenziali valide.' : 'L’agenda e le richieste funzionano. Completa il collegamento WhatsApp Business e abilita gli invii quando sei pronta. Al momento non partono promemoria automatici.');
       const button = textNode('button', 'Gestisci collegamento WhatsApp', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; on(button, 'click', () => showPanel('connection'));
-      card.replaceChildren(title, copy, textNode('p', `Limiti: ${next.dailyLimit} invii al giorno, ${next.monthlyLimit} al mese. Invii di questo mese: ${next.sentThisMonth}.`, 'agenda-note'), button);
-      if (active && (next.dailyLimit === 0 || next.monthlyLimit === 0)) card.append(textNode('p', 'Gli invii sono sospesi perché un limite è impostato a 0.', 'agenda-note'));
+      card.replaceChildren(title, copy,
+        textNode('p', `${next.economyMode ? 'Modalità risparmio attiva. ' : ''}Limiti effettivi: ${next.dailyLimit} tentativi al giorno e ${next.monthlyLimit} al mese.`, 'agenda-note'),
+        textNode('p', `Limiti impostati: ${next.configuredDailyLimit} al giorno e ${next.configuredMonthlyLimit} al mese.`, 'agenda-note'),
+        textNode('p', `Tentativi conteggiati questo mese: ${next.sentThisMonth}. Disponibili oggi: ${next.remainingToday}; questo mese: ${next.remainingThisMonth}.`, 'agenda-note'),
+        textNode('p', 'Il conteggio include gli invii con esito incerto per evitare altre spese. Non indica messaggi consegnati e non sostituisce la fattura Meta.', 'agenda-note'), button);
+      if (next.dailyLimit === 0 || next.monthlyLimit === 0) card.append(textNode('p', 'Gli invii sono sospesi perché un limite è impostato a 0.', 'agenda-note'));
     }
 
     function renderReminders() {
       const list = el('[data-reminders]');
-      if (!reminders.length) { list.replaceChildren(textNode('p', 'Non ci sono ancora promemoria. Verranno pianificati per gli appuntamenti con consenso.', 'agenda-card')); return; }
+      const day = addDays(today(), reminderPeriod === 'tomorrow' ? 1 : 0);
+      el('[data-reminder-summary]').textContent = `${reminderPeriod === 'all' ? 'Tutti i promemoria' : `Promemoria previsti per ${prettyDate(day)}`} · ${reminders.length} promemoria. ${reminders.length === 100 ? 'Sono mostrati al massimo 100 record. Scegli Oggi o Domani per restringere l’elenco.' : 'La data si riferisce al promemoria, non al giorno dell’appuntamento.'}`;
+      if (!reminders.length) { list.replaceChildren(textNode('p', reminderPeriod === 'all' ? 'Non ci sono ancora promemoria. Verranno pianificati per gli appuntamenti con consenso.' : 'Non ci sono promemoria previsti per questo giorno.', 'agenda-card')); return; }
+      const dedupCopy: Record<string, string> = {
+        already_reminded: 'Un promemoria per questo appuntamento è già stato inviato. Il nuovo orario non genera un secondo invio automatico: comunica la modifica alla cliente a mano.',
+        prior_send_uncertain: 'L’invio precedente ha un esito incerto. Non parte un secondo promemoria automatico. Controlla la chat e comunica alla cliente l’eventuale cambio di orario a mano.',
+        manual_sent: 'Il promemoria è stato registrato come inviato a mano. Non parte un secondo invio automatico. Se cambi l’orario, avvisa la cliente a mano.',
+        after_cutoff: 'Appuntamento inserito dopo l’orario del promemoria: nessun invio automatico tardivo.',
+        cancelled: 'L’appuntamento è stato annullato: nessun promemoria da inviare.',
+        no_consent: 'La cliente non ha accettato il promemoria: nessun invio automatico.',
+      };
       list.replaceChildren(...reminders.map(item => {
-        const card = textNode('article', '', 'agenda-card reminder-card');
-        const top = textNode('div', '', 'appointment-top'); top.append(textNode('h3', item.name), textNode('span', reminderLabels[item.status] || item.status, 'status-badge')); card.append(top);
-        card.append(textNode('p', `${prettyDate(item.date)} · ${item.time}`));
+        const card = textNode('article', '', 'agenda-card reminder-card'); card.dataset.reminderId = item.id;
+        const top = textNode('div', '', 'appointment-top'); top.append(textNode('h3', item.name), textNode('span', `${reminderLabels[item.status] || item.status}${item.staleRevision ? ' · versione precedente' : ''}`, 'status-badge')); card.append(top);
+        card.append(textNode('p', `${item.staleRevision ? 'Orario attuale dell’appuntamento' : 'Appuntamento'}: ${prettyDate(item.date)} alle ${item.time}`));
+        if (item.staleRevision) card.append(textNode('p', 'Il promemoria si riferisce a una versione precedente. Comunica alla cliente le modifiche all’appuntamento.', 'agenda-note'));
         if (item.dueAt) card.append(textNode('p', `Promemoria previsto: ${new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.dueAt))}`, 'agenda-note'));
-        if (item.status === 'needs_review') card.append(textNode('p', 'L’esito dell’invio è incerto. Controlla WhatsApp prima di mandare un altro messaggio: non viene riprovato automaticamente.', 'agenda-note'));
-        if (item.status === 'skipped') card.append(textNode('p', item.errorCode === 'after_cutoff' ? 'Appuntamento inserito dopo l’orario del promemoria: nessun invio tardivo.' : 'Il promemoria non è stato inviato. Controlla lo stato dell’appuntamento, il consenso e i limiti.', 'agenda-note'));
+        if (item.status === 'pending' && item.dueAt > Date.now()) card.append(textNode('p', 'È programmato per l’orario indicato. Non viene inviato in anticipo.', 'agenda-note'));
+        if (item.status === 'needs_review') card.append(textNode('p', item.manualSentAt ? 'Il tentativo automatico resta con esito incerto e conteggiato. Hai registrato il successivo invio manuale; non partono altri promemoria automatici.' : 'L’esito dell’invio è incerto e il tentativo resta conteggiato. Controlla WhatsApp prima di mandare un altro messaggio: non viene riprovato automaticamente.', 'agenda-note'));
+        if (item.status === 'skipped') card.append(textNode('p', dedupCopy[item.errorCode || ''] || 'Il promemoria non è stato inviato. Controlla lo stato dell’appuntamento, il consenso e i limiti.', 'agenda-note'));
         if (item.status === 'failed' && item.errorText) card.append(textNode('p', item.errorText, 'agenda-note'));
-        if (item.status !== 'skipped' || !['cancelled', 'no_consent'].includes(item.errorCode || '')) card.append(manualLink(item));
+        if (item.manualSentAt) card.append(textNode('p', `Invio manuale registrato da Jessica il ${new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.manualSentAt))}. Questa dichiarazione non verifica la consegna del messaggio.`, 'agenda-note'));
+        const alreadySent = Boolean(item.providerMessageId) || ['sending', 'accepted', 'delivered', 'read'].includes(item.status);
+        const deduplicated = ['already_reminded', 'prior_send_uncertain', 'manual_sent'].includes(item.errorCode || '');
+        const unavailable = ['cancelled', 'no_consent'].includes(item.errorCode || '');
+        const nowTime = new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
+        const pastAppointment = item.date < today() || (item.date === today() && item.time <= nowTime);
+        if (item.manualSentAt || alreadySent || deduplicated || unavailable || pastAppointment || !['pending', 'failed', 'skipped', 'needs_review'].includes(item.status)) return card;
+        const actions = textNode('div', '', 'button-group'); const acknowledge = textNode('button', 'Ho inviato il promemoria', 'agenda-button secondary') as HTMLButtonElement; acknowledge.type = 'button'; acknowledge.dataset.manualAcknowledge = item.id;
+        actions.append(manualLink(item), acknowledge); card.append(actions);
+        const form = document.createElement('form'); form.className = 'manual-confirm-form'; form.hidden = true; form.dataset.manualConfirm = item.id;
+        const heading = textNode('h4', 'Registra l’invio manuale'); heading.tabIndex = -1;
+        const label = textNode('label', '', 'checkbox-label'); const declaration = document.createElement('input'); declaration.type = 'checkbox'; declaration.required = true; label.append(declaration, document.createTextNode(`Confermo di avere già inviato questo promemoria a ${item.name}.`));
+        const confirm = textNode('button', 'Conferma invio manuale', 'agenda-button') as HTMLButtonElement; confirm.type = 'submit';
+        const cancel = textNode('button', 'Torna al promemoria', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button';
+        const formActions = textNode('div', '', 'button-group'); formActions.append(confirm, cancel);
+        form.append(heading, textNode('p', 'Registra l’invio solo dopo aver premuto Invia in WhatsApp. Questo comando non invia messaggi e ferma altri promemoria automatici per lo stesso appuntamento.', 'agenda-note'), label, formActions); card.append(form);
+        on(acknowledge, 'click', () => { actions.hidden = true; form.hidden = false; heading.focus({ preventScroll: true }); });
+        on(cancel, 'click', () => { form.hidden = true; actions.hidden = false; declaration.checked = false; acknowledge.focus({ preventScroll: true }); });
+        on(form, 'submit', event => { event.preventDefault(); if (!declaration.checked) { declaration.focus(); return; } void act(form, async () => {
+          await api<Reminder>(`/api/admin/reminders/${encodeURIComponent(item.id)}/manual`, 'POST', {}); await loadAll(); inform('Invio manuale registrato. Non è stato inviato alcun messaggio da questo comando.'); focus('#reminders-title');
+        }); });
         return card;
       }));
     }
@@ -605,7 +665,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
         }) : []; return { day: day.day, label: day.label, ranges };
       });
       const closedDates = [...closedDatesDraft];
-      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); settingsDirty = false; await loadAll(); inform('Impostazioni salvate.');
+      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), openingHours, closedDates, economyMode: input(settingsForm, 'economyMode').checked, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); settingsDirty = false; await loadAll(); inform('Impostazioni salvate.');
     }); });
     on(passwordForm, 'submit', event => { event.preventDefault(); void act(passwordForm, async () => { const password = input(passwordForm, 'password').value; if (password !== input(passwordForm, 'confirmation').value) { input(passwordForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const result = await api<Session>('/api/admin/password', 'POST', { currentPassword: input(passwordForm, 'currentPassword').value, password }); if (result.csrfToken) showAccess(result); else showAccess(await api<Session>('/api/auth/session')); passwordForm.reset(); inform('Password aggiornata. Gli altri accessi sono stati chiusi.'); }); });
 
@@ -615,7 +675,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(document, 'agenda:authentication-expired', () => { if (!session.authenticated) return; showAccess({ authenticated: false, setupRequired: false }); inform('L’accesso è scaduto. Accedi di nuovo per continuare.', true); input(loginForm, 'email').focus(); });
     on(document, 'agenda:configuration-changed', () => { if (!session.authenticated) return; void api<Automation>('/api/admin/automation').then(next => { if (!session.authenticated || lifetime.signal.aborted) return; automation = next; renderAutomation(next); renderOverview(); }).catch(() => {}); });
     on(document, 'agenda:new-appointment', event => { if (!session.authenticated || busy) return; const detail = (event as CustomEvent<{ name: string; phone: string }>).detail; if (!detail || typeof detail.name !== 'string' || typeof detail.phone !== 'string') return; showPanel('calendar', false); openEditor(); input(appointmentForm, 'name').value = detail.name; input(appointmentForm, 'phone').value = detail.phone; input(appointmentForm, 'date').focus(); });
-    on(settingsForm, 'input', () => { settingsDirty = true; }); on(settingsForm, 'change', () => { settingsDirty = true; });
+    on(settingsForm, 'input', () => { settingsDirty = true; renderCostPreview(); }); on(settingsForm, 'change', () => { settingsDirty = true; renderCostPreview(); });
     on(accountForm, 'submit', event => { event.preventDefault(); void act(accountForm, async () => { const next = await api<Session>('/api/admin/account', 'PATCH', { email: input(accountForm, 'email').value.trim(), currentPassword: input(accountForm, 'currentPassword').value }); accountForm.reset(); showAccess(next); document.dispatchEvent(new CustomEvent('agenda:panel', { detail: { panel: activePanel } })); inform('Email aggiornata. Gli altri accessi sono stati chiusi.'); }); });
     on(createServiceForm, 'submit', event => { event.preventDefault(); void act(createServiceForm, async () => {
       const duration = input(createServiceForm, 'durationMinutes'); const enabled = input(createServiceForm, 'enabled').checked; const listed = input(createServiceForm, 'listed').checked;
@@ -650,6 +710,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(el('[data-today]'), 'click', () => { void act(null, () => moveDate(today())); });
     on(el('[data-calendar-date]'), 'change', () => { const date = el<HTMLInputElement>('[data-calendar-date]').value; if (date) void act(null, () => moveDate(date)); });
     on(el('[data-refresh]'), 'click', () => { void act(null, async () => { await loadAll(); inform('Agenda aggiornata.'); }); });
+    on(el('[data-reminders-refresh]'), 'click', () => { void act(null, async () => { await loadReminders(); inform('Elenco dei promemoria aggiornato.'); }); });
+    on(el('[data-reminder-period]'), 'change', () => { const control = el<HTMLSelectElement>('[data-reminder-period]'); if (busy) { control.value = reminderPeriod; return; } reminderPeriod = control.value; void act(null, async () => { await loadReminders(); inform('Elenco dei promemoria aggiornato.'); }); });
     on(el('[data-requests-refresh]'), 'click', () => { void act(null, async () => { await loadAll(); inform('Richieste aggiornate.'); }); });
     on(el('[data-request-status]'), 'change', () => { if (busy) { el<HTMLSelectElement>('[data-request-status]').value = requestStatus; return; } void act(null, async () => { requestStatus = el<HTMLSelectElement>('[data-request-status]').value; await loadRequests(); inform('Elenco delle richieste aggiornato.'); }); });
     root.querySelectorAll<HTMLElement>('[data-view]').forEach(button => on(button, 'click', () => { void act(null, async () => { view = button.dataset.view!; root.querySelectorAll<HTMLElement>('[data-view]').forEach(candidate => { const selected = candidate === button; candidate.setAttribute('aria-pressed', String(selected)); candidate.classList.toggle('secondary', !selected); }); await loadCalendar(); inform('Vista calendario aggiornata.'); }); }));
@@ -720,6 +782,9 @@ import CustomerDirectory from './CustomerDirectory.astro';
   .request-card > p { margin-top: .7rem; }
   .request-actions, .request-confirm-form, .request-decline { margin-top: 1.2rem; }
   .request-confirm-form, .request-decline { padding-top: 1.2rem; border-top: 1px solid #dbe1ed; }
+  .manual-confirm-form { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dbe1ed; }
+  .reminder-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
+  .reminder-toolbar label { flex: 1 1 12rem; }
   .request-decline .button-group { margin-top: 1rem; }
   .request-result { margin-top: 1rem; border-color: #adc8ed; background: #f3f7ff; }
   .request-result p { margin-top: .7rem; }

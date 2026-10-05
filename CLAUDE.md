@@ -274,3 +274,30 @@ la mappa è attiva, niente badge "da confermare".
   da sessione autenticata con nuova verifica password, Origin e CSRF.
 - Non creare credenziali/password per Jessica né attivare l’account al posto suo.
   Il link monouso privato è nel file locale ignorato `.agenda-attivazione.md`.
+
+
+## 18. Priorità ai costi — 2026-10-05
+
+- L’utente non sa se Jessica abbia WhatsApp Business Platform e autorizza a spendere
+  il meno possibile. La preferenza per i promemoria automatici resta valida.
+- Collegamento diretto Meta, nessun gestionale o provider aggiuntivo a canone.
+  Gli invii restano sospesi finché numero, credenziali e modello non sono configurati.
+- Modalità risparmio attiva di default: tetto effettivo 10 al giorno e 60 al mese,
+  conservando le quote scelte da Jessica. Un limite 0 continua a sospendere gli invii.
+  I limiti contengono i messaggi: non dichiarare un tetto di spesa in euro non verificato.
+- Deduplicazione per appuntamento anche fra revisioni dopo invio accettato o incerto.
+  Se spostato dopo l’invio, Jessica comunica il nuovo orario manualmente. I record
+  relativi a vecchie revisioni non attestano l’invio automatico del nuovo orario.
+- Promemoria di oggi, domani e storico; conferma esplicita degli invii manuali.
+  Aprire wa.me non significa inviare. La dichiarazione della titolare blocca la
+  ricoda automatica senza liberare la quota consumata da un precedente esito incerto.
+- Contatori prudenti allineati: gli esiti incerti consumano quota, ma non equivalgono
+  a una consegna o a una fattura Meta. Niente presunzione di gratuità entro 24 ore.
+- Ricerca del 5 ottobre 2026: la documentazione Meta pricing/non-template-messages
+  indica cambi dal 1 ottobre per utility nella finestra 24 ore; usare le regole
+  ufficiali applicabili al conto, senza inventare la tariffa italiana.
+- Railway misurato su 12 ore: CPU media 0.0000215 vCPU, RAM media 0.0889 GB,
+  picco 0.1168 GB. Un solo servizio con volume; non attivare sleep che fermerebbe
+  i timer, né confondere il limite RAM con il consumo fatturato. Il piano Hobby
+  prevede un minimo di $5 con $5 di consumi inclusi; piano e fattura effettivi del
+  conto non verificati. Ottimizzare l’idle senza promettere riduzioni del minimo.

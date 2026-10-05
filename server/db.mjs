@@ -39,7 +39,62 @@ CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
 CREATE TABLE IF NOT EXISTS customer_interactions (phone TEXT PRIMARY KEY,last_inbound_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS webhook_events (event_hash TEXT PRIMARY KEY,created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY,event TEXT NOT NULL,resource_id TEXT,created_at INTEGER NOT NULL,detail TEXT);
+CREATE INDEX IF NOT EXISTS audit_log_event_resource_time ON audit_log(event,resource_id,created_at);
 `;
+
+const QUOTA_STATUSES = ['sending', 'accepted', 'delivered', 'read', 'needs_review'];
+const quotaStatements = new WeakMap();
+const blockStatements = new WeakMap();
+
+export function effectiveReminderLimits(settings) {
+  const economyMode = settings.economyMode !== false;
+  const configuredDailyLimit = settings.dailyReminderLimit ?? 20;
+  const configuredMonthlyLimit = settings.monthlyReminderLimit ?? 200;
+  return {
+    economyMode, configuredDailyLimit, configuredMonthlyLimit,
+    dailyLimit: economyMode ? Math.min(configuredDailyLimit, 10) : configuredDailyLimit,
+    monthlyLimit: economyMode ? Math.min(configuredMonthlyLimit, 60) : configuredMonthlyLimit,
+  };
+}
+
+export function reminderQuotaPeriod(instant) {
+  const { date } = toLocalParts(instant);
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
+  const nextMonth = `${month === 12 ? year + 1 : year}-${String(month === 12 ? 1 : month + 1).padStart(2, '0')}-01`;
+  return {
+    dayStart: localDateTimeToEpoch(date, '00:00'), dayEnd: localDateTimeToEpoch(addDays(date, 1), '00:00'),
+    monthStart: localDateTimeToEpoch(`${date.slice(0, 7)}-01`, '00:00'), monthEnd: localDateTimeToEpoch(nextMonth, '00:00'),
+  };
+}
+
+export function conservativeReminderCount(db, from, to) {
+  let statement = quotaStatements.get(db);
+  if (!statement) {
+    statement = db.prepare(`SELECT COUNT(DISTINCT r.id) AS count FROM reminders r JOIN audit_log a ON a.resource_id=r.id
+      WHERE a.event='whatsapp_send_claimed' AND a.created_at>=? AND a.created_at<?
+      AND (r.status IN (${QUOTA_STATUSES.map(() => '?').join(',')}) OR r.provider_message_id IS NOT NULL)`);
+    quotaStatements.set(db, statement);
+  }
+  return Number(statement.get(from, to, ...QUOTA_STATUSES).count);
+}
+
+export function reminderBlockReason(db, appointmentId, exceptId = '') {
+  let statements = blockStatements.get(db);
+  if (!statements) {
+    statements = {
+      manual: db.prepare("SELECT id FROM audit_log WHERE event='reminder_marked_manual' AND resource_id=? LIMIT 1"),
+      previous: db.prepare(`SELECT status,provider_message_id FROM reminders WHERE appointment_id=? AND id<>?
+        AND (provider_message_id IS NOT NULL OR status IN ('sending','accepted','delivered','read','needs_review'))
+        ORDER BY (provider_message_id IS NOT NULL) DESC,id LIMIT 1`),
+    };
+    blockStatements.set(db, statements);
+  }
+  if (statements.manual.get(appointmentId)) return 'manual_sent';
+  const previous = statements.previous.get(appointmentId, exceptId);
+  if (!previous) return null;
+  return !previous.provider_message_id && ['sending', 'needs_review'].includes(previous.status) ? 'prior_send_uncertain' : 'already_reminded';
+}
 
 function serviceId(service, index) {
   if (service.id) return cleanText(service.id, 'Servizio', { max: 80 });
@@ -95,7 +150,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
   }
   function setting(key, value) { db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, JSON.stringify(value)); }
   const defaults = {
-    bookingEnabled: false, requestEnabled: true, reminderTime: '18:00', bookingDays: 60,
+    bookingEnabled: false, requestEnabled: true, reminderTime: '18:00', bookingDays: 60, economyMode: true,
     openingHours: validateHours(business.openingHours, business.openingHours), closedDates: [], dailyReminderLimit: 20, monthlyReminderLimit: 200,
   };
   transaction(() => {
@@ -305,7 +360,8 @@ export function createStore({ dataDir, business, now = Date.now }) {
     if (row.status !== 'confirmed' || !row.reminder_consent) return;
     const dueAt = reminderDueAt(toLocalParts(row.start_at).date, getSettings().reminderTime);
     const late = dueAt <= at || row.start_at <= at;
-    db.prepare('INSERT OR IGNORE INTO reminders(id,appointment_id,appointment_revision,due_at,status,next_attempt_at,error_code,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)').run(randomUUID(), row.id, row.revision, dueAt, late ? 'skipped' : 'pending', dueAt, late ? 'after_cutoff' : null, at, at);
+    const blocked = reminderBlockReason(db, row.id);
+    db.prepare('INSERT OR IGNORE INTO reminders(id,appointment_id,appointment_revision,due_at,status,next_attempt_at,error_code,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)').run(randomUUID(), row.id, row.revision, dueAt, late || blocked ? 'skipped' : 'pending', dueAt, blocked || (late ? 'after_cutoff' : null), at, at);
   }
   function invalidateUnsent(id, at, code) {
     db.prepare("UPDATE reminders SET status='skipped',error_code=?,error_text=NULL,lease_until=NULL,updated_at=? WHERE appointment_id=? AND provider_message_id IS NULL AND status IN ('pending','failed')").run(code, at, id);
@@ -494,6 +550,7 @@ export function createStore({ dataDir, business, now = Date.now }) {
       const next = { ...current, ...patch };
       boolean(next.bookingEnabled, 'Prenotazioni online');
       boolean(next.requestEnabled, 'Richieste dal calendario');
+      boolean(next.economyMode, 'Modalità risparmio');
       parseTime(next.reminderTime);
       integer(next.bookingDays, 'Periodo prenotabile', 1, 365);
       integer(next.dailyReminderLimit, 'Limite giornaliero', 0, 1000);
@@ -517,24 +574,47 @@ export function createStore({ dataDir, business, now = Date.now }) {
       return next;
     });
   }
-  function listReminders({ limit = 100 } = {}) {
+  const manualAudit = db.prepare("SELECT created_at FROM audit_log WHERE event='reminder_marked_manual' AND resource_id=? ORDER BY created_at DESC,id DESC LIMIT 1");
+  function mapReminder(row) {
+    const local = toLocalParts(row.start_at);
+    return { id: row.id, appointmentId: row.appointment_id, name: row.name, phone: row.phone, date: local.date, time: local.time, status: row.status, dueAt: row.due_at, attemptCount: row.attempt_count, errorCode: row.error_code, errorText: row.error_text, providerMessageId: row.provider_message_id, staleRevision: row.appointment_revision !== row.current_revision, manualSentAt: manualAudit.get(row.appointment_id)?.created_at ?? null };
+  }
+  function listReminders({ limit = 100, date } = {}) {
     integer(limit, 'Numero promemoria', 1, 500);
-    return db.prepare('SELECT r.*,a.name,a.phone,a.start_at FROM reminders r JOIN appointments a ON a.id=r.appointment_id ORDER BY r.due_at DESC,r.id LIMIT ?').all(limit).map((row) => {
-      const local = toLocalParts(row.start_at);
-      return { id: row.id, appointmentId: row.appointment_id, name: row.name, phone: row.phone, date: local.date, time: local.time, status: row.status, dueAt: row.due_at, attemptCount: row.attempt_count, errorCode: row.error_code, errorText: row.error_text, providerMessageId: row.provider_message_id };
+    if (date !== undefined) {
+      parseDate(date);
+      return db.prepare('SELECT r.*,a.name,a.phone,a.start_at,a.revision AS current_revision FROM reminders r JOIN appointments a ON a.id=r.appointment_id WHERE r.due_at>=? AND r.due_at<? ORDER BY r.due_at,r.id LIMIT ?')
+        .all(localDateTimeToEpoch(date, '00:00'), localDateTimeToEpoch(addDays(date, 1), '00:00'), limit).map(mapReminder);
+    }
+    return db.prepare('SELECT r.*,a.name,a.phone,a.start_at,a.revision AS current_revision FROM reminders r JOIN appointments a ON a.id=r.appointment_id ORDER BY r.due_at DESC,r.id LIMIT ?').all(limit).map(mapReminder);
+  }
+  function markReminderManual(id, at = clock()) {
+    return transaction(() => {
+      const query = db.prepare('SELECT r.*,a.name,a.phone,a.start_at,a.revision AS current_revision,a.status AS appointment_status FROM reminders r JOIN appointments a ON a.id=r.appointment_id WHERE r.id=?');
+      const row = query.get(id);
+      if (!row) fail('reminder_not_found', 'Promemoria non trovato.', 404);
+      if (manualAudit.get(row.appointment_id)) return mapReminder(row);
+      if (row.status === 'sending' || db.prepare("SELECT id FROM reminders WHERE appointment_id=? AND status='sending' LIMIT 1").get(row.appointment_id)) fail('reminder_sending', 'Un invio automatico è in corso. Attendi il suo esito.', 409);
+      if (row.provider_message_id || ['accepted', 'delivered', 'read'].includes(row.status)) fail('reminder_already_sent', 'Il promemoria ha già un invio registrato. Controlla il suo esito.', 409);
+      if (row.appointment_status !== 'confirmed' || row.start_at <= at) fail('appointment_not_active', 'L’appuntamento è annullato o già trascorso.', 409);
+      audit('reminder_marked_manual', row.appointment_id, at, JSON.stringify({ reminderId: row.id }));
+      // An uncertain paid attempt remains counted and visible for review.
+      db.prepare("UPDATE reminders SET status='skipped',error_code='manual_sent',error_text=NULL,lease_until=NULL,updated_at=? WHERE appointment_id=? AND provider_message_id IS NULL AND status IN ('pending','failed')")
+        .run(at, row.appointment_id);
+      return mapReminder(query.get(id));
     });
   }
   function getStats(at = clock()) {
     const today = toLocalParts(at).date;
     const start = localDateTimeToEpoch(today, '00:00');
     const end = localDateTimeToEpoch(addDays(today, 1), '00:00');
-    const month = localDateTimeToEpoch(`${today.slice(0, 7)}-01`, '00:00');
+    const period = reminderQuotaPeriod(at);
     return {
       todayAppointments: db.prepare("SELECT COUNT(*) AS count FROM appointments WHERE status='confirmed' AND start_at>=? AND start_at<?").get(start, end).count,
       upcomingAppointments: db.prepare("SELECT COUNT(*) AS count FROM appointments WHERE status='confirmed' AND start_at>? ").get(at).count,
       pendingReminders: db.prepare("SELECT COUNT(*) AS count FROM reminders WHERE status='pending'").get().count,
       pendingRequests: db.prepare("SELECT COUNT(*) AS count FROM booking_requests WHERE status='pending'").get().count,
-      sentThisMonth: db.prepare("SELECT COUNT(DISTINCT r.id) AS count FROM reminders r JOIN audit_log a ON a.resource_id=r.id AND a.event='whatsapp_send_claimed' WHERE (r.status IN ('accepted','delivered','read') OR r.provider_message_id IS NOT NULL) AND a.created_at>=? AND a.created_at<=?").get(month, at).count,
+      sentThisMonth: conservativeReminderCount(db, period.monthStart, period.monthEnd),
     };
   }
   async function backup() {
@@ -562,5 +642,5 @@ export function createStore({ dataDir, business, now = Date.now }) {
     await Promise.all(copies.slice(7).map((file) => unlink(resolve(backupDirectory, file))));
     return destination;
   }
-  return { db, transaction, close: () => db.close(), getPublicConfig, getAvailability, getRequestAvailability, createPublicBooking, createPublicRequest, listRequests, confirmRequest, declineRequest, listAppointments, createAdminAppointment, updateAppointment, listCustomers, getCustomerHistory, listServices, createService, updateService, getSettings, updateSettings, listReminders, getStats, backup };
+  return { db, transaction, close: () => db.close(), getPublicConfig, getAvailability, getRequestAvailability, createPublicBooking, createPublicRequest, listRequests, confirmRequest, declineRequest, listAppointments, createAdminAppointment, updateAppointment, listCustomers, getCustomerHistory, listServices, createService, updateService, getSettings, updateSettings, listReminders, markReminderManual, getStats, backup };
 }
