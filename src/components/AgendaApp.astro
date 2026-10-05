@@ -110,7 +110,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
               <label>Ora<input type="time" name="time" required /></label>
               <label>Durata, in minuti<input type="number" name="durationMinutes" min="5" max="480" step="1" required /></label>
               <label>Nome della cliente<input name="name" autocomplete="name" minlength="2" maxlength="100" required /></label>
-              <label>Telefono<input type="tel" name="phone" autocomplete="tel" inputmode="tel" placeholder="Es. 333 123 4567" required /><small>Per i numeri esteri aggiungi il prefisso, per esempio +40.</small></label>
+              <label>Telefono<input type="tel" name="phone" autocomplete="tel" inputmode="tel" placeholder="Es. 333 123 4567" required /><small>Per i cellulari italiani non serve il +39. Per fissi e numeri esteri aggiungi il prefisso (es. +39 051…, +40…).</small></label>
               <label data-status-field hidden>Stato<select name="status"><option value="confirmed">Confermato</option><option value="cancelled">Annullato</option></select></label>
             </div>
             <label>Note dell’appuntamento<textarea name="notes" maxlength="500" rows="3" placeholder="Dettagli utili per il servizio" /></label><small>Dettagli utili per questa visita. Le annotazioni che riguardano più appuntamenti si gestiscono nella rubrica.</small>
@@ -326,12 +326,12 @@ import CustomerDirectory from './CustomerDirectory.astro';
       for (const range of open) { openMinutes += (range.end - range.start) / 60_000; const clipped = occupied.map(item => ({ start: Math.max(item.start, range.start), end: Math.min(item.end, range.end) })).filter(item => item.start < item.end).sort((a, b) => a.start - b.start); let current: {start: number; end: number} | undefined; for (const item of clipped) { if (!current) current = { ...item }; else if (item.start <= current.end) current.end = Math.max(current.end, item.end); else { occupiedMinutes += (current.end - current.start) / 60_000; current = { ...item }; } } if (current) occupiedMinutes += (current.end - current.start) / 60_000; }
       return { openMinutes, occupiedMinutes, freeMinutes: Math.max(0, openMinutes - occupiedMinutes) };
     }
-    /** «333 123 4567» or «051 123456» → +39…; foreign numbers keep their own prefix. */
+    /** «333 123 4567» → +39…; landlines and foreign numbers need their prefix (0… is ambiguous). */
     function italianPhone(value: string) {
       const cleaned = value.trim().replace(/[\s().\/-]/g, '');
       if (cleaned.startsWith('00')) return `+${cleaned.slice(2)}`;
-      if (/^(?:3\d{8,9}|0\d{5,10})$/.test(cleaned)) return `+39${cleaned}`;
-      if (/^39(?:3\d{8,9}|0\d{5,10})$/.test(cleaned)) return `+${cleaned}`;
+      if (/^3\d{8,9}$/.test(cleaned)) return `+39${cleaned}`;
+      if (/^393\d{8,9}$/.test(cleaned)) return `+${cleaned}`;
       return cleaned;
     }
     /** +393331234567 → +39 333 123 4567, easier to read and to dictate. */
@@ -356,7 +356,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       if (requestSession.authenticated && session !== requestSession) throw new DOMException('Accesso aggiornato durante la richiesta.', 'AbortError');
       if (!response.ok) {
         if (response.status === 401 && session.authenticated) { showAccess({ authenticated: false, setupRequired: false }); inform('L’accesso è scaduto. Accedi di nuovo per continuare.', true); input(loginForm, 'email').focus(); }
-        throw new Error(data?.error?.message || 'Non è stato possibile completare l’operazione. Riprova tra poco.');
+        throw Object.assign(new Error(data?.error?.message || 'Non è stato possibile completare l’operazione. Riprova tra poco.'), { status: response.status });
       }
       return data as T;
     }
@@ -400,6 +400,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
       setupForm.hidden = !activationToken;
       loginForm.hidden = setup || reset;
       el('[data-setup-cancel]').hidden = !reset;
+      // A reset keeps the current login email: the field is shown only for the first activation.
+      const setupEmail = input(setupForm, 'email'); setupEmail.required = !reset; (setupEmail.closest('label') as HTMLElement).hidden = reset;
       if (lastEmail) { input(loginForm, 'email').value = lastEmail; input(setupForm, 'email').value = lastEmail; }
     }
 
@@ -466,8 +468,18 @@ import CustomerDirectory from './CustomerDirectory.astro';
         // Online bookings appear in Agenda and Oggi without pressing Aggiorna, unless Jessica is editing there.
         const calendarPanel = el('[data-panel=calendar]');
         const calendarQuiet = !calendarPanel.hidden && el('[data-editor]').hidden && el('[data-block-editor]').hidden && !calendarPanel.querySelector('[data-inline-action]') && !document.activeElement?.closest('[data-panel=calendar] .calendar-days');
-        if (activePanel === 'overview' && !busy) await loadOperations();
-        else if (calendarQuiet && !busy) { const { from, to } = period(); const query = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`; const [items, pauses] = await Promise.all([api<{ items: Appointment[] }>(`/api/admin/appointments?${query}`), api<{ items: Block[] }>(`/api/admin/blocks?${query}`)]); if (session.authenticated && !busy && JSON.stringify([items.items, pauses.items]) !== JSON.stringify([appointments, blocks])) { appointments = items.items; blocks = pauses.items; renderCalendar(); } }
+        if (activePanel === 'overview' && !busy) {
+          const date = today();
+          const [items, pauses] = await Promise.all([api<{ items: Appointment[] }>(`/api/admin/appointments?from=${date}&to=${encodeURIComponent(addDays(date, 366))}`), api<{ items: Block[] }>(`/api/admin/blocks?from=${date}&to=${date}`)]);
+          const focusInOverview = Boolean(document.activeElement?.closest('[data-panel=overview]'));
+          if (session.authenticated && !busy && activePanel === 'overview' && !focusInOverview && JSON.stringify([items.items, pauses.items]) !== JSON.stringify([operationAppointments, operationBlocks])) { operationAppointments = items.items; operationBlocks = pauses.items; renderOperations(); }
+        } else if (calendarQuiet && !busy) {
+          const requested = period(); const query = `from=${encodeURIComponent(requested.from)}&to=${encodeURIComponent(requested.to)}`;
+          const [items, pauses] = await Promise.all([api<{ items: Appointment[] }>(`/api/admin/appointments?${query}`), api<{ items: Block[] }>(`/api/admin/blocks?${query}`)]);
+          const current = period();
+          const stillQuiet = !calendarPanel.hidden && el('[data-editor]').hidden && el('[data-block-editor]').hidden && !calendarPanel.querySelector('[data-inline-action]') && !document.activeElement?.closest('[data-panel=calendar] .calendar-days');
+          if (session.authenticated && !busy && stillQuiet && current.from === requested.from && current.to === requested.to && JSON.stringify([items.items, pauses.items]) !== JSON.stringify([appointments, blocks])) { appointments = items.items; blocks = pauses.items; renderCalendar(); }
+        }
       } catch { /* Un aggiornamento in background non interrompe il lavoro; resta disponibile Aggiorna richieste. */ }
       finally { backgroundRefreshing = false; }
     }
@@ -818,8 +830,11 @@ import CustomerDirectory from './CustomerDirectory.astro';
     }
 
     /** Closures are saved on their own, without waiting for the rest of the settings form. */
-    async function saveClosures(next: string[], message: string) {
+    async function saveClosures(change: { add?: string; remove?: string }, message: string) {
       await act(null, async () => {
+        // Start from the closures saved on the server, so another device's changes are kept.
+        const current = (await api<Settings>('/api/admin/settings')).closedDates;
+        const next = [...new Set([...current.filter(value => value !== change.remove), ...(change.add ? [change.add] : [])])].sort();
         const saved = await api<Settings>('/api/admin/settings', 'PATCH', { closedDates: next });
         if (settings) settings = { ...settings, closedDates: saved.closedDates };
         closedDatesDraft = [...saved.closedDates]; renderClosedDates(); inform(message);
@@ -831,7 +846,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       if (!closedDatesDraft.length) { list.replaceChildren(textNode('li', 'Non ci sono chiusure straordinarie.', 'agenda-note')); return; }
       list.replaceChildren(...closedDatesDraft.map(date => {
         const item = textNode('li', '', 'closure-item'); const button = textNode('button', 'Rimuovi', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; button.setAttribute('aria-label', `Rimuovi la chiusura del ${prettyDate(date, false)}`);
-        on(button, 'click', () => { void saveClosures(closedDatesDraft.filter(value => value !== date), `Chiusura del ${prettyDate(date, false)} rimossa: il giorno torna prenotabile secondo gli orari.`); });
+        on(button, 'click', () => { void saveClosures({ remove: date }, `Chiusura del ${prettyDate(date, false)} rimossa: il giorno torna prenotabile secondo gli orari.`); });
         item.append(textNode('span', prettyDate(date)), button); return item;
       }));
     }
@@ -933,7 +948,15 @@ import CustomerDirectory from './CustomerDirectory.astro';
     }
 
     on(loginForm, 'submit', event => { event.preventDefault(); void act(loginForm, async () => { showAccess(await api<Session>('/api/auth/login', 'POST', { email: input(loginForm, 'email').value.trim(), password: input(loginForm, 'password').value, remember: input(loginForm, 'remember').checked })); input(loginForm, 'password').value = ''; await loadAll(); showPanel('overview'); inform('Accesso riuscito. La tua area privata è pronta.'); }); });
-    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const resetting = !session.setupRequired; showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim(), remember: input(setupForm, 'remember').checked })); activationToken = ''; setupForm.reset(); await loadAll(); showPanel('overview'); inform(resetting ? 'Nuova password salvata. Sei collegata; gli altri dispositivi sono stati scollegati.' : 'Area privata attivata. Le richieste del calendario sono nella sezione Richieste.'); }); });
+    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const resetting = !session.setupRequired;
+      let next: Session;
+      try { next = await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, ...(resetting ? {} : { email: input(setupForm, 'email').value.trim() }), remember: input(setupForm, 'remember').checked }); }
+      catch (error) {
+        // A link already used or expired: go back to the normal login, with the reason.
+        if (resetting && [403, 409].includes((error as { status?: number }).status ?? 0)) { activationToken = ''; setupForm.reset(); showAccess({ authenticated: false, setupRequired: false }); inform(`${(error as Error).message}`, true); input(loginForm, 'password').focus(); return; }
+        throw error;
+      }
+      showAccess(next); activationToken = ''; setupForm.reset(); await loadAll(); showPanel('overview'); inform(resetting ? 'Nuova password salvata. Sei collegata; gli altri dispositivi sono stati scollegati.' : 'Area privata attivata. Le richieste del calendario sono nella sezione Richieste.'); }); });
     on(el('[data-logout]'), 'click', () => { void act(null, async () => { await api('/api/auth/logout', 'POST', {}); activationToken = ''; showAccess({ authenticated: false, setupRequired: false }); loginForm.reset(); input(loginForm, 'email').value = lastEmail || root.dataset.ownerEmail || ''; inform('Sei uscita dall’agenda.'); input(loginForm, 'email').focus(); }); });
     on(el('[data-new]'), 'click', () => openEditor(undefined, el('[data-new]')));
     on(el('[data-editor-keep]'), 'click', () => { if (busy) return; pendingEditorTransition = null; el('[data-editor-guard]').hidden = true; focus('#editor-title'); });
@@ -962,8 +985,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
           return { opens: start.value, closes: end.value };
         }) : []; return { day: day.day, label: day.label, ranges };
       });
-      const closedDates = [...closedDatesDraft];
-      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), bookingLeadMinutes: Number(input(settingsForm, 'bookingLeadMinutes').value), customerChangesEnabled: input(settingsForm, 'customerChangesEnabled').checked, customerChangeNoticeHours: Number(input(settingsForm, 'customerChangeNoticeHours').value), openingHours, closedDates, economyMode: input(settingsForm, 'economyMode').checked, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); settingsDirty = false; await loadAll(); inform('Impostazioni salvate.');
+      await api('/api/admin/settings', 'PATCH', { requestEnabled: input(settingsForm, 'requestEnabled').checked, bookingEnabled: input(settingsForm, 'bookingEnabled').checked, bookingDays: Number(input(settingsForm, 'bookingDays').value), bookingLeadMinutes: Number(input(settingsForm, 'bookingLeadMinutes').value), customerChangesEnabled: input(settingsForm, 'customerChangesEnabled').checked, customerChangeNoticeHours: Number(input(settingsForm, 'customerChangeNoticeHours').value), openingHours, economyMode: input(settingsForm, 'economyMode').checked, reminderTime: input(settingsForm, 'reminderTime').value, dailyReminderLimit: Number(input(settingsForm, 'dailyReminderLimit').value), monthlyReminderLimit: Number(input(settingsForm, 'monthlyReminderLimit').value) }); settingsDirty = false; await loadAll(); inform('Impostazioni salvate.');
     }); });
     on(passwordForm, 'submit', event => { event.preventDefault(); void act(passwordForm, async () => { const password = input(passwordForm, 'password').value; if (password !== input(passwordForm, 'confirmation').value) { input(passwordForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const result = await api<Session>('/api/admin/password', 'POST', { currentPassword: input(passwordForm, 'currentPassword').value, password }); if (result.csrfToken) showAccess(result); else showAccess(await api<Session>('/api/auth/session')); passwordForm.reset(); inform('Password aggiornata. Gli altri accessi sono stati chiusi.'); }); });
 
@@ -973,7 +995,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(document, 'agenda:authentication-expired', () => { if (!session.authenticated) return; showAccess({ authenticated: false, setupRequired: false }); inform('L’accesso è scaduto. Accedi di nuovo per continuare.', true); input(loginForm, 'email').focus(); });
     on(document, 'agenda:configuration-changed', () => { if (!session.authenticated) return; void api<Automation>('/api/admin/automation').then(next => { if (!session.authenticated || lifetime.signal.aborted) return; automation = next; renderAutomation(next); renderOverview(); }).catch(() => {}); });
     on(document, 'agenda:new-appointment', event => { if (!session.authenticated || busy) return; const detail = (event as CustomEvent<{ name: string; phone: string; serviceId?: string; title?: string; durationMinutes?: number }>).detail; if (!detail || typeof detail.name !== 'string' || typeof detail.phone !== 'string') return; const serviceId = typeof detail.serviceId === 'string' && services.some(service => service.id === detail.serviceId) ? detail.serviceId : ''; const title = typeof detail.title === 'string' ? detail.title.slice(0, 100) : ''; const durationMinutes = Number.isInteger(detail.durationMinutes) && detail.durationMinutes! >= 5 && detail.durationMinutes! <= 480 ? detail.durationMinutes : undefined; showPanel('calendar', false); openEditor(undefined, undefined, { name: detail.name.slice(0, 100), phone: detail.phone, serviceId, title, durationMinutes, date: '' }); });
-    on(settingsForm, 'input', () => { settingsDirty = true; renderCostPreview(); }); on(settingsForm, 'change', () => { settingsDirty = true; renderCostPreview(); });
+    const markSettingsDirty = (event: Event) => { if ((event.target as HTMLElement | null)?.matches('[data-closure-date]')) return; settingsDirty = true; renderCostPreview(); };
+    on(settingsForm, 'input', markSettingsDirty); on(settingsForm, 'change', markSettingsDirty);
     on(el('[data-service-search]'), 'input', () => { serviceSearch = el<HTMLInputElement>('[data-service-search]').value; renderServices(); });
     on(el('[data-service-visibility]'), 'change', () => { serviceVisibility = el<HTMLSelectElement>('[data-service-visibility]').value; renderServices(); });
     on(el('[data-service-create-restart]'), 'click', () => serviceCreationTransition(() => { resetServiceCreation(); input(createServiceForm, 'name').focus(); }));
@@ -994,7 +1017,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       const control = el<HTMLInputElement>('[data-closure-date]'); if (!control.value || !/^\d{4}-\d{2}-\d{2}$/.test(control.value)) { control.focus(); inform('Scegli il giorno di chiusura.', true); return; }
       if (closedDatesDraft.includes(control.value)) { inform('Questo giorno è già tra le chiusure.'); return; }
       const added = control.value;
-      void saveClosures([...closedDatesDraft, added].sort(), `Chiusura del ${prettyDate(added, false)} salvata: le clienti non possono prenotare quel giorno.`).then(() => { if (closedDatesDraft.includes(added)) control.value = ''; });
+      void saveClosures({ add: added }, `Chiusura del ${prettyDate(added, false)} salvata: le clienti non possono prenotare quel giorno.`).then(() => { if (closedDatesDraft.includes(added)) control.value = ''; });
     });
     on(backupForm, 'submit', event => { event.preventDefault(); void act(backupForm, async () => {
       const response = await fetch('/api/admin/backup', { method: 'POST', credentials: 'same-origin', signal: lifetime.signal, headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ currentPassword: input(backupForm, 'currentPassword').value }) });

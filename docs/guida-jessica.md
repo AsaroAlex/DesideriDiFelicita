@@ -50,7 +50,8 @@ In alto trovi quattro sezioni: **Oggi · Richieste · Agenda · Clienti**.
    Una richiesta **non occupa l'agenda** finché non la confermi.
 3. **Agenda** — la giornata o la settimana. Da qui puoi:
    - **Nuovo appuntamento** per chi prenota al telefono o in salone
-     (il numero si scrive normalmente, es. `333 123 4567`: il +39 lo aggiunge l'agenda);
+     (il cellulare si scrive normalmente, es. `333 123 4567`: il +39 lo aggiunge l'agenda;
+     per fissi e numeri esteri scrivi il prefisso, es. `+39 051 123456`, `+40 722 123 456`);
    - **Aggiungi pausa** per bloccare un periodo (pranzo, commissioni…);
    - su ogni appuntamento: **Modifica**, **Sposta**, **Annulla appuntamento**,
      **Chiama**, **Scrivi su WhatsApp**, e dopo il servizio **Segna terminato** o **Segna assente**.

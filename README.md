@@ -85,6 +85,8 @@ servizio sempre attivo (niente sleep: i promemoria hanno bisogno del timer) e qu
 
 - **Jessica ha dimenticato la password** → `npm run link-accesso`, imposta su Railway le due
   variabili stampate, attendi il riavvio e manda a Jessica il link. Vale una volta sola e scade.
+  (Dopo il primo deploy di questa versione il link configurato in precedenza viene considerato
+  già usato: genera il nuovo link *dopo* quel deploy.)
 - **Dominio personalizzato** → aggiungilo in Railway → Networking, configura i DNS indicati,
   imposta `SITE_URL` e `APP_ORIGIN` con il nuovo indirizzo e ripubblica; aggiorna anche
   `PRODUCTION_URL` in `.github/workflows/deploy.yml` e in `astro.config.mjs`.

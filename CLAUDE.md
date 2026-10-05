@@ -157,7 +157,7 @@ la mappa è attiva, niente badge "da confermare".
 - URL pubblico: https://desideri-di-felicita-production.up.railway.app/
 - Ramo: `main` (dal 2026-10-05 unico branch; prima era `codex/railway-deploy`).
 - Installazione riproducibile: `npm ci`; build: `npm run build`; output: `dist/`.
-- `railway.json` usa Railpack, avvio `npm start` e healthcheck `/`. Il server
+- `railway.json` usa Railpack, avvio `node server/index.mjs` e healthcheck `/api/health`. Il server
   statico di produzione ascolta su `0.0.0.0` alla porta `PORT` assegnata da Railway
   (predefinita `3000` in locale).
 - `astro.config.mjs` mantiene il default GitHub Pages, ma su Railway usa

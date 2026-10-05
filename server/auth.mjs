@@ -87,7 +87,10 @@ export function createAuth({ store, config, now = Date.now }) {
   // never become a password-reset link. Later links are tracked when used.
   store.transaction(() => {
     if (usedLinks() !== null) return;
-    saveUsedLinks.run(USED_LINKS_KEY, JSON.stringify(config.bootstrapToken && ownerQuery.get() ? [linkHash(config.bootstrapToken)] : []));
+    const marked = Boolean(config.bootstrapToken && ownerQuery.get());
+    saveUsedLinks.run(USED_LINKS_KEY, JSON.stringify(marked ? [linkHash(config.bootstrapToken)] : []));
+    // No secret is logged: only that a new access link must be generated after this deploy.
+    if (marked) console.log('Access links: the configured link was marked as already used. Generate a new one with npm run link-accesso if needed.');
   });
   const sessionShape = (session) => session
     ? { authenticated: true, email: session.email, csrfToken: session.csrfToken }
