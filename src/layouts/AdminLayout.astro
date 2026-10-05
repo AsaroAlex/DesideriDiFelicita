@@ -18,12 +18,19 @@ const { title = 'Area Jessica' } = Astro.props;
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#2459c8" />
     <title>{title} · {site.businessName}</title>
+    <link rel="icon" href={withBase('favicon.ico')} sizes="32x32" />
     <link rel="icon" href={withBase('favicon.svg')} type="image/svg+xml" />
+    <!-- «Aggiungi a schermata Home» apre direttamente l’agenda, come un’app. -->
+    <link rel="manifest" href={withBase('admin.webmanifest')} />
+    <link rel="apple-touch-icon" href={withBase('apple-touch-icon.png')} />
+    <meta name="apple-mobile-web-app-title" content="Agenda" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <ClientRouter />
   </head>
   <body class="admin-shell">
     <a class="skip-link" href="#main">Salta al contenuto</a>
-    <header class="admin-topbar"><div class="container"><a class="admin-brand" href={withBase('/admin')}>{site.businessName}<span>Area Jessica</span></a><a class="admin-back" href={withBase('/')}>Vai al sito del salone ↗</a></div></header>
+    <header class="admin-topbar"><div class="container"><a class="admin-brand" href={withBase('/admin')}>{site.businessName}<span>Area Jessica</span></a><a class="admin-back" href={withBase('/')} target="_blank" rel="noopener">Vai al sito del salone ↗</a></div></header>
     <main id="main"><slot /></main>
     <footer class="admin-footer"><div class="container">Area privata di Jessica · Gli orari sono quelli del salone, in Italia.</div></footer>
   </body>

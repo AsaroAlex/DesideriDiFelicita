@@ -192,6 +192,18 @@ test('requests and instant bookings also share the global hourly limit across cl
   assert.equal(rejected.status, 429);
 });
 
+test('a client over its own hourly budget does not consume the shared budget of other clients', async (t) => {
+  const { call } = await fixture(t, { trustProxy: 'railway' });
+  const send = (ip) => call('/api/public/requests', { method: 'POST', body: {}, headers: { 'x-real-ip': ip } });
+  for (let index = 0; index < 10; index++) assert.notEqual((await send('198.51.100.1')).status, 429);
+  // Rejected attempts from the same client never reach the global counter.
+  for (let index = 0; index < 100; index++) assert.equal((await send('198.51.100.1')).status, 429);
+  for (let index = 0; index < 50; index++) {
+    assert.notEqual((await send(`198.51.100.${Math.floor(index / 10) + 2}`)).status, 429);
+  }
+  assert.equal((await send('198.51.100.200')).status, 429);
+});
+
 test('pausing requests preserves configured instant booking and masks unconfigured calendar preferences', async (t) => {
   const { app, call, setup, submit } = await fixture(t);
   app.store.updateService('taglio', { durationMinutes: 45, enabled: true }, NOW);

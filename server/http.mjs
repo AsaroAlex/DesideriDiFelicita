@@ -122,10 +122,15 @@ function csvCell(value) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+const CSV_STATUS = { confirmed: 'Confermato', cancelled: 'Annullato' };
+const CSV_OUTCOME = { scheduled: 'In programma', completed: 'Svolto', no_show: 'Assente' };
+
+/** Excel in Italian reads «;» as the column separator; the BOM keeps accents readable. */
 export function appointmentsCsv(appointments) {
-  const headers = ['Riferimento', 'Stato', 'Servizio', 'Data', 'Ora', 'Durata minuti', 'Cliente', 'Telefono', 'Consenso promemoria'];
-  const rows = appointments.map((item) => [item.reference, item.status, item.title, item.date, item.time, item.durationMinutes, item.name, item.phone, item.reminderConsent ? 'Sì' : 'No']);
-  return '\uFEFF' + [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  const headers = ['Riferimento', 'Stato', 'Esito', 'Servizio', 'Data', 'Ora', 'Durata minuti', 'Cliente', 'Telefono', 'Consenso promemoria', 'Note'];
+  const rows = appointments.map((item) => [item.reference, CSV_STATUS[item.status] ?? item.status, item.status === 'cancelled' ? '' : CSV_OUTCOME[item.outcome ?? 'scheduled'] ?? '', item.title,
+    item.date.split('-').reverse().join('/'), item.time, item.durationMinutes, item.name, item.phone, item.reminderConsent ? 'Sì' : 'No', item.notes ?? '']);
+  return '\uFEFF' + [headers, ...rows].map((row) => row.map(csvCell).join(';')).join('\r\n') + '\r\n';
 }
 
 function securityHeaders(response, { privatePage, https }) {
@@ -241,8 +246,10 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
     }
     if (method === 'POST' && (path === '/api/public/bookings' || path === '/api/public/requests')) {
       // Both customer flows share one budget, so alternating endpoints cannot bypass it.
-      limit('bookings:global', 60, 3_600_000);
+      // The per-client check runs first: requests it rejects never consume the
+      // global budget, so one client cannot block bookings for everyone else.
       limit(`bookings:${ip}`, 10, 3_600_000);
+      limit('bookings:global', 60, 3_600_000);
       const body = await jsonBody(request);
       const kind = path.endsWith('/requests') ? 'request' : 'appointment';
       const result = store.transaction(() => {
@@ -253,8 +260,9 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
     }
     if (method === 'GET' && path === '/api/auth/session') return json(response, 200, sessionResult(auth.getSession(request)));
     if (method === 'POST' && (path === '/api/auth/setup' || path === '/api/auth/login')) {
-      limit('auth:global', 100, 900_000);
+      // Per-client first, as above: a single client cannot lock the owner out.
       limit(`auth:${ip}`, 5, 900_000);
+      limit('auth:global', 100, 900_000);
       const result = await auth[path.endsWith('/setup') ? 'setup' : 'login'](await jsonBody(request));
       response.setHeader('Set-Cookie', result.cookie);
       return json(response, path.endsWith('/setup') ? 201 : 200, sessionResult(result.session));
@@ -404,6 +412,9 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
       await serveHandler(request, response, options);
     } catch (error) {
       if (response.writableEnded || response.destroyed) return;
+      // A failure after the headers were sent (for example a download stream)
+      // cannot become a JSON error: close the connection instead.
+      if (response.headersSent) { response.destroy(); return; }
       response.setHeader('Cache-Control', 'no-store');
       if (error.retryAfter) response.setHeader('Retry-After', String(error.retryAfter));
       const status = error instanceof DomainError ? error.status : 500;
@@ -415,7 +426,14 @@ export function createApp({ config, store: suppliedStore, reminderRunner: suppli
     }
   }
 
-  const server = createServer({ maxHeaderSize: 16 * 1024 }, handler);
+  // The handler already answers every error; this guard only keeps an
+  // unexpected rejection from terminating the process.
+  const server = createServer({ maxHeaderSize: 16 * 1024 }, (request, response) => {
+    handler(request, response).catch(() => {
+      console.error('Application request failed.');
+      if (!response.destroyed) response.destroy();
+    });
+  });
   server.requestTimeout = 30_000;
   server.headersTimeout = 15_000;
   server.keepAliveTimeout = 5_000;

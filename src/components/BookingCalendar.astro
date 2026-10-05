@@ -1,6 +1,6 @@
 ---
 import { site } from '../data/site';
-import { salonQuestionMessage, whatsappHref } from '../lib/contact';
+import { salonQuestionMessage, telHref, whatsappHref } from '../lib/contact';
 import { withBase } from '../lib/href';
 
 const message = salonQuestionMessage(site.ownerName);
@@ -95,7 +95,7 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
         <div>
           <label class="booking__label" for="booking-phone">Numero di telefono</label>
           <input id="booking-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="Es. 333 123 4567" maxlength="25" required data-phone aria-describedby="booking-phone-help" />
-          <p class="booking__help" id="booking-phone-help">Per i numeri italiani basta il cellulare. Per i numeri esteri aggiungi il prefisso internazionale.</p>
+          <p class="booking__help" id="booking-phone-help">Per i numeri italiani non serve il +39. Per i numeri esteri aggiungi il prefisso internazionale.</p>
         </div>
       </div>
       <div class="booking__notes">
@@ -109,13 +109,14 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
       </label>
       <p class="booking__help">
         Il promemoria è facoltativo. Usiamo i tuoi recapiti per gestire
-        l’appuntamento: <a href={withBase('privacy/')}>leggi l’informativa privacy</a>.
+        l’appuntamento: <a href={withBase('privacy/')} target="_blank" rel="noopener">leggi l’informativa privacy</a>.
       </p>
-      <p class="booking__submit-status" data-submit-status role="status" aria-live="polite" hidden></p>
       <button class="btn btn--primary booking__submit" type="submit" data-submit disabled>
         Invia richiesta
       </button>
     </fieldset>
+    <!-- Fuori dal pannello recapiti: resta visibile anche quando gli orari vengono ricaricati. -->
+    <p class="booking__submit-status" data-submit-status role="status" aria-live="polite" hidden></p>
   </form>
 
   <section class="booking__confirmation booking__panel" data-confirmation hidden aria-labelledby="booking-confirmation-title">
@@ -136,7 +137,8 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
   </section>
 
   <p class="booking__support" data-booking-support>
-    Hai una domanda? <a data-fallback-link href={fallbackHref} target="_blank" rel="noopener">Scrivi al salone su WhatsApp</a>.
+    Hai una domanda? <a data-fallback-link href={fallbackHref} target="_blank" rel="noopener">Scrivi al salone su WhatsApp</a>
+    oppure chiama il <a href={telHref(site.phone)}>{site.phone}</a>.
   </p>
   <noscript>
     <p class="booking__status">Per usare il calendario attiva JavaScript nel browser. Puoi anche chiamare il salone al <a href={`tel:${site.phone.replace(/[^\d+]/g, '')}`}>{site.phone}</a>.</p>
@@ -184,11 +186,24 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
   class BookingApiError extends Error {
     status: number;
     code: string;
-    constructor(status: number, code = '') {
+    /** Messaggio in italiano già pensato per le clienti, inviato dal server. */
+    serverMessage: string;
+    constructor(status: number, code = '', serverMessage = '') {
       super(code || 'booking_request_failed');
       this.status = status;
       this.code = code;
+      this.serverMessage = typeof serverMessage === 'string' ? serverMessage.slice(0, 300) : '';
     }
+  }
+
+  function newRequestId(): string {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    // Safari < 15.4: stessa forma di UUID v4 con crypto.getRandomValues.
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
 
   const monthFormatter = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -261,9 +276,11 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
   }
 
   function normalizeClientPhone(value: string): string {
-    const cleaned = value.trim().replace(/[\s().-]/g, '');
+    const cleaned = value.trim().replace(/[\s().\/-]/g, '');
     if (cleaned.startsWith('00')) return `+${cleaned.slice(2)}`;
-    if (/^3\d{8,9}$/.test(cleaned)) return `+39${cleaned}`;
+    // Numeri italiani scritti senza prefisso: cellulare (3…) o fisso (0…).
+    if (/^(?:3\d{8,9}|0\d{5,10})$/.test(cleaned)) return `+39${cleaned}`;
+    if (/^39(?:3\d{8,9}|0\d{5,10})$/.test(cleaned)) return `+${cleaned}`;
     return cleaned;
   }
 
@@ -359,9 +376,22 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
       target.addEventListener(event, listener, { signal: lifecycle.signal });
     };
 
+    const latestMessage = new WeakMap<HTMLElement, string>();
     const showMessage = (target: HTMLElement, message: string) => {
-      target.textContent = message;
-      target.hidden = !message;
+      latestMessage.set(target, message);
+      if (!message || !target.hidden) {
+        target.textContent = message;
+        target.hidden = !message;
+        return;
+      }
+      // A live region that appears together with its text is often not read
+      // aloud: show the empty region first, then write the latest message.
+      target.textContent = '';
+      target.hidden = false;
+      requestAnimationFrame(() => {
+        const latest = latestMessage.get(target);
+        if (latest && !target.hidden && target.textContent !== latest) target.textContent = latest;
+      });
     };
 
     function service(): BookingService | undefined {
@@ -403,6 +433,7 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
       if (chosenService?.durationMinutes) meta.push(`${chosenService.durationMinutes} minuti`);
       if (chosenService) meta.push(chosenService.priceCents === null ? 'Prezzo su richiesta'
         : `${chosenService.priceFrom ? 'Da ' : ''}${priceFormatter.format(chosenService.priceCents / 100)}`);
+      if (chosenService) meta.push(requested ? 'Jessica ti conferma l’orario' : 'Conferma immediata');
       serviceDuration.textContent = meta.join(' · ');
       serviceDescription.textContent = chosenService?.description || '';
       serviceDescriptionWrap.hidden = !chosenService?.description;
@@ -455,7 +486,7 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
           throw new BookingApiError(response.status || 502);
         }
         const value = await response.json();
-        if (!response.ok) throw new BookingApiError(response.status, value?.error?.code);
+        if (!response.ok) throw new BookingApiError(response.status, value?.error?.code, value?.error?.message);
         return { value, status: response.status };
       } finally {
         window.clearTimeout(timeout);
@@ -510,7 +541,9 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
           button.textContent = String(dayValue(date).getUTCDate());
           button.setAttribute('aria-label', `${dayFormatter.format(dayValue(date))}${dateIsOpen(date) ? '' : ', salone chiuso'}`);
           button.setAttribute('aria-pressed', String(date === selectedDate));
-          button.disabled = date < config.today || date > maxDate || !dateIsOpen(date) || submitting;
+          const unavailable = date < config.today || date > maxDate || !dateIsOpen(date);
+          button.classList.toggle('is-unavailable', unavailable);
+          button.disabled = unavailable || submitting;
           button.tabIndex = !button.disabled && date === focusDay ? 0 : -1;
           if (date === config.today) button.setAttribute('aria-current', 'date');
           cell.append(button);
@@ -694,7 +727,7 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
         updateSelection();
       } catch {
         if (controller.signal.aborted || lifecycle.signal.aborted) return;
-        showMessage(status, 'Il calendario non si è caricato. Premi Ricarica il calendario per riprovare.');
+        showMessage(status, 'Il calendario non si è caricato. Premi Ricarica il calendario oppure contatta il salone su WhatsApp o al telefono: trovi i contatti qui sotto.');
         configRetry.hidden = false;
       }
     }
@@ -738,7 +771,14 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
     });
     on(calendar, 'click', (event) => {
       const button = (event.target as Element).closest<HTMLButtonElement>('[data-day]');
-      if (button && !button.disabled) chooseDate(button.dataset.day!, true);
+      if (!button || button.disabled) return;
+      chooseDate(button.dataset.day!, true);
+      // On a phone the times are below the calendar: bring them into view after a tap
+      // (detail > 0 means a pointer, so keyboard users keep their place in the grid).
+      const timesPanel = root!.querySelector<HTMLElement>('.booking__times-panel');
+      if ((event as MouseEvent).detail > 0 && timesPanel && matchMedia('(max-width: 839px)').matches && timesPanel.getBoundingClientRect().top > window.innerHeight * 0.6) {
+        timesPanel.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      }
     });
     on(calendar, 'keydown', (event) => {
       const keyboard = event as KeyboardEvent;
@@ -876,11 +916,11 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
         const name = nameInput.value.trim();
         const phone = normalizeClientPhone(phoneInput.value);
         if (name.length < 2) nameInput.setCustomValidity('Inserisci il tuo nome e cognome.');
-        if (!/^\+[1-9]\d{7,14}$/.test(phone)) phoneInput.setCustomValidity('Inserisci un cellulare italiano oppure un numero con prefisso internazionale.');
+        if (!/^\+[1-9]\d{7,14}$/.test(phone)) phoneInput.setCustomValidity('Controlla il numero di telefono. Per i numeri esteri aggiungi il prefisso internazionale, per esempio +40.');
         if (!form.reportValidity()) return;
         const payload = { serviceId: serviceSelect.value, date: selectedDate, time: selectedTime, name, phone, reminderConsent: reminderInput.checked, notes: notesInput.value.trim() };
         const payloadKey = JSON.stringify(payload);
-        if (requestPayloadKey !== payloadKey) { requestPayloadKey = payloadKey; requestId = crypto.randomUUID(); }
+        if (requestPayloadKey !== payloadKey) { requestPayloadKey = payloadKey; requestId = newRequestId(); }
         postBody = JSON.stringify({ ...payload, clientRequestId: requestId });
         uncertainBody = postBody;
         uncertainRequested = requested;
@@ -941,23 +981,35 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
         root!.querySelector<HTMLElement>('#booking-confirmation-title')!.focus();
       } catch (error) {
         if (controller.signal.aborted || lifecycle.signal.aborted) return;
-        if (retryingUncertain) {
+        // A definitive answer (4xx other than 429) ends the uncertain state:
+        // the salon has answered, so the form must become usable again.
+        const definitive = error instanceof BookingApiError && error.status >= 400 && error.status < 500 && error.status !== 429;
+        if (retryingUncertain && definitive) { uncertainSubmission = false; uncertainBody = ''; }
+        const showSubmitError = (text: string) => {
+          showMessage(submitStatus, text);
+          requestAnimationFrame(() => submitStatus.scrollIntoView({ block: 'center', behavior: 'auto' }));
+        };
+        if (retryingUncertain && !definitive) {
           uncertainSubmission = true;
           showMessage(submitStatus, error instanceof BookingApiError && error.status === 429
             ? 'Aspetta qualche minuto, poi riprova lo stesso invio per verificare l’esito.'
             : 'Non abbiamo ancora ricevuto l’esito. Puoi riprovare lo stesso invio oppure chiedere una verifica al salone.');
-        } else if (error instanceof BookingApiError && ['request_disabled', 'booking_disabled'].includes(error.code)) {
-          showMessage(submitStatus, 'Le prenotazioni sono cambiate. Aggiorniamo il calendario per mostrarti le opzioni attuali.');
+        } else if (error instanceof BookingApiError && ['request_disabled', 'booking_disabled', 'date_out_of_range'].includes(error.code)) {
+          showSubmitError(error.code === 'date_out_of_range'
+            ? 'Il calendario è stato aggiornato alla data di oggi: scegli di nuovo il giorno e l’orario.'
+            : 'Le prenotazioni sono cambiate. Aggiorniamo il calendario per mostrarti le opzioni attuali.');
           void loadConfig();
         } else if (error instanceof BookingApiError && error.status === 409) {
-          showMessage(submitStatus, requested
-            ? 'Questo orario non può più essere richiesto. Abbiamo aggiornato gli orari: scegli un’altra preferenza.'
-            : 'Questo orario è stato appena prenotato. Abbiamo aggiornato le disponibilità: scegli un altro orario.');
+          showSubmitError(requested
+            ? 'Questo orario non può più essere richiesto. Abbiamo aggiornato gli orari: scegli un’altra preferenza, i tuoi recapiti restano compilati.'
+            : 'Questo orario è stato appena prenotato. Abbiamo aggiornato le disponibilità: scegli un altro orario, i tuoi recapiti restano compilati.');
           void loadSlots();
+        } else if (error instanceof BookingApiError && error.code === 'booking_limit') {
+          showSubmitError('Hai già tre appuntamenti o richieste in programma. Per prenotarne altri contatta direttamente il salone su WhatsApp o al telefono.');
         } else if (error instanceof BookingApiError && error.status === 429) {
-          showMessage(submitStatus, 'Hai inviato diverse richieste in poco tempo. Aspetta qualche minuto, poi riprova.');
+          showSubmitError('Hai inviato diverse richieste in poco tempo. Aspetta qualche minuto, poi riprova.');
         } else if (error instanceof BookingApiError && error.status >= 400 && error.status < 500) {
-          showMessage(submitStatus, 'Non abbiamo potuto registrare i dati. Controlla i recapiti e l’orario scelto, poi riprova.');
+          showSubmitError(error.serverMessage || 'Non abbiamo potuto registrare i dati. Controlla i recapiti e l’orario scelto, poi riprova.');
           if (!requested) void loadSlots();
         } else {
           uncertainSubmission = true;
@@ -967,7 +1019,9 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
         if (!lifecycle.signal.aborted) {
           submitting = false;
           form.removeAttribute('aria-busy');
-          fields.forEach((field, index) => { field.disabled = originallyDisabled[index]; });
+          // Leaving the uncertain state re-enables the fields it had locked.
+          const unlocked = retryingUncertain && !uncertainSubmission;
+          fields.forEach((field, index) => { field.disabled = unlocked ? false : originallyDisabled[index]; });
           updateSelection();
           renderCalendar();
         }
@@ -1126,10 +1180,22 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
     width: 100%;
     min-height: 2.75rem;
     padding: 0.2rem;
-    border: 1px solid transparent;
+    /* Bookable days must read as buttons: visible border and darker text. */
+    border: 1px solid color-mix(in srgb, var(--color-primary) 38%, #fff);
     border-radius: var(--radius-sm);
-    background: var(--color-surface-alt);
+    background: #fff;
+    color: var(--color-ink);
+    font-weight: 600;
     cursor: pointer;
+  }
+  .booking__calendar :global(.booking-day.is-unavailable) {
+    border-color: transparent;
+    background: transparent;
+    color: #8792a5;
+    font-weight: 400;
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, #8792a5 60%, transparent);
+    cursor: default;
   }
   .booking__calendar :global(.booking-day:hover:not(:disabled)) {
     border-color: var(--color-primary);
@@ -1155,9 +1221,6 @@ const fallbackHref = whatsappHref(site.whatsapp, message);
     grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
     gap: var(--space-xs);
     margin-top: var(--space-md);
-    max-height: 22rem;
-    overflow-y: auto;
-    overscroll-behavior: contain;
     padding: 0.25rem;
   }
   .booking__slots :global(.booking-slot) {

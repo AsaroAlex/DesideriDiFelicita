@@ -47,7 +47,9 @@ import { withBase } from '../lib/href';
     if (!banner) return;
     let returnFocus: HTMLElement | null = null;
     watchConsentStorage();
-    banner.hidden = getConsent() !== null;
+    // The banner asks only where it matters: on pages that show the Google map.
+    // Elsewhere (for example while booking) it opens only from «Preferenze cookie».
+    banner.hidden = getConsent() !== null || !document.querySelector('[data-map]');
 
     function closeBanner() {
       banner!.hidden = true;
@@ -64,7 +66,7 @@ import { withBase } from '../lib/href';
     });
     window.addEventListener(CONSENT_CHANGE_EVENT, () => {
       if (getConsent()) closeBanner();
-      else banner.hidden = false;
+      else if (document.querySelector('[data-map]')) banner.hidden = false;
     }, { signal });
     window.addEventListener(CONSENT_OPEN_EVENT, ((event: CustomEvent) => {
       returnFocus = event.detail?.trigger instanceof HTMLElement ? event.detail.trigger : null;

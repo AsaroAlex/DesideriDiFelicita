@@ -8,8 +8,14 @@ const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerN
 <script is:inline data-astro-rerun>
   (() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const value = fragment.get('chiave') || '';
+    let value = fragment.get('chiave') || '';
     delete window.__desideriCustomerToken;
+    // La chiave resta solo in questa scheda (sessionStorage): sopravvive a un
+    // ricaricamento della pagina e si cancella quando la scheda viene chiusa.
+    try {
+      if (/^[A-Za-z0-9_-]{43}$/.test(value)) sessionStorage.setItem('desideri-appuntamento', value);
+      else value = sessionStorage.getItem('desideri-appuntamento') || '';
+    } catch { /* Storage non disponibile: resta valido il collegamento nell'indirizzo. */ }
     if (/^[A-Za-z0-9_-]{43}$/.test(value)) window.__desideriCustomerToken = value;
     if (window.location.hash || window.location.search) {
       window.history.replaceState(window.history.state, '', window.location.pathname);
@@ -147,8 +153,10 @@ const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerN
   let disposeCurrent: (() => void) | undefined;
 
   function initializeCustomer(force = false) {
-    const root = document.querySelector<HTMLElement>('[data-customer-appointment]');
-    if (!root || (root.dataset.customerReady === 'true' && !force)) return;
+    const found = document.querySelector<HTMLElement>('[data-customer-appointment]');
+    if (!found || (found.dataset.customerReady === 'true' && !force)) return;
+    // A non-null binding keeps the type narrowed inside the hoisted helpers below.
+    const root: HTMLElement = found;
     const transfer = window as Window & { __desideriCustomerToken?: string };
     let token = transfer.__desideriCustomerToken || new URLSearchParams(location.hash.slice(1)).get('chiave') || '';
     delete transfer.__desideriCustomerToken;
@@ -206,7 +214,14 @@ const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerN
       view = undefined;
     };
     const on = (target: EventTarget, name: string, listener: EventListener) => target.addEventListener(name, listener, { signal: lifecycle.signal });
-    const showMessage = (element: HTMLElement, value: string) => { element.textContent = value; element.hidden = !value; };
+    const latestMessage = new WeakMap<HTMLElement, string>();
+    // A live region shown together with its text is often not announced: reveal it empty, then write.
+    const showMessage = (element: HTMLElement, value: string) => {
+      latestMessage.set(element, value);
+      if (!value || !element.hidden) { element.textContent = value; element.hidden = !value; return; }
+      element.textContent = ''; element.hidden = false;
+      requestAnimationFrame(() => { const latest = latestMessage.get(element); if (latest && !element.hidden && element.textContent !== latest) element.textContent = latest; });
+    };
     const isBusy = () => reading || mutating || rangeLoading || downloading;
     function syncControls() {
       root.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button,input').forEach((element) => { element.disabled = isBusy() || expired; });
@@ -219,6 +234,7 @@ const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerN
     function denyAccess(missing = false) {
       expired = true;
       token = '';
+      try { sessionStorage.removeItem('desideri-appuntamento'); } catch { /* Nessuna copia da rimuovere. */ }
       copyUrl.value = '';
       copyUrl.hidden = true;
       view = undefined;
@@ -395,7 +411,8 @@ const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerN
           await loadView({ quiet: true });
           if (action === 'reschedule' && view?.canReschedule && !expired) await loadAvailability();
           showMessage(feedback, 'L’orario o lo stato è cambiato. Abbiamo aggiornato i dati: controlla il riepilogo e scegli di nuovo.');
-        } else showMessage(feedback, 'Non abbiamo ricevuto la risposta. Premi Aggiorna stato prima di riprovare, per verificare la tua scelta.');
+        } else if (error instanceof CustomerApiError && error.status === 429) showMessage(feedback, 'Hai effettuato diverse modifiche in poco tempo. Aspetta qualche minuto e riprova.');
+        else showMessage(feedback, 'Non abbiamo ricevuto la risposta. Premi Aggiorna stato prima di riprovare, per verificare la tua scelta.');
       } finally { if (!lifecycle.signal.aborted) { mutating = false; syncControls(); } }
     }
     on(copyLink, 'click', async () => {
@@ -444,7 +461,10 @@ const supportHref = whatsappHref(site.whatsapp, salonQuestionMessage(site.ownerN
       const button = (event.target as Element).closest<HTMLButtonElement>('[data-customer-day]');
       if (!button || button.disabled || isBusy()) return;
       selectedDate = button.dataset.customerDay!; selectedTime = ''; showMessage(moveMessage, ''); renderDays(); renderSlots();
+      dayButtons.querySelector<HTMLButtonElement>(`[data-customer-day="${selectedDate}"]`)?.focus({ preventScroll: true });
     });
+    // Enter in «Cerca a partire dal» searches, instead of confirming a time chosen earlier.
+    on(fromInput, 'keydown', (event) => { if ((event as KeyboardEvent).key === 'Enter') { event.preventDefault(); if (fromInput.reportValidity()) void loadAvailability(); } });
     on(slotButtons, 'change', (event) => {
       const input = event.target as HTMLInputElement;
       if (input.name !== 'customerTime' || !availableDays.find((day) => day.date === selectedDate)?.slots.some((slot) => slot.time === input.value)) return;

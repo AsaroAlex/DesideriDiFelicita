@@ -216,6 +216,15 @@ test('Railway client IP limits are independent and forwarded-header spoofing can
   assert.equal((await book({ 'x-real-ip': '198.51.100.30, 198.51.100.40' })).status, 429);
 });
 
+test('failed logins from one client cannot exhaust the owner login budget of other clients', async (t) => {
+  const { call, setup } = await fixture(t, { trustProxy: 'railway' });
+  assert.equal((await setup()).status, 201);
+  const login = (ip, password = 'password sbagliata 2026') => call('/api/auth/login', { method: 'POST', body: { email: business.email, password }, headers: { 'x-real-ip': ip } });
+  for (let index = 0; index < 5; index++) assert.equal((await login('198.51.100.66')).status, 401);
+  for (let index = 0; index < 150; index++) assert.equal((await login('198.51.100.66')).status, 429);
+  assert.equal((await login('198.51.100.7', PASSWORD)).status, 200);
+});
+
 test('webhook challenge and raw signature delivery work independently of browser Origin', async (t) => {
   const { call } = await fixture(t);
   const challenge = await call('/api/whatsapp/webhook?hub.challenge=123456');
@@ -233,4 +242,70 @@ test('CSV export quotes data and neutralizes spreadsheet formulas', () => {
   assert.ok(csv.includes('"\'=HYPERLINK(""bad"")"'));
   assert.ok(csv.includes('"\'+393501234567"'));
   assert.ok(csv.includes('"Taglio, piega"'));
+  // Italian Excel: semicolon separators, Italian labels and day/month/year dates.
+  assert.ok(csv.split('\r\n')[0].includes('"Riferimento";"Stato"'));
+  assert.ok(csv.includes('"Confermato";"In programma"'));
+  assert.ok(csv.includes('"05/10/2026"'));
+});
+
+test('a new private access link resets a forgotten password once and closes every old session', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'booking-reset-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const staticDir = join(directory, 'dist');
+  await mkdir(staticDir, { recursive: true });
+  let instant = Date.UTC(2026, 9, 4, 8);
+  async function start(bootstrapToken) {
+    const config = { origin: 'http://booking.test', host: '127.0.0.1', port: 0, dataDir: join(directory, 'data'), staticDir, business,
+      bootstrapToken, bootstrapExpiresAt: new Date(instant + 3_600_000).toISOString(), whatsapp: {} };
+    const runner = { start() {}, stop() {}, getStatus: () => ({ configured: false, missing: [] }), handleWebhook: () => ({ status: 404, body: {} }) };
+    const app = createApp({ config, reminderRunner: runner, now: () => instant });
+    const { port } = await app.start();
+    const call = async (path, body, cookie) => {
+      const response = await fetch(`http://127.0.0.1:${port}${path}`, { method: body ? 'POST' : 'GET', headers: { Origin: config.origin, ...(body ? { 'Content-Type': 'application/json' } : {}), ...(cookie ? { Cookie: cookie } : {}) }, body: body ? JSON.stringify(body) : undefined });
+      return { status: response.status, data: await response.json(), cookie: response.headers.get('set-cookie') };
+    };
+    return { app, call };
+  }
+  const first = await start(TOKEN);
+  const activated = await first.call('/api/auth/setup', { token: TOKEN, password: PASSWORD });
+  assert.equal(activated.status, 201);
+  const oldCookie = activated.cookie.split(';')[0];
+  assert.equal((await first.call('/api/auth/setup', { token: TOKEN, password: 'Un altra password 2026!' })).status, 409);
+  await first.app.close();
+
+  // The operator configures a new link: it sets a new password once.
+  const NEW_TOKEN = 'second-private-link-for-a-forgotten-password-2026';
+  const second = await start(NEW_TOKEN);
+  assert.equal((await second.call('/api/auth/setup', { token: TOKEN, password: 'Tentativo vecchio link 2026' })).status, 403);
+  const reset = await second.call('/api/auth/setup', { token: NEW_TOKEN, password: 'Nuova password sicura 2026', remember: true });
+  assert.equal(reset.status, 201);
+  assert.equal(reset.data.authenticated, true);
+  assert.match(reset.cookie, /Max-Age=2592000/);
+  assert.equal((await second.call('/api/auth/session', undefined, oldCookie)).data.authenticated, false);
+  assert.equal((await second.call('/api/auth/login', { email: business.email, password: PASSWORD })).status, 401);
+  assert.equal((await second.call('/api/auth/login', { email: business.email, password: 'Nuova password sicura 2026' })).status, 200);
+  assert.equal((await second.call('/api/auth/setup', { token: NEW_TOKEN, password: 'Terza password sicura 2026' })).status, 409);
+  const events = second.app.store.db.prepare("SELECT event FROM audit_log WHERE event LIKE 'owner_%' ORDER BY id").all().map((row) => row.event);
+  assert.deepEqual(events, ['owner_setup', 'owner_access_reset']);
+  await second.app.close();
+});
+
+test('an agenda activated before link tracking never turns its original link into a reset link', async (t) => {
+  const { app, setup } = await fixture(t);
+  assert.equal((await setup()).status, 201);
+  // Simulate the database of an earlier version: no record of used links.
+  app.store.db.prepare("DELETE FROM settings WHERE key = 'owner_access_links_used'").run();
+  const { createAuth } = await import('../server/auth.mjs');
+  const auth = createAuth({ store: app.store, config: { origin: 'http://booking.test', business, bootstrapToken: TOKEN, bootstrapExpiresAt: new Date(Date.UTC(2026, 9, 4, 9)).toISOString() }, now: () => Date.UTC(2026, 9, 4, 8) });
+  await assert.rejects(() => auth.setup({ token: TOKEN, password: 'Password di ripristino 2026' }), { code: 'setup_completed' });
+});
+
+test('remembered sessions last thirty days and the default session still lasts twelve hours', async (t) => {
+  const { call, setup } = await fixture(t);
+  assert.equal((await setup()).status, 201);
+  const short = await call('/api/auth/login', { method: 'POST', body: { email: business.email, password: PASSWORD } });
+  assert.match(short.response.headers.get('set-cookie'), /Max-Age=43200/);
+  const long = await call('/api/auth/login', { method: 'POST', body: { email: business.email, password: PASSWORD, remember: true } });
+  assert.match(long.response.headers.get('set-cookie'), /Max-Age=2592000/);
+  assert.equal((await call('/api/auth/login', { method: 'POST', body: { email: business.email, password: PASSWORD, remember: 'yes' } })).status, 400);
 });

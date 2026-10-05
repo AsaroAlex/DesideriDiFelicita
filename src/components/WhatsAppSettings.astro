@@ -8,8 +8,17 @@ const proposedTemplate = `Ciao {{1}}, ti ricordiamo l’appuntamento da ${site.b
   <section class="agenda-card" aria-labelledby="connection-status-title">
     <h3 id="connection-status-title" data-connection-title>Collegamento WhatsApp</h3>
     <p class="agenda-note" data-connection-state></p>
-    <p class="agenda-note">Un solo promemoria per appuntamento con consenso. In Orari e impostazioni puoi gestire orario, limiti e modalità risparmio: massimo 10 tentativi al giorno e 60 al mese quando è attiva.</p>
+    <p class="agenda-note">Un solo promemoria, la sera prima, e solo alle clienti che lo hanno chiesto. Orario e limiti si scelgono in Orari e impostazioni.</p>
   </section>
+  <form class="agenda-card" data-automation-toggle>
+    <h3>Attiva o sospendi i promemoria</h3>
+    <p class="agenda-note">Quando il collegamento con WhatsApp Business è pronto, qui puoi attivare o sospendere i promemoria automatici. Finché sono sospesi puoi mandarli a mano dalla sezione Promemoria, con un tocco.</p>
+    <label>La tua password del portale<input type="password" name="currentPassword" autocomplete="current-password" required /></label>
+    <button type="submit" class="agenda-button secondary" data-toggle-automation disabled>Attiva promemoria automatici</button>
+  </form>
+  <details class="connection-technical">
+    <summary>Configurazione tecnica · per chi gestisce il sito</summary>
+    <p class="agenda-note">Questa parte serve una sola volta, per collegare il numero alla piattaforma WhatsApp Business di Meta. Se non sai cosa sono questi dati, chiedi a chi gestisce il sito: l’agenda e le richieste funzionano anche senza.</p>
   <section class="agenda-card connection-steps" aria-labelledby="connection-steps-title">
     <h3 id="connection-steps-title">Collega WhatsApp in quattro passaggi</h3>
     <ol class="connection-checklist">
@@ -60,13 +69,7 @@ const proposedTemplate = `Ciao {{1}}, ti ricordiamo l’appuntamento da ${site.b
       <button type="submit" class="agenda-button">Salva collegamento</button>
     </fieldset>
   </form>
-  <form class="agenda-card" data-automation-toggle>
-    <h3>Attiva o sospendi i promemoria</h3>
-    <p class="agenda-note">Attiva gli invii dopo aver completato il numero, l’approvazione del modello e il webhook su Meta. Il salvataggio dei dati non verifica l’approvazione e non invia messaggi di prova.</p>
-    <p class="agenda-note">Gli invii automatici rispettano i limiti effettivi del portale. Se preferisci inviare un promemoria a mano, fallo dalla sezione Promemoria e registralo dopo averlo inviato: l’agenda evita un secondo invio automatico.</p>
-    <label>La tua password del portale<input type="password" name="currentPassword" autocomplete="current-password" required /></label>
-    <button type="submit" class="agenda-button secondary" data-toggle-automation disabled>Attiva promemoria automatici</button>
-  </form>
+  </details>
 </div>
 
 <script>
@@ -120,8 +123,8 @@ const proposedTemplate = `Ciao {{1}}, ti ricordiamo l’appuntamento da ${site.b
       el<HTMLFieldSetElement>('[data-connection-fields]').disabled = !value.storageAvailable;
       toggle.disabled = !value.storageAvailable || (!value.enabled && (!value.configured || !value.webhookConfigured));
       toggle.textContent = value.enabled ? 'Sospendi promemoria automatici' : 'Attiva promemoria automatici';
-      el('[data-connection-title]').textContent = value.enabled ? 'Invii automatici abilitati' : value.configured ? 'Collegamento salvato · invii sospesi' : 'WhatsApp da configurare';
-      el('[data-connection-state]').textContent = !value.storageAvailable ? 'Il collegamento richiede l’abilitazione dello storage protetto sul server.' : value.enabled ? 'I promemoria con consenso seguono l’orario e i limiti scelti. Lo stato di ogni invio è nella sezione Promemoria.' : value.configured && value.webhookConfigured ? 'Le credenziali sono salvate. Puoi attivare gli invii dopo aver completato la configurazione su Meta.' : 'Completa le credenziali e il webhook. Gli appuntamenti e le richieste funzionano anche con i promemoria sospesi.';
+      el('[data-connection-title]').textContent = value.enabled ? 'Promemoria automatici attivi' : value.configured ? 'Collegamento pronto · promemoria sospesi' : 'Promemoria automatici non ancora collegati';
+      el('[data-connection-state]').textContent = !value.storageAvailable ? 'Il collegamento non è ancora disponibile su questo server: chiedi a chi gestisce il sito di completare la configurazione.' : value.enabled ? 'I promemoria con consenso seguono l’orario e i limiti scelti. Lo stato di ogni invio è nella sezione Promemoria.' : value.configured && value.webhookConfigured ? 'Le credenziali sono salvate. Puoi attivare gli invii dopo aver completato la configurazione su Meta.' : 'Completa le credenziali e il webhook. Gli appuntamenti e le richieste funzionano anche con i promemoria sospesi.';
       checklist(value);
     }
     async function load() {
@@ -156,7 +159,8 @@ const proposedTemplate = `Ciao {{1}}, ti ricordiamo l’appuntamento da ${site.b
       try { await navigator.clipboard.writeText(field('verifyToken').value); if (current(requestGeneration)) inform('Token copiato. Salva qui il collegamento, poi incollalo nella verifica su Meta.'); }
       catch { if (!current(requestGeneration)) return; field('verifyToken').type = 'text'; field('verifyToken').focus(); field('verifyToken').select(); inform('Copia il token selezionato, poi salva il collegamento.'); }
     })(); });
-    on(form, 'input', () => { dirty = true; });
+    // The portal password is a confirmation, not a change to the connection.
+    on(form, 'input', event => { if ((event.target as HTMLInputElement | null)?.name !== 'currentPassword') dirty = true; });
     async function save(body: Record<string, unknown>, message: string) {
       if (busy || !isSignedIn()) return;
       const requestGeneration = generation; busy = true; root.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = true; });
@@ -171,7 +175,8 @@ const proposedTemplate = `Ciao {{1}}, ti ricordiamo l’appuntamento da ${site.b
         toggle.disabled = !isSignedIn() || !connection?.storageAvailable || (!connection.enabled && (!connection.configured || !connection.webhookConfigured));
       }
     }
-    on(form, 'submit', event => { event.preventDefault(); const body: Record<string, unknown> = { enabled: false }; for (const name of ['phoneNumberId', 'templateName', 'templateLanguage', 'graphVersion', 'accessToken', 'appSecret', 'verifyToken', 'currentPassword']) body[name] = field(name).value; void save(body, 'Collegamento salvato. Gli invii restano sospesi finché li attivi.'); });
+    // Updating a credential keeps the current on/off choice: it never silently stops active reminders.
+    on(form, 'submit', event => { event.preventDefault(); const keepEnabled = connection?.enabled === true; const body: Record<string, unknown> = { enabled: keepEnabled }; for (const name of ['phoneNumberId', 'templateName', 'templateLanguage', 'graphVersion', 'accessToken', 'appSecret', 'verifyToken', 'currentPassword']) body[name] = field(name).value; void save(body, keepEnabled ? 'Collegamento salvato. I promemoria automatici restano attivi.' : 'Collegamento salvato. Gli invii restano sospesi finché li attivi.'); });
     on(toggleForm, 'submit', event => { event.preventDefault(); if (!connection || toggle.disabled) return; const enabling = !connection.enabled; if (dirty && enabling) { inform('Salva prima le modifiche al collegamento. Poi potrai attivare i promemoria.', true); return; } void save({ currentPassword: (toggleForm.elements.namedItem('currentPassword') as HTMLInputElement).value, enabled: enabling }, enabling ? 'Promemoria automatici abilitati.' : 'Promemoria automatici sospesi.'); });
     return { load, clear };
   });
@@ -181,6 +186,10 @@ const proposedTemplate = `Ciao {{1}}, ti ricordiamo l’appuntamento da ${site.b
   [data-whatsapp-settings] { display: grid; gap: 1rem; }
   fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 1.2rem; min-width: 0; }
   summary { cursor: pointer; font-weight: 650; min-height: 44px; }
+  .connection-technical { display: grid; gap: 1rem; }
+  .connection-technical > summary { background: #fff; border: 1px solid #dbe3f1; border-radius: 1rem; padding: 1rem 1.25rem; display: flex; align-items: center; color: #1d3f86; }
+  .connection-technical[open] > summary { margin-bottom: 1rem; }
+  .connection-technical > :not(summary) + :not(summary) { margin-top: 1rem; }
   .connection-help p, .connection-help blockquote { margin-block: 1rem; font-size: .9rem; line-height: 1.7; }
   blockquote { border-left: 3px solid #2e6be6; padding-left: 1rem; margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
   .connection-checklist { padding-left: 1.4rem; display: grid; gap: 1rem; margin: 0; }

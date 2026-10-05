@@ -28,3 +28,4 @@ var/
 *.sqlite
 *.sqlite-*
 *.db
+dist-redirect/

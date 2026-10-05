@@ -10,7 +10,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "link-accesso": "node scripts/link-accesso.mjs",
+    "check": "astro check"
   },
   "dependencies": {
     "serve-handler": "^6.1.7"
@@ -19,9 +21,11 @@
     "node": "24.x"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@astrojs/sitemap": "^3.2.1",
     "@fontsource-variable/fraunces": "^5.2.9",
     "@fontsource-variable/manrope": "^5.2.8",
-    "astro": "^5.18.2"
+    "astro": "^5.18.2",
+    "typescript": "^5.9.3"
   }
 }

@@ -19,7 +19,9 @@ const { title = 'Il tuo appuntamento', description = 'Consulta e gestisci il tuo
     <meta name="description" content={description} />
     <meta name="theme-color" content="#2e6be6" />
     <title>{title} · {site.businessName}</title>
+    <link rel="icon" href={withBase('favicon.ico')} sizes="32x32" />
     <link rel="icon" href={withBase('favicon.svg')} type="image/svg+xml" />
+    <link rel="apple-touch-icon" href={withBase('apple-touch-icon.png')} />
     <ClientRouter />
   </head>
   <body class="customer-shell">

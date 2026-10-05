@@ -1,8 +1,9 @@
-name: Deploy to GitHub Pages
+name: GitHub Pages (vecchio indirizzo → sito ufficiale)
 
-# Pubblica il sito a ogni push su `main` (branch di produzione) oppure manualmente.
-# NB: in GitHub → Settings → Pages impostare "Source: GitHub Actions" e `main` come
-# branch di default; l'ambiente `github-pages` deve consentire il deploy da `main`.
+# Il sito ufficiale, con calendario e agenda, è pubblicato da Railway a ogni push su `main`.
+# Il vecchio indirizzo https://asaroalex.github.io/DesideriDiFelicita/ resta attivo solo
+# per reindirizzare i link già condivisi alla stessa pagina del sito ufficiale.
+# Con un dominio personalizzato basta aggiornare PRODUCTION_URL qui sotto.
 on:
   push:
     branches:
@@ -14,10 +15,12 @@ permissions:
   pages: write
   id-token: write
 
-# Una sola pubblicazione alla volta
 concurrency:
   group: pages
   cancel-in-progress: false
+
+env:
+  PRODUCTION_URL: https://desideri-di-felicita-production.up.railway.app
 
 jobs:
   build:
@@ -25,9 +28,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build con Astro
-        # Esegue install + build e carica l'artifact per Pages.
-        uses: withastro/action@v3
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Prepara i reindirizzamenti
+        run: node scripts/pages-redirect.mjs
+      - name: Carica l'artifact per Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-redirect
 
   deploy:
     needs: build

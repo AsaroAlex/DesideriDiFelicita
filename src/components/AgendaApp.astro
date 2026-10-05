@@ -31,6 +31,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
       <div data-owner-controls hidden><span data-owner-email-label></span><button type="button" class="agenda-button secondary" data-logout>Esci</button></div>
     </header>
     <p class="agenda-notice" role="status" aria-live="polite" data-notice>Caricamento dell’area privata…</p>
+    <!-- Copia visibile del messaggio quando quello in alto è fuori schermo (telefono). -->
+    <div class="agenda-toast" data-toast hidden aria-hidden="true"><span data-toast-text></span><button type="button" class="agenda-toast__close" data-toast-close tabindex="-1">Chiudi</button></div>
     <noscript><p class="agenda-notice">Per accedere all’agenda occorre attivare JavaScript nel browser.</p></noscript>
 
     <section class="agenda-card auth-card" data-auth hidden aria-labelledby="access-title">
@@ -39,28 +41,37 @@ import CustomerDirectory from './CustomerDirectory.astro';
       <form data-login-form hidden>
         <label>Email<input type="email" name="email" autocomplete="username" value={site.email} required /></label>
         <label>Password<input type="password" name="password" autocomplete="current-password" required /></label>
+        <label class="checkbox-label"><input type="checkbox" name="remember" />Resta collegata su questo dispositivo per 30 giorni</label>
         <button class="agenda-button" type="submit">Accedi</button>
+        <p class="agenda-note">Password dimenticata? Chiedi a chi gestisce il sito un nuovo link di accesso: ti permetterà di sceglierne una nuova.</p>
       </form>
       <form data-setup-form hidden>
         <label>Email per l’accesso<input type="email" name="email" autocomplete="username" value={site.email} required /></label>
         <label>Scegli una password<input type="password" name="password" autocomplete="new-password" minlength="12" required aria-describedby="setup-password-help" /></label>
         <small id="setup-password-help">Almeno 12 caratteri. Scegli una password che non utilizzi altrove.</small>
         <label>Ripeti la password<input type="password" name="confirmation" autocomplete="new-password" minlength="12" required /></label>
-        <button class="agenda-button" type="submit">Attiva la tua agenda</button>
+        <label class="checkbox-label"><input type="checkbox" name="remember" />Resta collegata su questo dispositivo per 30 giorni</label>
+        <button class="agenda-button" type="submit" data-setup-submit>Attiva la tua agenda</button>
+        <button class="agenda-button secondary" type="button" data-setup-cancel hidden>Ricordo la password: accedi</button>
       </form>
     </section>
 
     <div data-workspace hidden>
       <nav class="agenda-tabs" aria-label="Sezioni dell’agenda">
-        <button type="button" class="agenda-button" data-tab="overview" aria-pressed="true">Panoramica</button>
-        <button type="button" class="agenda-button secondary" data-tab="calendar" aria-pressed="false">Appuntamenti</button>
-        <button type="button" class="agenda-button secondary" data-tab="requests" aria-pressed="false">Richieste <span class="request-count" data-request-count aria-label="Richieste da confermare">0</span></button>
-        <button type="button" class="agenda-button secondary" data-tab="services" aria-pressed="false">Servizi</button>
-        <button type="button" class="agenda-button secondary" data-tab="customers" aria-pressed="false">Clienti</button>
-        <button type="button" class="agenda-button secondary" data-tab="settings" aria-pressed="false">Orari e impostazioni</button>
-        <button type="button" class="agenda-button secondary" data-tab="connection" aria-pressed="false">Collega WhatsApp</button>
-        <button type="button" class="agenda-button secondary" data-tab="reminders" aria-pressed="false">Promemoria</button>
-        <button type="button" class="agenda-button secondary" data-tab="account" aria-pressed="false">Accesso e backup</button>
+        <div class="agenda-tabs__main">
+          <button type="button" class="agenda-button" data-tab="overview" aria-pressed="true">Oggi</button>
+          <button type="button" class="agenda-button secondary" data-tab="requests" aria-pressed="false">Richieste <span class="request-count" data-request-count aria-hidden="true">0</span><span class="visually-hidden" data-request-count-label>, nessuna da confermare</span></button>
+          <button type="button" class="agenda-button secondary" data-tab="calendar" aria-pressed="false">Agenda</button>
+          <button type="button" class="agenda-button secondary" data-tab="customers" aria-pressed="false">Clienti</button>
+        </div>
+        <div class="agenda-tabs__more" role="group" aria-label="Configurazione">
+          <span class="agenda-tabs__label" aria-hidden="true">Configura:</span>
+          <button type="button" class="agenda-button secondary" data-tab="services" aria-pressed="false">Servizi e prezzi</button>
+          <button type="button" class="agenda-button secondary" data-tab="settings" aria-pressed="false">Orari e chiusure</button>
+          <button type="button" class="agenda-button secondary" data-tab="reminders" aria-pressed="false">Promemoria</button>
+          <button type="button" class="agenda-button secondary" data-tab="connection" aria-pressed="false">WhatsApp automatico</button>
+          <button type="button" class="agenda-button secondary" data-tab="account" aria-pressed="false">Password e backup</button>
+        </div>
       </nav>
 
       <section data-panel="overview" aria-labelledby="overview-title">
@@ -69,7 +80,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
         <div class="overview-grid operational-overview"><section class="agenda-card"><h3>Il prossimo appuntamento</h3><div data-next-appointment></div></section><section class="agenda-card"><h3>Disponibilità di oggi</h3><div data-today-capacity></div></section></div>
         <div class="overview-grid">
           <section class="agenda-card"><h3>Configura il tuo salone</h3><p class="agenda-note">Le richieste delle clienti sono già disponibili. Scegli tu se confermarle dopo aver controllato l’agenda oppure attivare la conferma automatica per i servizi con durata impostata.</p><ul class="setup-checklist" data-checklist></ul></section>
-          <section class="agenda-card"><h3>Come lavorare ogni giorno</h3><ol class="daily-guide"><li>Apri <strong>Richieste</strong>, controlla la durata e conferma l’orario.</li><li>Aggiungi in <strong>Appuntamenti</strong> anche le prenotazioni ricevute per telefono o in salone.</li><li>Usa <strong>Clienti</strong> per ritrovare rapidamente contatti e appuntamenti.</li><li>Collega WhatsApp e imposta orario e limiti dei promemoria quando sei pronta.</li></ol></section>
+          <section class="agenda-card"><h3>Come lavorare ogni giorno</h3><ol class="daily-guide"><li>Apri <strong>Richieste</strong>, controlla la durata e conferma l’orario.</li><li>Aggiungi in <strong>Appuntamenti</strong> anche le prenotazioni ricevute per telefono o in salone.</li><li>Usa <strong>Clienti</strong> per ritrovare rapidamente contatti e appuntamenti.</li><li>Il giorno prima, in <strong>Promemoria</strong>, manda il promemoria alle clienti che lo hanno chiesto: un tocco apre WhatsApp con il messaggio pronto.</li></ol></section>
         </div>
       </section>
 
@@ -82,9 +93,9 @@ import CustomerDirectory from './CustomerDirectory.astro';
           <button type="button" class="agenda-button secondary" data-refresh>Aggiorna</button>
         </div>
         <div class="agenda-card calendar-filters"><label>Cerca nel periodo visualizzato<input type="search" data-calendar-search placeholder="Cliente, telefono o servizio" autocomplete="off" /></label><label>Mostra<select data-calendar-status><option value="active">Appuntamenti confermati</option><option value="all">Tutti, anche annullati</option><option value="cancelled">Solo annullati</option></select></label></div>
-        <p class="agenda-note" data-calendar-summary></p>
+        <p class="agenda-note" data-calendar-summary aria-live="polite"></p>
         <p class="agenda-note">Gli orari sono quelli del salone, in Italia. Gli appuntamenti annullati restano visibili nello storico.</p>
-        <div class="calendar-days" data-calendar aria-live="polite"></div>
+        <div class="calendar-days" data-calendar></div>
 
         <section class="agenda-card block-editor" data-block-editor hidden aria-labelledby="block-editor-title"><div class="agenda-section-head"><h2 id="block-editor-title" tabindex="-1">Aggiungi una pausa</h2><button type="button" class="agenda-button secondary" data-block-close>Chiudi</button></div><form data-block-form><div class="form-grid"><label>Descrizione<input name="title" value="Pausa" maxlength="100" required /></label><label>Giorno<input type="date" name="date" required /></label><label>Ora<input type="time" name="time" required /></label><label>Durata, in minuti<input type="number" name="durationMinutes" min="5" max="480" step="1" required /></label></div><p class="agenda-note">La pausa impedisce nuove prenotazioni e richieste. Non può sovrapporsi a un appuntamento confermato.</p><button type="submit" class="agenda-button">Salva pausa</button></form></section>
 
@@ -99,13 +110,13 @@ import CustomerDirectory from './CustomerDirectory.astro';
               <label>Ora<input type="time" name="time" required /></label>
               <label>Durata, in minuti<input type="number" name="durationMinutes" min="5" max="480" step="1" required /></label>
               <label>Nome della cliente<input name="name" autocomplete="name" minlength="2" maxlength="100" required /></label>
-              <label>Telefono con prefisso internazionale<input type="tel" name="phone" autocomplete="tel" placeholder="+39…" required /></label>
+              <label>Telefono<input type="tel" name="phone" autocomplete="tel" inputmode="tel" placeholder="Es. 333 123 4567" required /><small>Per i numeri esteri aggiungi il prefisso, per esempio +40.</small></label>
               <label data-status-field hidden>Stato<select name="status"><option value="confirmed">Confermato</option><option value="cancelled">Annullato</option></select></label>
             </div>
             <label>Note dell’appuntamento<textarea name="notes" maxlength="500" rows="3" placeholder="Dettagli utili per il servizio" /></label><small>Dettagli utili per questa visita. Le annotazioni che riguardano più appuntamenti si gestiscono nella rubrica.</small>
             <label class="checkbox-label"><input type="checkbox" name="reminderConsent" />La cliente ha accettato il promemoria su WhatsApp.</label>
             <p class="agenda-note">Indica la durata effettiva per occupare il tempo corretto. Il promemoria viene pianificato per la sera prima: gli appuntamenti inseriti dopo quell’orario non generano un invio tardivo.</p>
-            <div class="button-group"><button type="submit" class="agenda-button">Salva appuntamento</button><button type="button" class="agenda-button secondary" data-editor-close>Lascia senza salvare</button></div>
+            <div class="button-group"><button type="submit" class="agenda-button">Salva appuntamento</button><button type="button" class="agenda-button secondary" data-editor-discard-close>Lascia senza salvare</button></div>
           </form>
         </section>
       </section>
@@ -115,7 +126,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
         <p class="agenda-note">Le clienti scelgono un servizio e un orario desiderato. Controlla la durata e conferma: solo allora l’appuntamento occupa l’agenda. Le richieste non inviano messaggi automatici.</p>
         <div class="agenda-card request-toolbar"><label>Mostra<select data-request-status><option value="pending">Da confermare</option><option value="confirmed">Confermate</option><option value="declined">Non accettate</option></select></label></div>
         <div class="agenda-card request-result" data-request-result hidden aria-live="polite"></div>
-        <div class="request-list" data-requests aria-live="polite"></div>
+        <div class="request-list" data-requests></div>
       </section>
 
       <section data-panel="services" hidden aria-labelledby="services-title">
@@ -153,9 +164,9 @@ import CustomerDirectory from './CustomerDirectory.astro';
           <h3>Orari di disponibilità</h3>
           <p class="agenda-note">Indica quando il salone è aperto. Puoi aggiungere più fasce nello stesso giorno, per esempio mattina e pomeriggio.</p>
           <div class="hours-grid" data-hours></div>
-          <h3>Chiusure straordinarie</h3><div class="closure-add"><label>Giorno di chiusura<input type="date" data-closure-date /></label><button type="button" class="agenda-button secondary" data-closure-add>Aggiungi giorno</button></div>
+          <h3>Chiusure straordinarie</h3><p class="agenda-note">Ferie e giorni di chiusura vengono salvati subito, appena li aggiungi o li rimuovi.</p><div class="closure-add"><label>Giorno di chiusura<input type="date" data-closure-date /></label><button type="button" class="agenda-button secondary" data-closure-add>Aggiungi giorno</button></div>
           <ul class="closed-date-list" data-closed-dates></ul>
-          <small>Le chiusure impediscono nuove prenotazioni e richieste. Non annullano gli appuntamenti già confermati.</small>
+          <small>Le chiusure impediscono nuove prenotazioni e richieste. Non annullano gli appuntamenti già confermati: controllali in Agenda.</small>
           <h3>Promemoria del giorno prima</h3>
           <label class="checkbox-label"><input type="checkbox" name="economyMode" />Modalità risparmio: massimo 10 invii al giorno e 60 al mese</label>
           <p class="agenda-note">La modalità risparmio mantiene i limiti che hai scelto e applica il valore più basso. Un limite a 0 sospende gli invii.</p>
@@ -183,7 +194,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
           </form>
           <p class="agenda-note">Almeno 12 caratteri. Gli altri accessi verranno chiusi.</p>
         </section>
-        <section class="agenda-card security-card" aria-labelledby="export-title"><h3 id="export-title">Esporta gli appuntamenti</h3><p class="agenda-note">Scegli il periodo da esportare, fino a un anno. Il file CSV si apre con Excel e contiene anche gli appuntamenti annullati.</p><form data-export-form><div class="form-grid"><label>Dal<input type="date" name="from" required /></label><label>Al<input type="date" name="to" required /></label></div><button class="agenda-button secondary" type="submit">Scarica appuntamenti in CSV</button></form></section>
+        <section class="agenda-card security-card" aria-labelledby="export-title"><h3 id="export-title">Esporta gli appuntamenti</h3><p class="agenda-note">Scegli il periodo da esportare, fino a un anno. Il file si apre con Excel o Numbers e contiene anche gli appuntamenti annullati.</p><form data-export-form><div class="form-grid"><label>Dal<input type="date" name="from" required /></label><label>Al<input type="date" name="to" required /></label></div><button class="agenda-button secondary" type="submit">Scarica appuntamenti in CSV</button></form></section>
         <section class="agenda-card security-card" aria-labelledby="backup-title"><h3 id="backup-title">Backup completo</h3><p class="agenda-note">Il backup conserva appuntamenti, richieste, impostazioni e collegamento WhatsApp ed è destinato al ripristino tecnico: tienilo in un posto sicuro.</p><form data-backup-form><label>Password attuale<input type="password" name="currentPassword" autocomplete="current-password" required /></label><button class="agenda-button secondary" type="submit">Scarica backup completo</button></form></section>
       </section>
 
@@ -217,8 +228,10 @@ import CustomerDirectory from './CustomerDirectory.astro';
   let dispose: (() => void) | undefined;
 
   function initAgenda() {
-    const root = document.querySelector<HTMLElement>('[data-agenda]');
-    if (!root || root === activeRoot) return;
+    const found = document.querySelector<HTMLElement>('[data-agenda]');
+    if (!found || found === activeRoot) return;
+    // A non-null binding keeps the type narrowed inside the hoisted helpers below.
+    const root: HTMLElement = found;
     dispose?.();
     activeRoot = root;
     const lifetime = new AbortController();
@@ -257,6 +270,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
     let selectedDate = today();
     let busy = false;
     let backgroundRefreshing = false;
+    let lastEmail = '';
 
     const el = <T extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
     const notice = el('[data-notice]');
@@ -273,7 +287,18 @@ import CustomerDirectory from './CustomerDirectory.astro';
     const input = <T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement = HTMLInputElement>(form: HTMLFormElement, name: string) => form.elements.namedItem(name) as T;
     const on = (target: EventTarget, event: string, handler: EventListener) => target.addEventListener(event, handler, { signal: lifetime.signal });
     const textNode = (tag: string, text: string, className = '') => { const node = document.createElement(tag); node.textContent = text; if (className) node.className = className; return node; };
-    const inform = (message: string, error = false) => { notice.textContent = message; notice.classList.toggle('is-error', error); notice.setAttribute('role', error ? 'alert' : 'status'); };
+    const toast = el('[data-toast]');
+    let toastTimer = 0;
+    const inform = (message: string, error = false) => {
+      notice.textContent = message; notice.classList.toggle('is-error', error); notice.setAttribute('role', error ? 'alert' : 'status');
+      // On a phone the message at the top is often off screen: repeat it at the bottom for a few seconds.
+      window.clearTimeout(toastTimer);
+      const box = notice.getBoundingClientRect();
+      const offScreen = box.bottom < 0 || box.top > window.innerHeight;
+      if (!offScreen || message === 'Operazione in corso…') { toast.hidden = true; return; }
+      el('[data-toast-text]').textContent = message; toast.classList.toggle('is-error', error); toast.hidden = false;
+      toastTimer = window.setTimeout(() => { toast.hidden = true; }, error ? 9000 : 4500);
+    };
     const focus = (selector: string) => el(selector)?.focus({ preventScroll: true });
 
     function today() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
@@ -301,6 +326,26 @@ import CustomerDirectory from './CustomerDirectory.astro';
       for (const range of open) { openMinutes += (range.end - range.start) / 60_000; const clipped = occupied.map(item => ({ start: Math.max(item.start, range.start), end: Math.min(item.end, range.end) })).filter(item => item.start < item.end).sort((a, b) => a.start - b.start); let current: {start: number; end: number} | undefined; for (const item of clipped) { if (!current) current = { ...item }; else if (item.start <= current.end) current.end = Math.max(current.end, item.end); else { occupiedMinutes += (current.end - current.start) / 60_000; current = { ...item }; } } if (current) occupiedMinutes += (current.end - current.start) / 60_000; }
       return { openMinutes, occupiedMinutes, freeMinutes: Math.max(0, openMinutes - occupiedMinutes) };
     }
+    /** «333 123 4567» or «051 123456» → +39…; foreign numbers keep their own prefix. */
+    function italianPhone(value: string) {
+      const cleaned = value.trim().replace(/[\s().\/-]/g, '');
+      if (cleaned.startsWith('00')) return `+${cleaned.slice(2)}`;
+      if (/^(?:3\d{8,9}|0\d{5,10})$/.test(cleaned)) return `+39${cleaned}`;
+      if (/^39(?:3\d{8,9}|0\d{5,10})$/.test(cleaned)) return `+${cleaned}`;
+      return cleaned;
+    }
+    /** +393331234567 → +39 333 123 4567, easier to read and to dictate. */
+    function displayPhone(value: string) {
+      const match = /^\+39(3\d{2})(\d{3})(\d{3,4})$/.exec(value);
+      return match ? `+39 ${match[1]} ${match[2]} ${match[3]}` : value;
+    }
+    /** Chiama e WhatsApp a portata di pollice, per confermare o chiarire con la cliente. */
+    function contactLinks(person: { name: string; phone: string }, message: string) {
+      const group = textNode('div', '', 'button-group contact-links');
+      const call = textNode('a', 'Chiama', 'agenda-button secondary') as HTMLAnchorElement; call.href = `tel:${person.phone.replace(/[^\d+]/g, '')}`; call.setAttribute('aria-label', `Chiama ${person.name}`);
+      const chat = textNode('a', 'Scrivi su WhatsApp', 'agenda-button secondary') as HTMLAnchorElement; chat.href = whatsappHref(person.phone, message); chat.target = '_blank'; chat.rel = 'noopener noreferrer'; chat.setAttribute('aria-label', `Scrivi su WhatsApp a ${person.name}`);
+      group.append(call, chat); return group;
+    }
     function minutesLabel(value: number) { const minutes = Math.round(value); return minutes >= 60 ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ''}` : `${minutes} min`; }
 
     async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
@@ -317,7 +362,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
     }
 
     async function act(form: HTMLFormElement | null, task: () => Promise<void>) {
-      if (busy) return;
+      if (busy) { inform('Un attimo: sto completando l’operazione precedente.'); return; }
       busy = true;
       inform('Operazione in corso…');
       const buttons = form ? Array.from(form.querySelectorAll<HTMLButtonElement>('button')) : [];
@@ -337,7 +382,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
       el('[data-workspace]').hidden = !next.authenticated;
       el('[data-owner-controls]').hidden = !next.authenticated;
       el('[data-auth]').hidden = next.authenticated;
-      if (next.authenticated) { el('[data-owner-email-label]').textContent = next.email || ''; input(accountForm, 'email').value = next.email || ''; document.dispatchEvent(new CustomEvent('agenda:authenticated', { detail: { email: next.email, csrfToken } })); return; }
+      if (next.authenticated) { lastEmail = next.email || lastEmail; el('[data-owner-email-label]').textContent = next.email || ''; input(accountForm, 'email').value = next.email || ''; document.dispatchEvent(new CustomEvent('agenda:authenticated', { detail: { email: next.email, csrfToken } })); return; }
       document.dispatchEvent(new CustomEvent('agenda:logout'));
       automation = undefined; closedDatesDraft = []; settingsDirty = false; serviceDrafts.clear(); reminderPeriod = 'today'; el<HTMLSelectElement>('[data-reminder-period]').value = 'today'; el('[data-reminder-summary]').textContent = ''; showPanel('overview', false);
       serviceSearch = ''; serviceVisibility = 'visible'; el<HTMLInputElement>('[data-service-search]').value = ''; el<HTMLSelectElement>('[data-service-visibility]').value = 'visible'; el('[data-service-summary]').textContent = ''; resetServiceCreation();
@@ -347,10 +392,15 @@ import CustomerDirectory from './CustomerDirectory.astro';
       el('[data-requests]').replaceChildren(); el('[data-request-result]').replaceChildren(); el('[data-request-result]').hidden = true; el('[data-request-count]').textContent = '0';
       appointmentForm.reset(); passwordForm.reset(); accountForm.reset(); backupForm.reset(); settingsForm.reset(); createServiceForm.reset(); el('[data-hours]').replaceChildren(); el('[data-closed-dates]').replaceChildren(); el('[data-checklist]').replaceChildren(); el('[data-editor]').hidden = true;
       const setup = Boolean(next.setupRequired);
-      el('[data-auth-title]').textContent = setup ? 'Benvenuta nella tua agenda' : 'Accedi alla tua agenda';
-      el('[data-auth-intro]').textContent = setup ? (activationToken ? 'Imposta il tuo accesso privato per iniziare.' : 'Per il primo accesso serve il link di attivazione riservato a Jessica.') : 'Un accesso privato, riservato a Jessica.';
-      setupForm.hidden = !setup || !activationToken;
-      loginForm.hidden = setup;
+      // The same private link activates the agenda or, later, sets a new password.
+      const reset = !setup && Boolean(activationToken);
+      el('[data-auth-title]').textContent = setup ? 'Benvenuta nella tua agenda' : reset ? 'Scegli una nuova password' : 'Accedi alla tua agenda';
+      el('[data-auth-intro]').textContent = setup ? (activationToken ? 'Imposta il tuo accesso privato per iniziare.' : 'Per il primo accesso serve il link di attivazione riservato a Jessica.') : reset ? 'Hai aperto un link per reimpostare l’accesso. Scegli una nuova password: gli altri dispositivi verranno scollegati.' : 'Un accesso privato, riservato a Jessica.';
+      el('[data-setup-submit]').textContent = reset ? 'Salva la nuova password' : 'Attiva la tua agenda';
+      setupForm.hidden = !activationToken;
+      loginForm.hidden = setup || reset;
+      el('[data-setup-cancel]').hidden = !reset;
+      if (lastEmail) { input(loginForm, 'email').value = lastEmail; input(setupForm, 'email').value = lastEmail; }
     }
 
     async function loadCalendar() {
@@ -413,14 +463,21 @@ import CustomerDirectory from './CustomerDirectory.astro';
         const nowEditing = Boolean(panel.querySelector('[data-request-confirm]:not([hidden]), .request-decline:not([hidden])'));
         const nowFocused = Boolean(document.activeElement?.closest('[data-request-id]'));
         if (result && requestStatus === requestedStatus && !panel.hidden && !nowEditing && !nowFocused && JSON.stringify(result.items) !== JSON.stringify(requests)) { requests = result.items; renderRequests(); }
+        // Online bookings appear in Agenda and Oggi without pressing Aggiorna, unless Jessica is editing there.
+        const calendarPanel = el('[data-panel=calendar]');
+        const calendarQuiet = !calendarPanel.hidden && el('[data-editor]').hidden && el('[data-block-editor]').hidden && !calendarPanel.querySelector('[data-inline-action]') && !document.activeElement?.closest('[data-panel=calendar] .calendar-days');
+        if (activePanel === 'overview' && !busy) await loadOperations();
+        else if (calendarQuiet && !busy) { const { from, to } = period(); const query = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`; const [items, pauses] = await Promise.all([api<{ items: Appointment[] }>(`/api/admin/appointments?${query}`), api<{ items: Block[] }>(`/api/admin/blocks?${query}`)]); if (session.authenticated && !busy && JSON.stringify([items.items, pauses.items]) !== JSON.stringify([appointments, blocks])) { appointments = items.items; blocks = pauses.items; renderCalendar(); } }
       } catch { /* Un aggiornamento in background non interrompe il lavoro; resta disponibile Aggiorna richieste. */ }
       finally { backgroundRefreshing = false; }
     }
 
     function renderStats(stats: Record<string, number>) {
-      const labels = [['pendingRequests', 'Richieste da confermare'], ['todayAppointments', 'Appuntamenti oggi'], ['upcomingAppointments', 'In programma'], ['pendingReminders', 'Promemoria in attesa'], ['sentThisMonth', 'Tentativi conteggiati questo mese']];
+      const labels = [['pendingRequests', 'Richieste da confermare'], ['todayAppointments', 'Appuntamenti oggi'], ['upcomingAppointments', 'In programma'], ['pendingReminders', 'Promemoria automatici in coda'], ['sentThisMonth', 'Promemoria automatici del mese']];
       el('[data-stats]').replaceChildren(...labels.map(([key, label]) => { const card = textNode('div', '', 'stat-card'); card.append(textNode('strong', String(stats[key] ?? 0)), textNode('span', label)); return card; }));
-      el('[data-request-count]').textContent = String(stats.pendingRequests ?? 0);
+      const pending = stats.pendingRequests ?? 0;
+      el('[data-request-count]').textContent = String(pending);
+      el('[data-request-count-label]').textContent = pending === 1 ? ', 1 da confermare' : `, ${pending ? pending : 'nessuna'} da confermare`;
     }
 
     function manualLink(appointment: { name: string; phone: string; date: string; time: string }) {
@@ -445,6 +502,16 @@ import CustomerDirectory from './CustomerDirectory.astro';
       result.hidden = false;
     }
 
+    function showDeclineResult(request: BookingRequest) {
+      const result = el('[data-request-result]');
+      const close = textNode('button', 'Chiudi', 'agenda-button secondary') as HTMLButtonElement; close.type = 'button';
+      on(close, 'click', () => { result.hidden = true; result.replaceChildren(); focus('#requests-title'); });
+      const links = contactLinks(request, `Ciao ${request.name}, sono Jessica di ${root.dataset.business}. Mi dispiace, ${prettyDate(request.date, false)} alle ${request.time} non riesco a riceverti per ${request.serviceName}. Ti va se troviamo insieme un altro orario?`);
+      links.append(close);
+      result.replaceChildren(textNode('h3', 'Richiesta non accettata'), textNode('p', `${request.name} · ${request.serviceName}`), textNode('p', 'Se vuoi, avvisa la cliente: il messaggio WhatsApp è già pronto, controllalo e premi Invia.', 'agenda-note'), links);
+      result.hidden = false;
+    }
+
     function renderRequests() {
       const list = el('[data-requests]');
       if (!requests.length) {
@@ -455,8 +522,11 @@ import CustomerDirectory from './CustomerDirectory.astro';
         const card = textNode('article', '', 'agenda-card request-card'); card.dataset.requestId = request.id;
         const heading = textNode('div', '', 'appointment-top');
         heading.append(textNode('h3', request.name), textNode('span', request.withdrawnAt ? 'Ritirata dalla cliente' : request.status === 'pending' ? 'Da confermare' : request.status === 'confirmed' ? 'Confermata' : 'Non accettata', 'status-badge')); card.append(heading);
-        card.append(textNode('p', request.serviceName), textNode('p', `Orario desiderato: ${prettyDate(request.date)} alle ${request.time}`), textNode('p', request.phone, 'agenda-note'), textNode('small', `Riferimento ${request.reference}`));
+        card.append(textNode('p', request.serviceName), textNode('p', `Orario desiderato: ${prettyDate(request.date)} alle ${request.time}`), textNode('p', displayPhone(request.phone), 'agenda-note'), textNode('small', `Riferimento ${request.reference}`));
         if (request.notes) card.append(textNode('p', `Note della richiesta: ${request.notes}`, 'agenda-note'));
+        const requestedPast = request.status === 'pending' && romeEpoch(request.date, request.time) <= Date.now();
+        if (requestedPast) card.append(textNode('p', 'L’orario desiderato è già passato: concorda con la cliente un nuovo giorno, poi conferma o non accettare.', 'agenda-note is-warning'));
+        if (request.status === 'pending') card.append(contactLinks(request, `Ciao ${request.name}, sono Jessica di ${root.dataset.business}. Ho ricevuto la tua richiesta per ${request.serviceName} di ${prettyDate(request.date)} alle ${request.time}.`));
         if (request.status === 'pending' || (request.status === 'confirmed' && request.appointment?.status !== 'cancelled')) card.append(customerLinkControls('requests', request.id));
         if (request.status !== 'pending') {
           if (request.appointment) {
@@ -478,7 +548,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
         const field = (labelText: string, name: string, type: string, value: string) => {
           const label = textNode('label', labelText); const control = document.createElement('input'); control.name = name; control.type = type; control.value = value; control.required = true; label.append(control); fields.append(label); return control;
         };
-        const date = field('Giorno', 'date', 'date', request.date); date.min = today();
+        const date = field('Giorno', 'date', 'date', requestedPast && request.date < today() ? today() : request.date); date.min = today();
         field('Ora', 'time', 'time', request.time);
         const knownDuration = services.find(service => service.id === request.serviceId)?.durationMinutes;
         const duration = field('Durata effettiva, in minuti', 'durationMinutes', 'number', knownDuration ? String(knownDuration) : ''); duration.min = '5'; duration.max = '480'; duration.step = '1';
@@ -504,7 +574,7 @@ import CustomerDirectory from './CustomerDirectory.astro';
           selectedDate = result.appointment.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate;
           showRequestResult(result.appointment); await loadAll(); inform('Richiesta confermata. L’appuntamento è in agenda.'); focus('#requests-title');
         }); });
-        on(declineSave, 'click', () => { void act(null, async () => { await api(`/api/admin/requests/${encodeURIComponent(request.id)}/decline`, 'POST', {}); await loadAll(); inform('Richiesta non accettata. Non è stato creato un appuntamento.'); focus('#requests-title'); }); });
+        on(declineSave, 'click', () => { void act(null, async () => { await api(`/api/admin/requests/${encodeURIComponent(request.id)}/decline`, 'POST', {}); await loadAll(); showDeclineResult(request); inform('Richiesta non accettata. Non è stato creato un appuntamento.'); focus('#requests-title'); }); });
         return card;
       }));
     }
@@ -540,13 +610,14 @@ import CustomerDirectory from './CustomerDirectory.astro';
       const card = textNode('article', '', `appointment-card${item.status === 'cancelled' ? ' is-cancelled' : ''}`); card.dataset.appointmentId = item.id;
       const labels = { scheduled: 'Confermato', completed: 'Terminato', no_show: 'Non si è presentata' };
       const interval = appointmentInterval(item); const top = textNode('div', '', 'appointment-top'); top.append(textNode('strong', `${item.time}–${timeAt(interval.end)} · ${item.durationMinutes} min`), textNode('span', item.status === 'cancelled' ? 'Annullato' : labels[item.outcome || 'scheduled'], 'status-badge')); card.append(top);
-      card.append(textNode('h4', item.name), textNode('p', item.title || services.find(service => service.id === item.serviceId)?.name || 'Appuntamento'), textNode('p', item.phone, 'agenda-note'), textNode('small', `Riferimento ${item.reference}`));
+      card.append(textNode('h4', item.name), textNode('p', item.title || services.find(service => service.id === item.serviceId)?.name || 'Appuntamento'), textNode('p', displayPhone(item.phone), 'agenda-note'), textNode('small', `Riferimento ${item.reference}`));
+      if (item.status === 'confirmed' && (item.outcome || 'scheduled') === 'scheduled' && interval.end > Date.now()) card.append(contactLinks(item, `Ciao ${item.name}, sono Jessica di ${root.dataset.business}. Ti scrivo per il tuo appuntamento di ${prettyDate(item.date, false)} alle ${item.time}.`));
       if (interval.end > romeEpoch(addDays(item.date, 1), '00:00')) card.append(textNode('p', `Inizia il ${prettyDate(item.date, false)} e prosegue nel giorno successivo.`, 'agenda-note'));
       if (item.notes) card.append(textNode('p', `Note: ${item.notes}`, 'agenda-note'));
       const actions = textNode('div', '', 'button-group'); const edit = textNode('button', 'Modifica', 'agenda-button secondary') as HTMLButtonElement; edit.type = 'button'; on(edit, 'click', () => openEditor(item, edit)); actions.append(edit);
       if (item.status !== 'cancelled' && (item.outcome || 'scheduled') === 'scheduled') {
         const move = textNode('button', 'Sposta', 'agenda-button secondary') as HTMLButtonElement; move.type = 'button'; on(move, 'click', () => openEditor(item, move, undefined, true)); actions.append(move);
-        const cancel = textNode('button', 'Annulla', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button'; on(cancel, 'click', () => inlineAction(card, cancel, `Vuoi annullare l’appuntamento di ${item.name}? I promemoria ancora da inviare verranno fermati.`, 'Conferma annullamento', async () => { await api(`/api/admin/appointments/${encodeURIComponent(item.id)}`, 'PATCH', { status: 'cancelled' }); await loadAll(); inform('Appuntamento annullato. Avvisa la cliente se necessario.'); focus('#calendar-title'); })); actions.append(cancel);
+        const cancel = textNode('button', 'Annulla appuntamento', 'agenda-button secondary') as HTMLButtonElement; cancel.type = 'button'; on(cancel, 'click', () => inlineAction(card, cancel, `Vuoi annullare l’appuntamento di ${item.name}? I promemoria ancora da inviare verranno fermati.`, 'Conferma annullamento', async () => { await api(`/api/admin/appointments/${encodeURIComponent(item.id)}`, 'PATCH', { status: 'cancelled' }); await loadAll(); inform('Appuntamento annullato. Avvisa la cliente se necessario.'); focus('#calendar-title'); })); actions.append(cancel);
       }
       if (item.status === 'confirmed') {
         if ((item.outcome || 'scheduled') !== 'scheduled') { const reopen = textNode('button', 'Riapri appuntamento', 'agenda-button secondary') as HTMLButtonElement; reopen.type = 'button'; on(reopen, 'click', () => inlineAction(card, reopen, 'Vuoi correggere l’esito e riaprire questo appuntamento? Non verrà inviato un nuovo promemoria da questa azione.', 'Conferma riapertura', async () => { await api(`/api/admin/appointments/${encodeURIComponent(item.id)}`, 'PATCH', { outcome: 'scheduled' }); await loadAll(); inform('Appuntamento riaperto. Puoi modificarlo o annullarlo.'); focus('#calendar-title'); })); actions.append(reopen); }
@@ -746,12 +817,21 @@ import CustomerDirectory from './CustomerDirectory.astro';
       }));
     }
 
+    /** Closures are saved on their own, without waiting for the rest of the settings form. */
+    async function saveClosures(next: string[], message: string) {
+      await act(null, async () => {
+        const saved = await api<Settings>('/api/admin/settings', 'PATCH', { closedDates: next });
+        if (settings) settings = { ...settings, closedDates: saved.closedDates };
+        closedDatesDraft = [...saved.closedDates]; renderClosedDates(); inform(message);
+        await Promise.all([loadCalendar(), loadOperations()]);
+      });
+    }
     function renderClosedDates() {
       const list = el('[data-closed-dates]');
       if (!closedDatesDraft.length) { list.replaceChildren(textNode('li', 'Non ci sono chiusure straordinarie.', 'agenda-note')); return; }
       list.replaceChildren(...closedDatesDraft.map(date => {
         const item = textNode('li', '', 'closure-item'); const button = textNode('button', 'Rimuovi', 'agenda-button secondary') as HTMLButtonElement; button.type = 'button'; button.setAttribute('aria-label', `Rimuovi la chiusura del ${prettyDate(date, false)}`);
-        on(button, 'click', () => { settingsDirty = true; closedDatesDraft = closedDatesDraft.filter(value => value !== date); renderClosedDates(); inform('Chiusura rimossa dal modulo. Salva le impostazioni per applicare la modifica.'); });
+        on(button, 'click', () => { void saveClosures(closedDatesDraft.filter(value => value !== date), `Chiusura del ${prettyDate(date, false)} rimossa: il giorno torna prenotabile secondo gli orari.`); });
         item.append(textNode('span', prettyDate(date)), button); return item;
       }));
     }
@@ -853,9 +933,9 @@ import CustomerDirectory from './CustomerDirectory.astro';
       }));
     }
 
-    on(loginForm, 'submit', event => { event.preventDefault(); void act(loginForm, async () => { showAccess(await api<Session>('/api/auth/login', 'POST', { email: input(loginForm, 'email').value.trim(), password: input(loginForm, 'password').value })); input(loginForm, 'password').value = ''; await loadAll(); showPanel('overview'); inform('Accesso riuscito. La tua area privata è pronta.'); }); });
-    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim() })); activationToken = ''; setupForm.reset(); await loadAll(); showPanel('overview'); inform('Area privata attivata. Le richieste del calendario sono nella sezione Richieste.'); }); });
-    on(el('[data-logout]'), 'click', () => { void act(null, async () => { await api('/api/auth/logout', 'POST', {}); activationToken = ''; showAccess({ authenticated: false, setupRequired: false }); loginForm.reset(); input(loginForm, 'email').value = root.dataset.ownerEmail || ''; inform('Sei uscita dall’agenda.'); input(loginForm, 'email').focus(); }); });
+    on(loginForm, 'submit', event => { event.preventDefault(); void act(loginForm, async () => { showAccess(await api<Session>('/api/auth/login', 'POST', { email: input(loginForm, 'email').value.trim(), password: input(loginForm, 'password').value, remember: input(loginForm, 'remember').checked })); input(loginForm, 'password').value = ''; await loadAll(); showPanel('overview'); inform('Accesso riuscito. La tua area privata è pronta.'); }); });
+    on(setupForm, 'submit', event => { event.preventDefault(); void act(setupForm, async () => { const password = input(setupForm, 'password').value; if (password !== input(setupForm, 'confirmation').value) { input(setupForm, 'confirmation').focus(); throw new Error('Le password non coincidono.'); } const resetting = !session.setupRequired; showAccess(await api<Session>('/api/auth/setup', 'POST', { token: activationToken, password, email: input(setupForm, 'email').value.trim(), remember: input(setupForm, 'remember').checked })); activationToken = ''; setupForm.reset(); await loadAll(); showPanel('overview'); inform(resetting ? 'Nuova password salvata. Sei collegata; gli altri dispositivi sono stati scollegati.' : 'Area privata attivata. Le richieste del calendario sono nella sezione Richieste.'); }); });
+    on(el('[data-logout]'), 'click', () => { void act(null, async () => { await api('/api/auth/logout', 'POST', {}); activationToken = ''; showAccess({ authenticated: false, setupRequired: false }); loginForm.reset(); input(loginForm, 'email').value = lastEmail || root.dataset.ownerEmail || ''; inform('Sei uscita dall’agenda.'); input(loginForm, 'email').focus(); }); });
     on(el('[data-new]'), 'click', () => openEditor(undefined, el('[data-new]')));
     on(el('[data-editor-keep]'), 'click', () => { if (busy) return; pendingEditorTransition = null; el('[data-editor-guard]').hidden = true; focus('#editor-title'); });
     on(el('[data-editor-discard]'), 'click', () => { if (busy) return; const next = pendingEditorTransition; pendingEditorTransition = null; el('[data-editor-guard]').hidden = true; next?.(); });
@@ -865,9 +945,12 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(el('[data-calendar-search]'), 'input', () => { calendarSearch = el<HTMLInputElement>('[data-calendar-search]').value; renderCalendar(); });
     on(el('[data-calendar-status]'), 'change', () => { calendarStatus = el<HTMLSelectElement>('[data-calendar-status]').value; renderCalendar(); });
     root.querySelectorAll<HTMLElement>('[data-editor-close]').forEach(button => on(button, 'click', () => closeEditor()));
+    on(el('[data-editor-discard-close]'), 'click', () => { if (!busy) closeEditor(true); });
+    on(el('[data-setup-cancel]'), 'click', () => { if (busy) return; activationToken = ''; setupForm.reset(); showAccess({ authenticated: false, setupRequired: false }); inform('Accedi con email e password.'); input(loginForm, 'password').focus(); });
+    on(el('[data-toast-close]'), 'click', () => { window.clearTimeout(toastTimer); toast.hidden = true; });
     on(input<HTMLSelectElement>(appointmentForm, 'serviceId'), 'change', () => { const service = services.find(item => item.id === input<HTMLSelectElement>(appointmentForm, 'serviceId').value); input(appointmentForm, 'title').value = service?.name || ''; input(appointmentForm, 'durationMinutes').value = service?.durationMinutes ? String(service.durationMinutes) : ''; });
     on(appointmentForm, 'submit', event => { event.preventDefault(); void act(appointmentForm, async () => {
-      const body = { serviceId: input<HTMLSelectElement>(appointmentForm, 'serviceId').value || null, title: input(appointmentForm, 'title').value.trim(), date: input(appointmentForm, 'date').value, time: input(appointmentForm, 'time').value, durationMinutes: Number(input(appointmentForm, 'durationMinutes').value), name: input(appointmentForm, 'name').value.trim(), phone: input(appointmentForm, 'phone').value.trim(), notes: input<HTMLTextAreaElement>(appointmentForm, 'notes').value.trim(), reminderConsent: input(appointmentForm, 'reminderConsent').checked, ...(editingId ? { status: input<HTMLSelectElement>(appointmentForm, 'status').value } : {}) };
+      const body = { serviceId: input<HTMLSelectElement>(appointmentForm, 'serviceId').value || null, title: input(appointmentForm, 'title').value.trim(), date: input(appointmentForm, 'date').value, time: input(appointmentForm, 'time').value, durationMinutes: Number(input(appointmentForm, 'durationMinutes').value), name: input(appointmentForm, 'name').value.trim(), phone: italianPhone(input(appointmentForm, 'phone').value), notes: input<HTMLTextAreaElement>(appointmentForm, 'notes').value.trim(), reminderConsent: input(appointmentForm, 'reminderConsent').checked, ...(editingId ? { status: input<HTMLSelectElement>(appointmentForm, 'status').value } : {}) };
       const appointment = await api<Appointment>(editingId ? `/api/admin/appointments/${encodeURIComponent(editingId)}` : '/api/admin/appointments', editingId ? 'PATCH' : 'POST', body); selectedDate = appointment.date; el<HTMLInputElement>('[data-calendar-date]').value = selectedDate; closeEditor(true); await loadAll(); inform(appointment.status === 'cancelled' ? 'Appuntamento annullato. I promemoria ancora da inviare sono stati fermati.' : 'Appuntamento salvato.'); focus('#calendar-title');
     }); });
     on(settingsForm, 'submit', event => { event.preventDefault(); void act(settingsForm, async () => {
@@ -911,7 +994,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
     on(el('[data-closure-add]'), 'click', () => {
       const control = el<HTMLInputElement>('[data-closure-date]'); if (!control.value || !/^\d{4}-\d{2}-\d{2}$/.test(control.value)) { control.focus(); inform('Scegli il giorno di chiusura.', true); return; }
       if (closedDatesDraft.includes(control.value)) { inform('Questo giorno è già tra le chiusure.'); return; }
-      settingsDirty = true; closedDatesDraft = [...closedDatesDraft, control.value].sort(); control.value = ''; renderClosedDates(); inform('Giorno aggiunto al modulo. Salva le impostazioni per applicare la chiusura.');
+      const added = control.value;
+      void saveClosures([...closedDatesDraft, added].sort(), `Chiusura del ${prettyDate(added, false)} salvata: le clienti non possono prenotare quel giorno.`).then(() => { if (closedDatesDraft.includes(added)) control.value = ''; });
     });
     on(backupForm, 'submit', event => { event.preventDefault(); void act(backupForm, async () => {
       const response = await fetch('/api/admin/backup', { method: 'POST', credentials: 'same-origin', signal: lifetime.signal, headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ currentPassword: input(backupForm, 'currentPassword').value }) });
@@ -974,6 +1058,8 @@ import CustomerDirectory from './CustomerDirectory.astro';
   .agenda :is(button, a, input, select, textarea):focus-visible { outline: 3px solid #2e6be6; outline-offset: 3px; }
   .agenda label { display: flex; flex-direction: column; gap: .4rem; font-weight: 600; font-size: .86rem; min-width: 0; }
   .agenda :is(input:not([type=checkbox]), select, textarea) { width: 100%; min-width: 0; min-height: 44px; padding: .7rem .8rem; border: 1px solid #b8c3d8; border-radius: .65rem; background: #fff; }
+  /* 16px evita lo zoom automatico di Safari su iPhone quando si tocca un campo. */
+  .agenda :is(input, select, textarea) { font-size: 16px; font-weight: 450; }
   .agenda textarea { resize: vertical; }
   .agenda .checkbox-label { flex-direction: row; align-items: flex-start; gap: .7rem; line-height: 1.5; }
   .agenda input[type=checkbox] { margin-top: .2rem; width: 1.1rem; height: 1.1rem; flex: 0 0 auto; accent-color: #2e6be6; }
@@ -988,7 +1074,17 @@ import CustomerDirectory from './CustomerDirectory.astro';
   .stat-card { background: #fff; border: 1px solid #dde5f4; border-radius: 1rem; padding: 1rem; display: flex; flex-direction: column; gap: .25rem; }
   .stat-card strong { font-size: 1.8rem; color: #2459c8; }
   .stat-card span { font-size: .75rem; color: #48536b; }
-  .agenda-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1.5rem 2rem; }
+  .agenda-tabs { display: grid; gap: .75rem; margin-block: 1.5rem 2rem; }
+  .agenda-tabs__main, .agenda-tabs__more { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .agenda-tabs__main .agenda-button { font-size: .95rem; padding-inline: 1.1rem; }
+  .agenda-tabs__more .agenda-button { min-height: 40px; font-size: .8rem; padding: .5rem .8rem; }
+  .agenda-tabs__label { color: #5c687e; font-size: .8rem; font-weight: 600; }
+  @media (max-width: 480px) and (min-width: 361px) { .agenda-tabs__main { flex-wrap: nowrap; } .agenda-tabs__main .agenda-button { flex: 1 1 auto; padding-inline: .55rem; font-size: .88rem; } }
+  .agenda-toast { position: fixed; left: 1rem; right: 1rem; bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 950; display: flex; gap: .75rem; align-items: center; justify-content: space-between; max-width: 40rem; margin-inline: auto; padding: .9rem 1rem; border-radius: 1rem; background: #10244d; color: #fff; box-shadow: 0 14px 36px rgba(11, 18, 32, .25); font-size: .92rem; line-height: 1.45; }
+  .agenda-toast.is-error { background: #862b25; }
+  .agenda-toast__close { flex: none; min-height: 40px; padding: .4rem .8rem; border: 1px solid rgba(255,255,255,.5); border-radius: .7rem; background: transparent; color: #fff; font: inherit; font-size: .8rem; cursor: pointer; }
+  .agenda-note.is-warning { color: #7a4b00; background: #fff6e0; border-radius: .6rem; padding: .5rem .75rem; }
+  .contact-links .agenda-button { min-height: 42px; }
   .request-count { min-width: 1.5rem; padding: .1rem .4rem; margin-left: .45rem; border-radius: 1rem; background: #dce8ff; color: #17396f; font-size: .75rem; line-height: 1.4; }
   .agenda-section-head { margin-block: 0 1.2rem; }
   .calendar-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }

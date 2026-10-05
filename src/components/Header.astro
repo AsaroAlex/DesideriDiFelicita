@@ -21,6 +21,9 @@ const isActive = (href: string) => norm(withBase(href)) === current;
       <Logo variant="horizontal" />
     </a>
 
+    <!-- Sul telefono «Prenota» resta sempre visibile, accanto al menu. -->
+    <a class="btn btn--primary header__book" href={withBase('/prenota')} aria-current={isActive('/prenota') ? 'page' : undefined}>Prenota</a>
+
     <button
       class="nav-toggle"
       type="button"
@@ -145,6 +148,10 @@ const isActive = (href: string) => norm(withBase(href)) === current;
     --btn-fg: #fff;
   }
 
+  .header__book {
+    display: none;
+  }
+
   .nav-toggle {
     display: none;
     flex-direction: column;
@@ -193,6 +200,12 @@ const isActive = (href: string) => norm(withBase(href)) === current;
     .header[data-nav-ready] .nav-toggle {
       display: flex;
     }
+    .header[data-nav-ready] .header__book {
+      display: inline-flex;
+      margin-left: auto;
+      padding: 0.65em 1.1em;
+      font-size: 0.92rem;
+    }
     .nav {
       width: 100%;
       flex-direction: column;
@@ -235,6 +248,11 @@ const isActive = (href: string) => norm(withBase(href)) === current;
     .nav :global(.nav__cta) {
       justify-content: center;
       width: 100%;
+    }
+  }
+  @media (max-width: 359px) {
+    .header[data-nav-ready] .header__book {
+      display: none;
     }
   }
 </style>

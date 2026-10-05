@@ -2,15 +2,14 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
-const GH_USER = 'asaroalex';
-const REPO = 'DesideriDiFelicita';
+// Indirizzo ufficiale del sito (Railway). Per un dominio personalizzato impostare
+// SITE_URL (es. https://desideridifelicita.it) nelle variabili Railway e ripubblicare.
+const PRODUCTION_URL = 'https://desideri-di-felicita-production.up.railway.app';
 
-// Senza variabili rimane il deploy GitHub Pages di progetto. Su Railway il
-// dominio pubblico viene fornito dalla piattaforma; SITE_URL permette di usare
-// un dominio personalizzato. Entrambe le variabili vanno impostate al build.
+// Le variabili vengono lette al build: SITE_URL prevale sul dominio fornito da Railway.
 const siteUrl = process.env.SITE_URL?.trim();
 const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
-const configuredSite = siteUrl || (railwayDomain ? `https://${railwayDomain}` : null);
+const configuredSite = siteUrl || (railwayDomain ? `https://${railwayDomain}` : PRODUCTION_URL);
 
 /** @param {string} value */
 function validateOrigin(value) {
@@ -29,9 +28,9 @@ function validateOrigin(value) {
   return url.origin;
 }
 
-const site = validateOrigin(configuredSite || `https://${GH_USER}.github.io`);
+const site = validateOrigin(configuredSite);
 const configuredBase = process.env.BASE_PATH?.trim();
-const base = configuredBase || (configuredSite ? '/' : `/${REPO}`);
+const base = configuredBase || '/';
 if (!base.startsWith('/') || base.includes('//') || /[?#\\]/.test(base)) {
   throw new Error('BASE_PATH deve essere un percorso assoluto, per esempio / oppure /DesideriDiFelicita.');
 }
